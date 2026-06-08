@@ -1,0 +1,146 @@
+/* Dark, grim baseline styles for the prototype. */
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background-color: #0d0d0d;
+  color: #e0e0e0;
+}
+
+.app {
+  padding: 1rem;
+}
+
+nav button {
+  margin-right: 0.5rem;
+  background-color: #333;
+  color: #e0e0e0;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.combat-screen {
+  max-width: 1000px;
+  margin-top: 1.5rem;
+}
+
+.combatants {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.combatant-panel {
+  border: 1px solid #555;
+  padding: 1rem;
+  background-color: #1a1a1a;
+}
+
+.combatant-panel h2 {
+  margin-top: 0;
+}
+
+.intent {
+  color: #e8bd69;
+  font-weight: bold;
+}
+
+.combat-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 1rem 0;
+}
+
+.combat-controls button {
+  border: 1px solid #a27333;
+  padding: 0.75rem 1.25rem;
+  background-color: #5c3b18;
+  color: #fff;
+  cursor: pointer;
+}
+
+.combat-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.hand {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.card {
+  position: relative;
+  min-height: 170px;
+  border: 1px solid #555;
+  padding: 1rem 0.75rem;
+  background-color: #222;
+  color: #e0e0e0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card:hover:not(:disabled) {
+  border-color: #d09b48;
+  transform: translateY(-2px);
+}
+
+.card:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.card h3 {
+  margin-top: 0;
+  padding-right: 1.5rem;
+}
+
+.card-cost {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #315d8a;
+  line-height: 1.5rem;
+  text-align: center;
+  font-weight: bold;
+}
+
+.combat-result {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid currentColor;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.combat-result.won {
+  color: #8fcf72;
+}
+
+.combat-result.lost {
+  color: #d46d6d;
+}
+
+.map-node {
+  display: inline-block;
+  width: 80px;
+  height: 40px;
+  margin: 0.25rem;
+  text-align: center;
+  line-height: 40px;
+  border: 1px solid #555;
+  background-color: #222;
+}
+
+@media (max-width: 600px) {
+  .combatants {
+    grid-template-columns: 1fr;
+  }
+}

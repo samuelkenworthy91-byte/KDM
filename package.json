@@ -1,0 +1,19 @@
+{
+  "name": "lantern-deckbuilder",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A roguelite deckbuilder inspired by dark monster‑hunting games.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^4.0.0"
+  }
+}
