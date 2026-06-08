@@ -49,7 +49,8 @@ button:hover:not(:disabled) {
 
 .settlement-screen,
 .placeholder-screen,
-.victory-screen {
+.victory-screen,
+.summary-screen {
   max-width: 620px;
   margin: 4rem auto;
   border: 1px solid #494136;
@@ -61,6 +62,8 @@ button:hover:not(:disabled) {
 .settlement-screen h2,
 .placeholder-screen h2,
 .victory-screen h2,
+.summary-screen h2,
+.grave-legacy-screen h2,
 .screen-header h2 {
   margin-top: 0;
   color: #ded0b4;
@@ -69,8 +72,119 @@ button:hover:not(:disabled) {
 
 .settlement-screen p,
 .placeholder-screen p,
-.victory-screen p {
+.victory-screen p,
+.summary-screen p {
   line-height: 1.6;
+}
+
+.graveyard-section {
+  margin: 1.5rem 0;
+  border-top: 1px solid #494136;
+  border-bottom: 1px solid #494136;
+  padding: 1rem 0;
+  text-align: left;
+}
+
+.graveyard-section h3 {
+  margin-top: 0;
+  color: #bcae96;
+  font-family: Georgia, serif;
+}
+
+.graveyard-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.graveyard-section li {
+  margin: 0.55rem 0;
+  color: #b9b1a5;
+  line-height: 1.45;
+}
+
+.summary-list {
+  margin: 1.5rem 0;
+  border-top: 1px solid #494136;
+  text-align: left;
+}
+
+.summary-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #302c27;
+  padding: 0.7rem 0;
+}
+
+.summary-list dt {
+  color: #9d917f;
+}
+
+.summary-list dd {
+  margin: 0;
+  color: #ded0b4;
+  text-align: right;
+}
+
+.grave-legacy-screen {
+  max-width: 1000px;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.fallen-details {
+  margin: 0 auto 1.5rem;
+  border: 1px solid #494136;
+  padding: 0.75rem 1rem;
+  background: #171512;
+  color: #b9b1a5;
+}
+
+.fallen-details p {
+  margin: 0.35rem 0;
+}
+
+.grave-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.grave-card {
+  min-height: 235px;
+  border-color: #514b43;
+  padding: 1.2rem;
+  background: linear-gradient(#211f1c, #151412);
+  color: #c9c1b5;
+  text-align: left;
+}
+
+.grave-card:hover,
+.grave-card.selected {
+  border-color: #a28153;
+  background: linear-gradient(#30291f, #1a1713);
+}
+
+.grave-card.selected {
+  box-shadow: inset 0 0 0 1px #a28153;
+}
+
+.grave-card h3 {
+  margin-top: 0;
+  color: #ded0b4;
+  font-family: Georgia, serif;
+}
+
+.grave-card p {
+  line-height: 1.5;
+}
+
+.grave-card strong {
+  display: block;
+  margin-top: 1rem;
+  color: #b58a4a;
+  line-height: 1.4;
 }
 
 .combat-screen {
@@ -104,6 +218,20 @@ button:hover:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   margin: 1rem 0;
+}
+
+.run-bonus-note {
+  margin-top: 1rem;
+  border: 1px solid #8a693c;
+  padding: 0.75rem;
+  background: #2b2115;
+  color: #e8bd69;
+  text-align: center;
+}
+
+.combat-controls .test-button {
+  border-color: #7e3f3f;
+  background-color: #3f2020;
 }
 
 .combat-controls button {
@@ -298,6 +426,12 @@ button:hover:not(:disabled) {
   .screen-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .combat-controls {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.65rem;
   }
 
   .map-row {

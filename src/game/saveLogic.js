@@ -1,10 +1,27 @@
 // Helpers for loading and saving settlement data in localStorage.
 
+export const defaultSettlement = {
+  settlementMemory: 0,
+  monsterKnowledge: {},
+  nextRunBonus: {},
+  graveHistory: []
+};
+
+export function normalizeSettlement(data = {}) {
+  return {
+    ...defaultSettlement,
+    ...data,
+    monsterKnowledge: data.monsterKnowledge || {},
+    nextRunBonus: data.nextRunBonus || {},
+    graveHistory: Array.isArray(data.graveHistory) ? data.graveHistory : []
+  };
+}
+
 export function loadSettlement() {
   try {
-    return JSON.parse(localStorage.getItem('settlement')) || {};
+    return normalizeSettlement(JSON.parse(localStorage.getItem('settlement')) || {});
   } catch (e) {
-    return {};
+    return normalizeSettlement();
   }
 }
 

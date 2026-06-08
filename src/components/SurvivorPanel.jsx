@@ -7,6 +7,7 @@ export default function SurvivorPanel({ survivor }) {
       <h2>{survivor.name}</h2>
       <p>HP: {survivor.hp} / {survivor.maxHp}</p>
       <p>Block: {survivor.block}</p>
+      <p>Strength: {survivor.strength || 0}</p>
       <p>Energy: {survivor.energy} / 3</p>
     </div>
   );

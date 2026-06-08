@@ -5,5 +5,6 @@ export const resources = {
   sinew: { id: 'sinew', name: 'Sinew' },
   organ: { id: 'organ', name: 'Organ' },
   claw: { id: 'claw', name: 'Claw' },
+  strangeEye: { id: 'strangeEye', name: 'Strange Eye' },
   scrap: { id: 'scrap', name: 'Scrap' }
 };
