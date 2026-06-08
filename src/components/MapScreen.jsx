@@ -1,4 +1,5 @@
 import React from 'react';
+import { fightingArts as fightingArtData } from '../data/fightingArts.js';
 
 const NODE_LABELS = {
   fight: 'Fight',
@@ -9,7 +10,13 @@ const NODE_LABELS = {
   boss: 'Boss'
 };
 
-export default function MapScreen({ map, onSelectNode, resources }) {
+export default function MapScreen({
+  map,
+  onSelectNode,
+  resources,
+  survivorName,
+  fightingArts = []
+}) {
   return (
     <section className="map-screen">
       <header className="screen-header">
@@ -18,9 +25,18 @@ export default function MapScreen({ map, onSelectNode, resources }) {
           <h2>Choose Your Path</h2>
         </div>
         <div className="resource-summary">
+          <strong>{survivorName || 'Nameless Survivor'}</strong>
+          <br />
           Spoils: {resources.length ? resources.join(', ') : 'None'}
         </div>
       </header>
+
+      {!!fightingArts.length && (
+        <div className="active-passives">
+          <strong>Fighting Arts:</strong>{' '}
+          {fightingArts.map(id => fightingArtData[id]?.name || id).join(', ')}
+        </div>
+      )}
 
       <div className="hunt-map" aria-label="Hunt map">
         {map.map((row, rowIndex) => (

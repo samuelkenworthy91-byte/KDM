@@ -44,6 +44,22 @@ export const cards = {
     description: 'Unplayable.',
     unplayable: true,
     effects: []
+  },
+  shame: {
+    id: 'shame',
+    name: 'Shame',
+    cost: 0,
+    description: 'Unplayable. A memory of what you chose.',
+    unplayable: true,
+    effects: []
+  },
+  curse: {
+    id: 'curse',
+    name: 'Curse',
+    cost: 0,
+    description: 'Unplayable. Something followed you home.',
+    unplayable: true,
+    effects: []
   }
 };
 

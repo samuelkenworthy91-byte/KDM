@@ -50,7 +50,8 @@ button:hover:not(:disabled) {
 .settlement-screen,
 .placeholder-screen,
 .victory-screen,
-.summary-screen {
+.summary-screen,
+.event-screen {
   max-width: 620px;
   margin: 4rem auto;
   border: 1px solid #494136;
@@ -63,6 +64,7 @@ button:hover:not(:disabled) {
 .placeholder-screen h2,
 .victory-screen h2,
 .summary-screen h2,
+.event-screen h2,
 .grave-legacy-screen h2,
 .screen-header h2 {
   margin-top: 0;
@@ -75,6 +77,138 @@ button:hover:not(:disabled) {
 .victory-screen p,
 .summary-screen p {
   line-height: 1.6;
+}
+
+.settlement-screen {
+  max-width: 960px;
+  margin: 2rem auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.settlement-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  border: 1px solid #494136;
+  padding: 1.5rem;
+  background: #171512;
+}
+
+.survivor-name-form {
+  display: grid;
+  min-width: 250px;
+  gap: 0.5rem;
+}
+
+.survivor-name-form label {
+  color: #bda982;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.survivor-name-form input {
+  border: 1px solid #5a5043;
+  padding: 0.65rem;
+  background: #0f0e0c;
+  color: #e0e0e0;
+}
+
+.settlement-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 2rem;
+}
+
+.settlement-stats div {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #37322b;
+  padding: 1rem;
+  background: #12110f;
+  text-align: center;
+}
+
+.settlement-stats strong {
+  color: #d8c7a5;
+  font-family: Georgia, serif;
+  font-size: 1.6rem;
+}
+
+.settlement-stats span {
+  color: #81786d;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.upgrade-section {
+  margin-top: 1.75rem;
+}
+
+.upgrade-section > h3 {
+  color: #bda982;
+  font-family: Georgia, serif;
+}
+
+.upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.upgrade-card {
+  display: flex;
+  min-height: 155px;
+  flex-direction: column;
+  border: 1px solid #4b4339;
+  padding: 1rem;
+  background: #191714;
+}
+
+.upgrade-card.unlocked {
+  border-color: #637452;
+  background: #171d14;
+}
+
+.upgrade-card.unaffordable {
+  opacity: 0.58;
+}
+
+.upgrade-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.upgrade-heading h3 {
+  margin: 0;
+  color: #ded0b4;
+  font-family: Georgia, serif;
+}
+
+.upgrade-heading span {
+  color: #b58a4a;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.upgrade-card p {
+  flex: 1;
+  color: #aaa094;
+}
+
+.upgrade-card button {
+  align-self: start;
+}
+
+.empty-upgrades {
+  color: #a99a82;
 }
 
 .graveyard-section {
@@ -333,6 +467,109 @@ button:hover:not(:disabled) {
   font-size: 0.9rem;
 }
 
+.event-screen {
+  max-width: 860px;
+  text-align: left;
+}
+
+.event-description {
+  margin: 1.5rem 0;
+  color: #c8bdac;
+  font-family: Georgia, serif;
+  font-size: 1.2rem;
+  line-height: 1.6;
+}
+
+.run-status {
+  display: flex;
+  gap: 1rem;
+  border: 1px solid #494136;
+  padding: 0.65rem 0.9rem;
+  background: #100f0d;
+  color: #d0b77e;
+}
+
+.event-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.event-choice {
+  display: flex;
+  min-height: 170px;
+  flex-direction: column;
+  gap: 0.8rem;
+  justify-content: center;
+  border-color: #625038;
+  padding: 1.25rem;
+  background: linear-gradient(#241e18, #141210);
+  text-align: left;
+}
+
+.event-choice strong {
+  color: #e0c998;
+  font-family: Georgia, serif;
+  font-size: 1.15rem;
+}
+
+.event-choice span {
+  color: #aaa094;
+  line-height: 1.5;
+}
+
+.event-choice em {
+  color: #d47b6f;
+  font-style: normal;
+  font-weight: bold;
+}
+
+.event-outcome {
+  border: 1px solid #806236;
+  padding: 1.5rem;
+  background: #211b13;
+  color: #dfd0b5;
+  text-align: center;
+}
+
+.event-outcome p {
+  margin-top: 0;
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.event-rewards {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  border-top: 1px solid #55462f;
+  border-bottom: 1px solid #55462f;
+  padding: 1rem 0;
+  text-align: left;
+}
+
+.event-rewards ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.active-passives {
+  margin: 0 0 1rem;
+  border: 1px solid #635333;
+  padding: 0.7rem;
+  background: #201b13;
+  color: #d8c7a5;
+}
+
+.event-inventory {
+  margin: 1.5rem 0 0;
+  border-top: 1px solid #39332b;
+  padding-top: 1rem;
+  color: #9e9588;
+  line-height: 1.5;
+}
+
 .hunt-map {
   display: flex;
   flex-direction: column;
@@ -419,6 +656,15 @@ button:hover:not(:disabled) {
 }
 
 @media (max-width: 600px) {
+  .settlement-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settlement-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .combatants {
     grid-template-columns: 1fr;
   }

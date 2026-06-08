@@ -3,9 +3,8 @@ export const fightingArts = {
   berserker: {
     id: 'berserker',
     name: 'Berserker',
-    type: 'active',
-    description: 'Deal 4 damage. If you have no block, deal 4 more.',
-    energy: 1
+    type: 'passive',
+    description: 'Attack cards deal +1 damage while you have 0 block.'
   },
   clutchFighter: {
     id: 'clutchFighter',
@@ -17,11 +16,11 @@ export const fightingArts = {
     id: 'tumble',
     name: 'Tumble',
     type: 'passive',
-    description: 'Once per fight, ignore the next hit and gain 5 block.'
+    description: 'Start each combat with +3 block.'
   },
-  monsterClawStyle: {
-    id: 'monsterClawStyle',
-    name: 'Monster Claw Style',
+  clawStyle: {
+    id: 'clawStyle',
+    name: 'Claw Style',
     type: 'passive',
     description: 'Your attacks apply 1 bleed.'
   }
