@@ -27,7 +27,10 @@ function getCombatStatus(survivor, monster) {
   return 'playing';
 }
 
-export function createCombatState(monsterOverride = monsters.whiteLion) {
+export function createCombatState(
+  monsterOverride = monsters.whiteLion,
+  { playerDamageBonus = 0 } = {}
+) {
   const survivor = {
     name: 'Survivor',
     hp: 30,
@@ -50,6 +53,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion) {
     hand: initialDraw.hand,
     discardPile: initialDraw.discard,
     intentIndex: 0,
+    playerDamageBonus,
     status: 'playing'
   };
 }
@@ -77,7 +81,7 @@ export function playCard(cardIndex, state) {
   card.effects.forEach(effect => {
     switch (effect.type) {
       case 'damage':
-        monster = applyDamage(monster, effect.amount);
+        monster = applyDamage(monster, effect.amount + (state.playerDamageBonus || 0));
         break;
       case 'block':
         survivor = { ...survivor, block: survivor.block + effect.amount };

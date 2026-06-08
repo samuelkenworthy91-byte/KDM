@@ -9,7 +9,13 @@ const NODE_LABELS = {
   boss: 'Boss'
 };
 
-export default function MapScreen({ map, onSelectNode, resources }) {
+export default function MapScreen({
+  map,
+  onSelectNode,
+  resources,
+  revealAllNodeTypes = false,
+  storytellerActive = false
+}) {
   return (
     <section className="map-screen">
       <header className="screen-header">
@@ -22,6 +28,13 @@ export default function MapScreen({ map, onSelectNode, resources }) {
         </div>
       </header>
 
+      <div className="run-bonus-notes">
+        {revealAllNodeTypes && <span>Scout Path: all node types revealed.</span>}
+        {storytellerActive && (
+          <span>Storyteller active: future reward choices will be expanded.</span>
+        )}
+      </div>
+
       <div className="hunt-map" aria-label="Hunt map">
         {map.map((row, rowIndex) => (
           <div key={rowIndex} className="map-row">
@@ -30,6 +43,9 @@ export default function MapScreen({ map, onSelectNode, resources }) {
             </span>
             <div className="map-row-nodes">
               {row.map(node => {
+                // TODO: Hide locked node types here when the hidden-map system is added.
+                // Scout Path already supplies the permanent reveal flag for that system.
+                const nodeLabel = NODE_LABELS[node.type];
                 const state = node.completed
                   ? 'completed'
                   : node.available
@@ -44,7 +60,7 @@ export default function MapScreen({ map, onSelectNode, resources }) {
                     disabled={!node.available || node.completed}
                     onClick={() => onSelectNode(node)}
                   >
-                    <span className="node-type">{NODE_LABELS[node.type]}</span>
+                    <span className="node-type">{nodeLabel}</span>
                     <span className="node-state">
                       {node.completed ? 'Completed' : node.available ? 'Available' : 'Locked'}
                     </span>
