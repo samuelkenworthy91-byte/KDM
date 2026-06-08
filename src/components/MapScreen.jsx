@@ -1,4 +1,6 @@
 import React from 'react';
+import EquipmentPanel from './EquipmentPanel.jsx';
+import InventoryPanel from './InventoryPanel.jsx';
 
 const NODE_LABELS = {
   fight: 'Fight',
@@ -9,7 +11,13 @@ const NODE_LABELS = {
   boss: 'Boss'
 };
 
-export default function MapScreen({ map, onSelectNode, resources }) {
+export default function MapScreen({
+  map,
+  onSelectNode,
+  inventory,
+  craftedEquipment,
+  revealAllNodeTypes
+}) {
   return (
     <section className="map-screen">
       <header className="screen-header">
@@ -17,10 +25,12 @@ export default function MapScreen({ map, onSelectNode, resources }) {
           <p className="eyebrow">The Hunt</p>
           <h2>Choose Your Path</h2>
         </div>
-        <div className="resource-summary">
-          Spoils: {resources.length ? resources.join(', ') : 'None'}
-        </div>
       </header>
+
+      <div className="status-panels">
+        <InventoryPanel inventory={inventory} compact />
+        <EquipmentPanel craftedEquipment={craftedEquipment} />
+      </div>
 
       <div className="hunt-map" aria-label="Hunt map">
         {map.map((row, rowIndex) => (
@@ -35,6 +45,7 @@ export default function MapScreen({ map, onSelectNode, resources }) {
                   : node.available
                     ? 'available'
                     : 'locked';
+                const showNodeType = revealAllNodeTypes || node.available || node.completed;
 
                 return (
                   <button
@@ -44,7 +55,9 @@ export default function MapScreen({ map, onSelectNode, resources }) {
                     disabled={!node.available || node.completed}
                     onClick={() => onSelectNode(node)}
                   >
-                    <span className="node-type">{NODE_LABELS[node.type]}</span>
+                    <span className="node-type">
+                      {showNodeType ? NODE_LABELS[node.type] : 'Unknown'}
+                    </span>
                     <span className="node-state">
                       {node.completed ? 'Completed' : node.available ? 'Available' : 'Locked'}
                     </span>

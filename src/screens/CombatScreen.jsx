@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
 import Card from '../components/Card.jsx';
+import EquipmentPanel from '../components/EquipmentPanel.jsx';
 import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorPanel from '../components/SurvivorPanel.jsx';
 import { createCombatState, endTurn, playCard } from '../game/combatLogic.js';
 
-export default function CombatScreen({ monster, runBonus, onVictory, onDefeat }) {
+export default function CombatScreen({
+  monster,
+  runBonus,
+  craftedEquipment,
+  onVictory,
+  onDefeat
+}) {
   const [combat, setCombat] = useState(() => createCombatState(monster, runBonus));
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
@@ -23,6 +30,8 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
 
   return (
     <section className="combat-screen">
+      <EquipmentPanel craftedEquipment={craftedEquipment} />
+
       <div className="combatants">
         <SurvivorPanel survivor={combat.survivor} />
         <MonsterPanel monster={combat.monster} intent={currentIntent} />
@@ -43,6 +52,12 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
       {runBonus?.firstCombatStrength > 0 && (
         <div className="run-bonus-note" role="status">
           Oath of Vengeance active: +1 strength for first combat.
+        </div>
+      )}
+
+      {runBonus?.equipmentEffects?.firstTurnDrawBonus > 0 && (
+        <div className="run-bonus-note" role="status">
+          Rawhide Hood active: +1 card drawn on turn 1.
         </div>
       )}
 

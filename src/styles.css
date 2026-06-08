@@ -77,6 +77,138 @@ button:hover:not(:disabled) {
   line-height: 1.6;
 }
 
+.settlement-screen {
+  max-width: 960px;
+  margin: 2rem auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.settlement-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  border: 1px solid #494136;
+  padding: 1.5rem;
+  background: #171512;
+}
+
+.settlement-header p {
+  margin-bottom: 0;
+  color: #aaa094;
+}
+
+.settlement-header button {
+  flex: 0 0 auto;
+  padding: 0.85rem 1.25rem;
+}
+
+.settlement-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 2rem;
+}
+
+.settlement-stats div {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #37322b;
+  padding: 1rem;
+  background: #12110f;
+  text-align: center;
+}
+
+.settlement-stats strong {
+  color: #d8c7a5;
+  font-family: Georgia, serif;
+  font-size: 1.6rem;
+}
+
+.settlement-stats span {
+  margin-top: 0.25rem;
+  color: #81786d;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.upgrade-section {
+  margin-top: 1.75rem;
+}
+
+.upgrade-section > h3 {
+  color: #bda982;
+  font-family: Georgia, serif;
+}
+
+.upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.upgrade-card {
+  display: flex;
+  min-height: 155px;
+  flex-direction: column;
+  border: 1px solid #4b4339;
+  padding: 1rem;
+  background: #191714;
+}
+
+.upgrade-card.unlocked {
+  border-color: #637452;
+  background: #171d14;
+}
+
+.upgrade-card.unaffordable {
+  opacity: 0.58;
+}
+
+.upgrade-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.upgrade-heading h3 {
+  margin: 0;
+  color: #ded0b4;
+  font-family: Georgia, serif;
+}
+
+.upgrade-heading span {
+  color: #b58a4a;
+  font-size: 0.7rem;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.upgrade-card p {
+  flex: 1;
+  color: #aaa094;
+  line-height: 1.5;
+}
+
+.upgrade-card button {
+  align-self: start;
+}
+
+.upgrade-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.empty-upgrades {
+  color: #a99a82;
+}
+
 .graveyard-section {
   margin: 1.5rem 0;
   border-top: 1px solid #494136;
@@ -317,6 +449,23 @@ button:hover:not(:disabled) {
   margin-top: 1.5rem;
 }
 
+.reward-screen,
+.crafting-screen {
+  max-width: 1000px;
+  margin: 2rem auto;
+}
+
+.reward-screen {
+  text-align: center;
+}
+
+.reward-screen h2,
+.crafting-screen h2 {
+  margin-top: 0;
+  color: #ded0b4;
+  font-family: Georgia, serif;
+}
+
 .screen-header {
   display: flex;
   align-items: end;
@@ -325,12 +474,146 @@ button:hover:not(:disabled) {
   margin-bottom: 1.5rem;
 }
 
-.resource-summary {
+.resource-summary,
+.inventory-panel,
+.equipment-panel {
   border: 1px solid #494136;
   padding: 0.65rem 0.9rem;
   background: #171512;
   color: #c9b58f;
   font-size: 0.9rem;
+}
+
+.status-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.inventory-panel h3,
+.equipment-panel h3 {
+  margin: 0 0 0.6rem;
+  color: #bcae96;
+  font-family: Georgia, serif;
+}
+
+.inventory-panel p,
+.equipment-panel p {
+  margin: 0;
+}
+
+.inventory-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.inventory-grid span {
+  border: 1px solid #36312b;
+  padding: 0.35rem 0.5rem;
+  background: #201d19;
+}
+
+.inventory-grid strong {
+  margin-left: 0.25rem;
+  color: #e8bd69;
+}
+
+.combat-screen > .equipment-panel {
+  margin-bottom: 1rem;
+}
+
+.reward-screen > .inventory-panel {
+  margin: 1.5rem auto;
+  text-align: left;
+}
+
+.reward-grid,
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.9rem;
+}
+
+.reward-card,
+.recipe-card {
+  min-height: 220px;
+  border: 1px solid #51483d;
+  padding: 1.1rem;
+  background: linear-gradient(#221e19, #151310);
+  color: #c9c1b5;
+  text-align: left;
+}
+
+.reward-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.reward-card:hover {
+  border-color: #c08b42;
+  transform: translateY(-2px);
+}
+
+.reward-card.strange,
+.reward-card.rare {
+  border-color: #765c89;
+  background: linear-gradient(#29202d, #171219);
+}
+
+.reward-card h3,
+.recipe-card h3 {
+  margin: 0.55rem 0;
+  color: #ded0b4;
+  font-family: Georgia, serif;
+}
+
+.reward-card p,
+.recipe-card p {
+  line-height: 1.5;
+}
+
+.reward-card strong {
+  margin-top: auto;
+  color: #e8bd69;
+}
+
+.reward-type,
+.recipe-slot {
+  color: #9c8260;
+  font-size: 0.7rem;
+  font-weight: bold;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.recipe-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.recipe-card.craftable {
+  border-color: #8a693c;
+}
+
+.recipe-card button,
+.crafted-label {
+  margin-top: auto;
+}
+
+.recipe-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.recipe-cost {
+  color: #b99a68;
+  font-weight: bold;
+}
+
+.crafted-label {
+  color: #8fb07e;
 }
 
 .hunt-map {
@@ -419,6 +702,15 @@ button:hover:not(:disabled) {
 }
 
 @media (max-width: 600px) {
+  .settlement-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settlement-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .combatants {
     grid-template-columns: 1fr;
   }
@@ -426,6 +718,10 @@ button:hover:not(:disabled) {
   .screen-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .status-panels {
+    grid-template-columns: 1fr;
   }
 
   .combat-controls {

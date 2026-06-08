@@ -1,4 +1,17 @@
 import React from 'react';
+import { resources } from '../data/resources.js';
+
+function formatResources(inventory) {
+  if (Array.isArray(inventory)) {
+    return inventory.length ? inventory.join(', ') : 'None';
+  }
+
+  const entries = Object.entries(inventory || {})
+    .filter(([, amount]) => amount > 0)
+    .map(([resourceId, amount]) => `${resources[resourceId]?.name || resourceId} x${amount}`);
+
+  return entries.length ? entries.join(', ') : 'None';
+}
 
 export default function RunSummaryScreen({ summary, onContinue }) {
   const isDeath = summary?.outcome === 'death';
@@ -38,8 +51,14 @@ export default function RunSummaryScreen({ summary, onContinue }) {
         </div>
         <div>
           <dt>Spoils</dt>
-          <dd>{summary?.resources?.length ? summary.resources.join(', ') : 'None'}</dd>
+          <dd>{formatResources(summary?.resources)}</dd>
         </div>
+        {summary?.bossResource && (
+          <div>
+            <dt>Nemesis Trophy</dt>
+            <dd>{summary.bossResource}</dd>
+          </div>
+        )}
       </dl>
       <button type="button" onClick={onContinue}>
         {isDeath ? 'Choose Grave Legacy' : 'Return to Settlement'}
