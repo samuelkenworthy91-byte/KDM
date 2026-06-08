@@ -4,8 +4,8 @@ import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorPanel from '../components/SurvivorPanel.jsx';
 import { createCombatState, endTurn, playCard } from '../game/combatLogic.js';
 
-export default function CombatScreen() {
-  const [combat, setCombat] = useState(createCombatState);
+export default function CombatScreen({ monster, onVictory, onDefeat }) {
+  const [combat, setCombat] = useState(() => createCombatState(monster));
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
 
@@ -22,7 +22,13 @@ export default function CombatScreen() {
 
       {combatOver && (
         <div className={`combat-result ${combat.status}`} role="status">
-          {combat.status === 'won' ? 'Victory!' : 'Defeat'}
+          <div>{combat.status === 'won' ? 'Victory!' : 'Defeat'}</div>
+          <button
+            type="button"
+            onClick={combat.status === 'won' ? onVictory : onDefeat}
+          >
+            {combat.status === 'won' ? 'Continue Hunt' : 'Return to Settlement'}
+          </button>
         </div>
       )}
 

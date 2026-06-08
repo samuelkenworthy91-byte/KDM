@@ -27,7 +27,7 @@ function getCombatStatus(survivor, monster) {
   return 'playing';
 }
 
-export function createCombatState() {
+export function createCombatState(monsterOverride = monsters.whiteLion) {
   const survivor = {
     name: 'Survivor',
     hp: 30,
@@ -35,7 +35,12 @@ export function createCombatState() {
     block: 0,
     energy: ENERGY_PER_TURN
   };
-  const monster = { ...monsters.whiteLion, intents: [...monsters.whiteLion.intents] };
+  const monster = {
+    ...monsterOverride,
+    block: monsterOverride.block ?? 0,
+    maxHp: monsterOverride.maxHp ?? monsterOverride.hp,
+    intents: monsterOverride.intents.map(intent => ({ ...intent }))
+  };
   const initialDraw = drawCards(shuffleCards(starterDeck), [], [], HAND_SIZE);
 
   return {
