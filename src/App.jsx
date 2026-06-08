@@ -1,34 +1,73 @@
 import React, { useState } from 'react';
 import MapScreen from './components/MapScreen.jsx';
 import { starterDeck } from './data/cards.js';
+import { equipment } from './data/equipment.js';
 import { graveLegacies } from './data/graveLegacies.js';
 import { monsters } from './data/monsters.js';
-import { resources as resourceData } from './data/resources.js';
+import { emptyInventory, resources as resourceData } from './data/resources.js';
 import {
   applyEventChoice,
-  applyResourceGain,
+  addResourceToInventory,
   getRandomEvent,
   getResourceNodeChoices
 } from './game/eventLogic.js';
+import { craftEquipment, getEquipmentEffects } from './game/craftingLogic.js';
 import { completeMapNode, generateMap } from './game/mapLogic.js';
 import { hasUpgrade, loadSettlement, saveSettlement } from './game/saveLogic.js';
 import CombatScreen from './screens/CombatScreen.jsx';
+import CraftingScreen from './screens/CraftingScreen.jsx';
 import EventScreen from './screens/EventScreen.jsx';
 import GraveLegacyScreen from './screens/GraveLegacyScreen.jsx';
+import LootRewardScreen from './screens/LootRewardScreen.jsx';
 import ResourceScreen from './screens/ResourceScreen.jsx';
 import RunSummaryScreen from './screens/RunSummaryScreen.jsx';
 import SettlementScreen from './screens/SettlementScreen.jsx';
+import SurvivorProgressScreen, {
+  survivorProgressRewards
+} from './screens/SurvivorProgressScreen.jsx';
 
 const RANDOM_MONSTER_PARTS = ['bone', 'hide', 'sinew', 'organ', 'claw', 'strangeEye'];
+const DEFAULT_LOOT = ['bone', 'hide', 'sinew', 'organ', 'claw'];
+const RARE_LOOT = ['strangeEye', 'horn', 'ichor'];
 
-const NON_COMBAT_COPY = {
-  craft: {
-    eyebrow: 'Makeshift Forge',
-    title: 'Crafting',
-    text: 'The crafting station is not yet fully stocked. You tend your gear and prepare to move on.',
-    action: 'Finish Crafting'
-  }
-};
+function createSurvivor(name) {
+  return {
+    id: `survivor-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: name?.trim() || 'Nameless Survivor',
+    maxHp: 30,
+    strength: 0,
+    personalDeckAdditions: [],
+    fightingArts: [],
+    craftedEquipment: [],
+    completedRuns: 0,
+    kills: 0,
+    scars: [],
+    isAlive: true
+  };
+}
+
+function createIdleRunState() {
+  return {
+    hp: 30,
+    maxHp: 30,
+    survival: 0,
+    survivor: createSurvivor('Nameless Survivor'),
+    inventory: { ...emptyInventory },
+    resources: [],
+    deck: starterDeck.map(card => card.id),
+    personalDeckAdditions: [],
+    craftedEquipment: [],
+    equipmentEffects: {},
+    nextCombatModifiers: {},
+    fightingArts: [],
+    kills: 0
+  };
+}
+
+function chooseUnique(ids, count) {
+  const shuffled = [...new Set(ids)].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 function createScaledMonster(type) {
   const base = monsters.whiteLion;
@@ -61,19 +100,12 @@ export default function App() {
   const [settlement, setSettlement] = useState(() => loadSettlement());
   const [runMap, setRunMap] = useState([]);
   const [currentNode, setCurrentNode] = useState(null);
-  const [runState, setRunState] = useState({
-    hp: 30,
-    maxHp: 30,
-    survival: 0,
-    survivor: { name: 'Nameless Survivor' },
-    inventory: {},
-    resources: [],
-    deck: starterDeck.map(card => card.id),
-    nextCombatModifiers: {},
-    fightingArts: []
-  });
+  const [runState, setRunState] = useState(createIdleRunState);
   const [activeEvent, setActiveEvent] = useState(null);
   const [resourceChoices, setResourceChoices] = useState([]);
+  const [lootChoices, setLootChoices] = useState([]);
+  const [pendingLoot, setPendingLoot] = useState(null);
+  const [progressChoices, setProgressChoices] = useState([]);
   const [runBonus, setRunBonus] = useState({});
   const [combatBonus, setCombatBonus] = useState({});
   const [runSummary, setRunSummary] = useState(null);
@@ -112,33 +144,41 @@ export default function App() {
     });
   };
 
-  const startRun = survivorName => {
+  const startRunWithSurvivor = survivor => {
     if (screen !== 'settlement') {
       return;
     }
 
     const nextRunBonus = settlement.nextRunBonus || {};
+    const equipmentEffects = getEquipmentEffects(survivor.craftedEquipment, equipment);
+    const baseMaxHp = survivor.maxHp || 30;
     let startingState = {
-      hp: 30,
-      maxHp: 30,
+      hp: baseMaxHp,
+      maxHp: baseMaxHp,
       survival: 0,
-      survivor: { name: survivorName || 'Nameless Survivor' },
-      inventory: {},
+      survivor: { ...survivor },
+      inventory: { ...emptyInventory },
       resources: [],
-      deck: starterDeck.map(card => card.id),
+      deck: [
+        ...starterDeck.map(card => card.id),
+        ...(survivor.personalDeckAdditions || [])
+      ],
+      personalDeckAdditions: [...(survivor.personalDeckAdditions || [])],
+      craftedEquipment: [...(survivor.craftedEquipment || [])],
+      equipmentEffects,
       nextCombatModifiers: {},
-      fightingArts: [],
-      temporaryFightingArts: []
+      fightingArts: [...(survivor.fightingArts || [])],
+      kills: survivor.kills || 0
     };
     const activeRunBonus = {};
 
     if (nextRunBonus.randomMonsterPart) {
       const partId = RANDOM_MONSTER_PARTS[Math.floor(Math.random() * RANDOM_MONSTER_PARTS.length)];
-      startingState = applyResourceGain(startingState, partId, 1);
+      startingState = addResourceToInventory(startingState, partId, 1);
     }
 
     if (hasUpgrade(settlement, 'boneSmith')) {
-      startingState = applyResourceGain(startingState, 'bone', 1);
+      startingState = addResourceToInventory(startingState, 'bone', 1);
     }
 
     if (nextRunBonus.extraMaxHp) {
@@ -166,10 +206,26 @@ export default function App() {
     setRunState(startingState);
     setActiveEvent(null);
     setResourceChoices([]);
+    setLootChoices([]);
+    setPendingLoot(null);
+    setProgressChoices([]);
     setRunBonus(activeRunBonus);
     setCombatBonus({});
     setRunSummary(null);
     setScreen('map');
+  };
+
+  const startNewSurvivor = survivorName => {
+    startRunWithSurvivor(createSurvivor(survivorName));
+  };
+
+  const startLivingSurvivor = survivorId => {
+    const survivor = settlement.livingSurvivors.find(
+      item => item.id === survivorId && item.isAlive
+    );
+    if (survivor) {
+      startRunWithSurvivor(survivor);
+    }
   };
 
   const selectNode = node => {
@@ -181,14 +237,28 @@ export default function App() {
 
     if (['fight', 'elite', 'boss'].includes(node.type)) {
       const firstCombatStrength = runBonus.firstCombatStrength || 0;
+      const monster = createScaledMonster(node.type);
+      const archiveBonus =
+        hasUpgrade(settlement, 'monsterArchive') &&
+        (settlement.monsterKnowledge[monster.baseId] || 0) > 0
+          ? 1
+          : 0;
       const nextCombatBonus = {
-        extraMaxHp: runBonus.extraMaxHp || 0,
+        maxHp: runState.maxHp,
+        strength: runState.survivor?.strength || 0,
         firstCombatStrength,
         survivorName: runState.survivor?.name || 'Nameless Survivor',
         currentHp: runState.hp,
         deck: runState.deck,
         nextCombatModifiers: runState.nextCombatModifiers || {},
-        fightingArts: runState.fightingArts || []
+        fightingArts: runState.fightingArts || [],
+        craftedEquipment: runState.craftedEquipment || [],
+        equipmentEffects: {
+          ...(runState.equipmentEffects || {}),
+          attackDamageBonus:
+            (runState.equipmentEffects?.attackDamageBonus || 0) + archiveBonus
+        },
+        scars: runState.survivor?.scars || []
       };
 
       setCombatBonus(nextCombatBonus);
@@ -229,7 +299,7 @@ export default function App() {
 
   const chooseResource = offer => {
     setRunState(current => {
-      const withResource = applyResourceGain(current, offer.resourceId, 1);
+      const withResource = addResourceToInventory(current, offer.resourceId, 1);
       return {
         ...withResource,
         hp: Math.max(0, withResource.hp - (offer.hpCost || 0))
@@ -248,32 +318,78 @@ export default function App() {
     id => resourceData[id]?.name || id
   );
 
+  const finishVictory = completedRunState => {
+    const completedMap = completeMapNode(runMap, currentNode.id);
+    const progress = getRunProgress(completedMap, currentNode);
+    const summary = {
+      outcome: 'victory',
+      survivorName: completedRunState.survivor.name,
+      nodesCompleted: progress.nodesCompleted,
+      rowReached: progress.rowReached,
+      settlementMemoryEarned: 3,
+      resources: completedRunState.resources.map(id => resourceData[id]?.name || id),
+      survivor: completedRunState.survivor
+    };
+
+    setRunMap(completedMap);
+    setRunSummary(summary);
+    updateSettlement(current => ({
+      ...current,
+      settlementMemory: current.settlementMemory + summary.settlementMemoryEarned,
+      victoriousRuns: current.victoriousRuns + 1
+    }));
+    setScreen('runSummary');
+  };
+
   const handleCombatVictory = combat => {
-    setRunState(current => ({ ...current, hp: combat.survivor.hp }));
+    const monster = createScaledMonster(currentNode?.type);
+    const updatedRunState = {
+      ...runState,
+      hp: combat.survivor.hp,
+      kills: (runState.kills || 0) + 1
+    };
+    const baseLoot = monster.loot?.length ? monster.loot : DEFAULT_LOOT;
+    let choices = chooseUnique(baseLoot, 3);
+
+    if (currentNode?.type === 'elite') {
+      choices = chooseUnique([...baseLoot, ...RARE_LOOT], 3);
+      if (!choices.some(id => RARE_LOOT.includes(id))) {
+        choices[choices.length - 1] = chooseUnique(RARE_LOOT, 1)[0];
+      }
+    }
 
     if (currentNode?.type === 'boss') {
-      const completedMap = completeMapNode(runMap, currentNode.id);
-      const progress = getRunProgress(completedMap, currentNode);
-      const summary = {
-        outcome: 'victory',
-        survivorName: runState.survivor?.name || 'Nameless Survivor',
-        nodesCompleted: progress.nodesCompleted,
-        rowReached: progress.rowReached,
-        settlementMemoryEarned: 3,
-        resources: resourceNames
-      };
+      choices = chooseUnique([...baseLoot, ...RARE_LOOT], 3);
+      if (!choices.some(id => RARE_LOOT.includes(id))) {
+        choices[choices.length - 1] = chooseUnique(RARE_LOOT, 1)[0];
+      }
+    }
 
-      setRunMap(completedMap);
-      setRunSummary(summary);
-      updateSettlement(current => ({
-        ...current,
-        settlementMemory: current.settlementMemory + summary.settlementMemoryEarned,
-        victoriousRuns: current.victoriousRuns + 1
-      }));
-      setScreen('runSummary');
+    updateSettlement(current => ({
+      ...current,
+      monsterKnowledge: {
+        ...current.monsterKnowledge,
+        [monster.baseId]: (current.monsterKnowledge[monster.baseId] || 0) + 1
+      }
+    }));
+    setRunState(updatedRunState);
+    setLootChoices(choices);
+    setPendingLoot({ isBoss: currentNode?.type === 'boss' });
+    setScreen('lootReward');
+  };
+
+  const chooseLootReward = resourceId => {
+    const updatedRunState = addResourceToInventory(runState, resourceId, 1);
+    setRunState(updatedRunState);
+    setLootChoices([]);
+
+    if (pendingLoot?.isBoss) {
+      setPendingLoot(null);
+      finishVictory(updatedRunState);
       return;
     }
 
+    setPendingLoot(null);
     completeCurrentNode();
   };
 
@@ -296,36 +412,44 @@ export default function App() {
       nodesCompleted: progress.nodesCompleted,
       rowReached: progress.rowReached,
       settlementMemoryEarned: 1 + progressReward + eliteReward + graveReward,
-      resources: resourceNames
+      resources: resourceNames,
+      survivor: {
+        ...runState.survivor,
+        completedRuns: runState.survivor?.completedRuns || 0,
+        kills: runState.kills || 0,
+        craftedEquipment: runState.craftedEquipment || [],
+        fightingArts: runState.fightingArts || [],
+        personalDeckAdditions: runState.personalDeckAdditions || []
+      }
     };
 
     setRunSummary(summary);
     updateSettlement(current => ({
       ...current,
       settlementMemory: current.settlementMemory + summary.settlementMemoryEarned,
-      deadSurvivors: current.deadSurvivors + 1
+      deadSurvivors: current.deadSurvivors + 1,
+      livingSurvivors: current.livingSurvivors.filter(
+        survivor => survivor.id !== runState.survivor?.id
+      )
     }));
     setScreen('runSummary');
+  };
+
+  const handleCraft = item => {
+    setRunState(current => craftEquipment(item, current, equipment).runState);
   };
 
   const returnToSettlement = () => {
     setRunMap([]);
     setCurrentNode(null);
-    setRunState({
-      hp: 30,
-      maxHp: 30,
-      survival: 0,
-      survivor: { name: 'Nameless Survivor' },
-      inventory: {},
-      resources: [],
-      deck: starterDeck.map(card => card.id),
-      nextCombatModifiers: {},
-      fightingArts: []
-    });
+    setRunState(createIdleRunState());
     setRunBonus({});
     setCombatBonus({});
     setActiveEvent(null);
     setResourceChoices([]);
+    setLootChoices([]);
+    setPendingLoot(null);
+    setProgressChoices([]);
     setRunSummary(null);
     setScreen('settlement');
   };
@@ -336,6 +460,66 @@ export default function App() {
       return;
     }
 
+    const hasPersonalCurse = (runState.personalDeckAdditions || []).some(id =>
+      ['panic', 'shame', 'curse'].includes(id)
+    );
+    setProgressChoices(
+      chooseUnique(
+        survivorProgressRewards.filter(
+          reward =>
+            (reward.type !== 'removeCurse' || hasPersonalCurse) &&
+            (reward.type !== 'fightingArt' ||
+              !runState.fightingArts?.includes(reward.value)) &&
+            (reward.type !== 'card' ||
+              !runState.personalDeckAdditions?.includes(reward.value)) &&
+            (reward.type !== 'scar' ||
+              !runState.survivor?.scars?.includes(reward.value))
+        ),
+        3
+      )
+    );
+    setScreen('survivorProgress');
+  };
+
+  const chooseSurvivorProgress = reward => {
+    let survivor = {
+      ...runState.survivor,
+      maxHp: runState.survivor?.maxHp || 30,
+      personalDeckAdditions: [...(runState.personalDeckAdditions || [])],
+      fightingArts: [...(runState.fightingArts || [])],
+      craftedEquipment: [...(runState.craftedEquipment || [])],
+      completedRuns: (runState.survivor?.completedRuns || 0) + 1,
+      kills: runState.kills || 0,
+      scars: [...(runState.survivor?.scars || [])],
+      isAlive: true
+    };
+
+    if (reward.type === 'fightingArt') {
+      survivor.fightingArts = [...new Set([...survivor.fightingArts, reward.value])];
+    } else if (reward.type === 'card') {
+      survivor.personalDeckAdditions.push(reward.value);
+    } else if (reward.type === 'maxHp') {
+      survivor.maxHp += reward.value;
+    } else if (reward.type === 'strength') {
+      survivor.strength = (survivor.strength || 0) + reward.value;
+    } else if (reward.type === 'scar') {
+      survivor.scars = [...new Set([...survivor.scars, reward.value])];
+    } else if (reward.type === 'removeCurse') {
+      const curseIndex = survivor.personalDeckAdditions.findIndex(id =>
+        ['panic', 'shame', 'curse'].includes(id)
+      );
+      if (curseIndex >= 0) {
+        survivor.personalDeckAdditions.splice(curseIndex, 1);
+      }
+    }
+
+    updateSettlement(current => {
+      const otherSurvivors = current.livingSurvivors.filter(item => item.id !== survivor.id);
+      return {
+        ...current,
+        livingSurvivors: [...otherSurvivors, survivor]
+      };
+    });
     returnToSettlement();
   };
 
@@ -347,6 +531,9 @@ export default function App() {
     const killedById = runSummary.killedById || 'unknownMonster';
     const graveEntry = {
       survivorName: runSummary.survivorName,
+      completedRuns: runSummary.survivor?.completedRuns || 0,
+      equipmentCount: runSummary.survivor?.craftedEquipment?.length || 0,
+      fightingArts: runSummary.survivor?.fightingArts || [],
       killedBy: runSummary.killedBy || 'unknownMonster',
       nodesCompleted: runSummary.nodesCompleted,
       rowReached: runSummary.rowReached,
@@ -383,21 +570,6 @@ export default function App() {
     returnToSettlement();
   };
 
-  const renderPlaceholder = type => {
-    const copy = NON_COMBAT_COPY[type];
-
-    return (
-      <section className="placeholder-screen">
-        <p className="eyebrow">{copy.eyebrow}</p>
-        <h2>{copy.title}</h2>
-        <p>{copy.text}</p>
-        <button type="button" onClick={completeCurrentNode}>
-          {copy.action}
-        </button>
-      </section>
-    );
-  };
-
   const renderScreen = () => {
     switch (screen) {
       case 'settlement':
@@ -405,7 +577,8 @@ export default function App() {
           <SettlementScreen
             settlement={settlement}
             onBuyUpgrade={buyUpgrade}
-            onStartRun={startRun}
+            onStartRun={startNewSurvivor}
+            onStartLivingSurvivor={startLivingSurvivor}
           />
         );
       case 'map':
@@ -416,6 +589,9 @@ export default function App() {
             resources={resourceNames}
             survivorName={runState.survivor?.name}
             fightingArts={runState.fightingArts}
+            inventory={runState.inventory}
+            craftedEquipment={runState.craftedEquipment}
+            revealAllNodeTypes={hasUpgrade(settlement, 'scoutPath')}
           />
         );
       case 'combat':
@@ -433,6 +609,7 @@ export default function App() {
           <ResourceScreen
             key={currentNode?.id}
             choices={resourceChoices}
+            inventory={runState.inventory}
             onChoose={chooseResource}
             onContinue={completeCurrentNode}
           />
@@ -448,7 +625,22 @@ export default function App() {
           />
         ) : null;
       case 'craft':
-        return renderPlaceholder(screen);
+        return (
+          <CraftingScreen
+            runState={runState}
+            onCraft={handleCraft}
+            onContinue={completeCurrentNode}
+          />
+        );
+      case 'lootReward':
+        return (
+          <LootRewardScreen
+            choices={lootChoices}
+            inventory={runState.inventory}
+            isBoss={pendingLoot?.isBoss}
+            onChoose={chooseLootReward}
+          />
+        );
       case 'runSummary':
         return (
           <RunSummaryScreen summary={runSummary} onContinue={continueFromSummary} />
@@ -456,6 +648,14 @@ export default function App() {
       case 'graveLegacy':
         return (
           <GraveLegacyScreen summary={runSummary} onChooseLegacy={chooseGraveLegacy} />
+        );
+      case 'survivorProgress':
+        return (
+          <SurvivorProgressScreen
+            survivor={runState.survivor}
+            choices={progressChoices}
+            onChoose={chooseSurvivorProgress}
+          />
         );
       default:
         return <div>Unknown Screen</div>;

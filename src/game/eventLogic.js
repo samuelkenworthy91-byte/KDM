@@ -19,7 +19,7 @@ export function getRandomEvent() {
   return randomItem(events);
 }
 
-export function applyResourceGain(runState, resourceId, amount = 1) {
+export function addResourceToInventory(runState, resourceId, amount = 1) {
   if (!resources[resourceId] || amount <= 0) {
     return runState;
   }
@@ -36,6 +36,8 @@ export function applyResourceGain(runState, resourceId, amount = 1) {
     ]
   };
 }
+
+export const applyResourceGain = addResourceToInventory;
 
 export function addCardToRunDeck(runState, cardId) {
   if (!cards[cardId]) {
@@ -99,7 +101,7 @@ function applyEffects(effects, runState, settlement) {
   const todoEffects = [];
 
   if (effects.resource) {
-    nextRunState = applyResourceGain(
+    nextRunState = addResourceToInventory(
       nextRunState,
       effects.resource.id,
       effects.resource.amount
@@ -116,7 +118,7 @@ function applyEffects(effects, runState, settlement) {
       const resourceId = effects.randomResource.ids
         ? randomItem(effects.randomResource.ids)
         : getRandomResourceByType(effects.randomResource.type);
-      nextRunState = applyResourceGain(nextRunState, resourceId, 1);
+      nextRunState = addResourceToInventory(nextRunState, resourceId, 1);
       appliedEffects.push({
         type: 'resource',
         text: `+1 ${resources[resourceId]?.name || resourceId}`

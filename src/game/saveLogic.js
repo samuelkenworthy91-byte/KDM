@@ -7,7 +7,9 @@ export const defaultSettlement = {
   monsterKnowledge: {},
   unlockedUpgrades: [],
   nextRunBonus: {},
-  graveHistory: []
+  graveHistory: [],
+  livingSurvivors: [],
+  settlementStash: {}
 };
 
 export function normalizeSettlement(data = {}) {
@@ -28,7 +30,23 @@ export function normalizeSettlement(data = {}) {
     monsterKnowledge: { ...(data.monsterKnowledge || {}) },
     unlockedUpgrades: [...new Set(unlockedUpgrades)],
     nextRunBonus: { ...(data.nextRunBonus || {}) },
-    graveHistory: Array.isArray(data.graveHistory) ? data.graveHistory : []
+    graveHistory: Array.isArray(data.graveHistory) ? data.graveHistory : [],
+    livingSurvivors: Array.isArray(data.livingSurvivors)
+      ? data.livingSurvivors.map(survivor => ({
+          id: survivor.id,
+          name: survivor.name || 'Nameless Survivor',
+          maxHp: Number(survivor.maxHp) || 30,
+          strength: Number(survivor.strength) || 0,
+          personalDeckAdditions: survivor.personalDeckAdditions || [],
+          fightingArts: survivor.fightingArts || [],
+          craftedEquipment: survivor.craftedEquipment || [],
+          completedRuns: Number(survivor.completedRuns) || 0,
+          kills: Number(survivor.kills) || 0,
+          scars: survivor.scars || [],
+          isAlive: survivor.isAlive !== false
+        }))
+      : [],
+    settlementStash: { ...(data.settlementStash || {}) }
   };
 }
 

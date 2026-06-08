@@ -12,6 +12,7 @@ export default function MonsterPanel({ monster, intent }) {
       <h2>{monster.name}</h2>
       <p>HP: {monster.hp} / {monster.maxHp}</p>
       <p>Block: {monster.block}</p>
+      {(monster.bleed || 0) > 0 && <p>Bleed: {monster.bleed}</p>}
       <p className="intent">Next Intent: {intentText}</p>
     </div>
   );

@@ -42,7 +42,7 @@ export default function RunSummaryScreen({ summary, onContinue }) {
         </div>
       </dl>
       <button type="button" onClick={onContinue}>
-        {isDeath ? 'Choose Grave Legacy' : 'Return to Settlement'}
+        {isDeath ? 'Choose Grave Legacy' : 'Choose Survivor Progress'}
       </button>
     </section>
   );

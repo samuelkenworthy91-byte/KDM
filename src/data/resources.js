@@ -49,6 +49,20 @@ export const resources = {
     rarity: 'uncommon',
     description: 'A jagged tooth that can be used in brutal crafting.'
   },
+  fur: {
+    id: 'fur',
+    name: 'Fur',
+    type: 'basic',
+    rarity: 'common',
+    description: 'Matted monster fur that still holds warmth.'
+  },
+  horn: {
+    id: 'horn',
+    name: 'Horn',
+    type: 'rare',
+    rarity: 'rare',
+    description: 'A heavy horn fit for a brutal weapon head.'
+  },
   strangeEye: {
     id: 'strangeEye',
     name: 'Strange Eye',
@@ -64,3 +78,10 @@ export const resources = {
     description: 'Black fluid that moves against gravity.'
   }
 };
+
+export const resourceIds = Object.keys(resources);
+
+export const emptyInventory = resourceIds.reduce(
+  (inventory, resourceId) => ({ ...inventory, [resourceId]: 0 }),
+  {}
+);

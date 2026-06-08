@@ -28,19 +28,25 @@ function getCombatStatus(survivor, monster) {
 }
 
 export function createCombatState(monsterOverride = monsters.whiteLion, runBonus = {}) {
-  const extraMaxHp = runBonus.extraMaxHp || 0;
-  const strength = runBonus.firstCombatStrength || 0;
-  const maxHp = 30 + extraMaxHp;
+  const strength = (runBonus.strength || 0) + (runBonus.firstCombatStrength || 0);
+  const maxHp = runBonus.maxHp || 30;
   const modifiers = runBonus.nextCombatModifiers || {};
   const fightingArts = runBonus.fightingArts || [];
+  const equipmentEffects = runBonus.equipmentEffects || {};
+  const scarBlock = runBonus.scars?.includes('scarTissue') ? 2 : 0;
   const energy = Math.max(0, ENERGY_PER_TURN - (modifiers.firstTurnEnergyPenalty || 0));
   const survivor = {
     name: runBonus.survivorName || 'Nameless Survivor',
     hp: Math.min(runBonus.currentHp ?? maxHp, maxHp),
     maxHp,
-    block: (modifiers.startBlock || 0) + (fightingArts.includes('tumble') ? 3 : 0),
+    block:
+      (modifiers.startBlock || 0) +
+      (equipmentEffects.startBlock || 0) +
+      (fightingArts.includes('tumble') ? 3 : 0) +
+      scarBlock,
     energy,
-    strength
+    strength,
+    evasion: 0
   };
   const monsterBonusHp = modifiers.monsterBonusHp || 0;
   const monster = {
@@ -57,7 +63,12 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     .map(cardId => cards[cardId])
     .filter(Boolean);
   const combatDeck = runDeck.length ? runDeck : starterDeck;
-  const initialDraw = drawCards(shuffleCards(combatDeck), [], [], HAND_SIZE);
+  const initialDraw = drawCards(
+    shuffleCards(combatDeck),
+    [],
+    [],
+    HAND_SIZE + (equipmentEffects.firstTurnDrawBonus || 0)
+  );
 
   return {
     survivor,
@@ -67,6 +78,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     discardPile: initialDraw.discard,
     intentIndex: 0,
     fightingArts,
+    attackDamageBonus: equipmentEffects.attackDamageBonus || 0,
     status: getCombatStatus(survivor, monster)
   };
 }
@@ -96,10 +108,14 @@ export function playCard(cardIndex, state) {
       case 'damage': {
         const berserkerBonus =
           state.fightingArts?.includes('berserker') && survivor.block === 0 ? 1 : 0;
-        monster = applyDamage(
-          monster,
-          effect.amount + (survivor.strength || 0) + berserkerBonus
-        );
+        const damage =
+          effect.amount +
+          (survivor.strength || 0) +
+          berserkerBonus +
+          (state.attackDamageBonus || 0);
+        for (let hit = 0; hit < (effect.hits || 1); hit += 1) {
+          monster = applyDamage(monster, damage);
+        }
         if (state.fightingArts?.includes('clawStyle')) {
           monster = { ...monster, bleed: (monster.bleed || 0) + 1 };
         }
@@ -124,13 +140,21 @@ export function playCard(cardIndex, state) {
         discardPile = result.discard;
         break;
       }
+      case 'evasion':
+        survivor = { ...survivor, evasion: (survivor.evasion || 0) + effect.amount };
+        break;
       default:
         break;
     }
   });
 
   const playedCardIndex = hand.indexOf(card);
-  const discarded = discardCard(hand, discardPile, playedCardIndex);
+  const discarded = card.exhaust
+    ? {
+        hand: hand.filter((_, index) => index !== playedCardIndex),
+        discard: discardPile
+      }
+    : discardCard(hand, discardPile, playedCardIndex);
 
   return {
     ...state,
@@ -149,7 +173,11 @@ export function applyMonsterIntent(monster, state) {
   let nextMonster = { ...monster, block: 0 };
 
   if (intent.type === 'attack') {
-    survivor = applyDamage(survivor, intent.damage);
+    if ((survivor.evasion || 0) > 0) {
+      survivor.evasion -= 1;
+    } else {
+      survivor = applyDamage(survivor, intent.damage);
+    }
   } else if (intent.type === 'block') {
     nextMonster.block += intent.block;
   }
@@ -159,6 +187,7 @@ export function applyMonsterIntent(monster, state) {
   }
 
   survivor.block = 0;
+  survivor.evasion = 0;
 
   return {
     ...state,

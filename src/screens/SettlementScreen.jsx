@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { equipment } from '../data/equipment.js';
+import { fightingArts } from '../data/fightingArts.js';
 import { graveLegacies } from '../data/graveLegacies.js';
 import { settlementUpgrades } from '../data/settlementUpgrades.js';
 import { hasUpgrade } from '../game/saveLogic.js';
@@ -23,7 +25,12 @@ function UpgradeCard({ settlement, upgrade, onBuyUpgrade }) {
   );
 }
 
-export default function SettlementScreen({ settlement, onBuyUpgrade, onStartRun }) {
+export default function SettlementScreen({
+  settlement,
+  onBuyUpgrade,
+  onStartRun,
+  onStartLivingSurvivor
+}) {
   const [survivorName, setSurvivorName] = useState('');
   const unlocked = settlementUpgrades.filter(upgrade => hasUpgrade(settlement, upgrade.id));
   const available = settlementUpgrades.filter(upgrade => !hasUpgrade(settlement, upgrade.id));
@@ -64,6 +71,34 @@ export default function SettlementScreen({ settlement, onBuyUpgrade, onStartRun 
       </div>
 
       <section className="upgrade-section">
+        <h3>Living Survivors</h3>
+        <div className="survivor-grid">
+          {settlement.livingSurvivors.length ? settlement.livingSurvivors.map(survivor => (
+            <article key={survivor.id} className="survivor-card">
+              <h3>{survivor.name}</h3>
+              <p>Max HP: {survivor.maxHp}</p>
+              <p>Completed runs: {survivor.completedRuns}</p>
+              <p>
+                Equipment:{' '}
+                {survivor.craftedEquipment.length
+                  ? survivor.craftedEquipment.map(id => equipment[id]?.name || id).join(', ')
+                  : 'None'}
+              </p>
+              <p>
+                Fighting arts:{' '}
+                {survivor.fightingArts.length
+                  ? survivor.fightingArts.map(id => fightingArts[id]?.name || id).join(', ')
+                  : 'None'}
+              </p>
+              <button type="button" onClick={() => onStartLivingSurvivor(survivor.id)}>
+                Start Run
+              </button>
+            </article>
+          )) : <p className="empty-upgrades">No living veterans. Name a new survivor.</p>}
+        </div>
+      </section>
+
+      <section className="upgrade-section">
         <h3>Unlocked Upgrades</h3>
         <div className="upgrade-grid">
           {unlocked.length
@@ -94,12 +129,28 @@ export default function SettlementScreen({ settlement, onBuyUpgrade, onStartRun 
                 <strong>{grave.survivorName || 'Nameless Survivor'}</strong> killed by{' '}
                 {grave.killedBy || 'unknownMonster'} |{' '}
                 {graveLegacies[grave.chosenLegacyId]?.name || grave.chosenLegacyId} | Nodes completed:{' '}
-                {grave.nodesCompleted ?? 0}
+                {grave.nodesCompleted ?? 0} | Lost equipment: {grave.equipmentCount ?? 0} |
+                Completed runs: {grave.completedRuns ?? 0} | Fighting arts:{' '}
+                {grave.fightingArts?.length
+                  ? grave.fightingArts.map(id => fightingArts[id]?.name || id).join(', ')
+                  : 'None'}
               </li>
             ))}
           </ul>
         ) : <p>No graves yet. The settlement waits.</p>}
       </section>
+
+      {Object.values(settlement.settlementStash).some(amount => amount > 0) && (
+        <section className="graveyard-section">
+          <h3>Settlement Stash</h3>
+          <p>
+            {Object.entries(settlement.settlementStash)
+              .filter(([, amount]) => amount > 0)
+              .map(([id, amount]) => `${id} x${amount}`)
+              .join(', ')}
+          </p>
+        </section>
+      )}
     </section>
   );
 }

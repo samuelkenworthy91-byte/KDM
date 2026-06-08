@@ -60,6 +60,65 @@ export const cards = {
     description: 'Unplayable. Something followed you home.',
     unplayable: true,
     effects: []
+  },
+  hack: {
+    id: 'hack',
+    name: 'Hack',
+    type: 'attack',
+    cost: 1,
+    description: 'Deal 5 damage.',
+    effects: [{ type: 'damage', amount: 5 }]
+  },
+  clawStrike: {
+    id: 'clawStrike',
+    name: 'Claw Strike',
+    type: 'attack',
+    cost: 1,
+    description: 'Deal 6 damage.',
+    effects: [{ type: 'damage', amount: 6 }]
+  },
+  slipAway: {
+    id: 'slipAway',
+    name: 'Slip Away',
+    type: 'skill',
+    cost: 0,
+    description: 'Gain 1 evasion. Exhaust.',
+    exhaust: true,
+    effects: [{ type: 'evasion', amount: 1 }]
+  },
+  strangeGlimpse: {
+    id: 'strangeGlimpse',
+    name: 'Strange Glimpse',
+    type: 'skill',
+    cost: 0,
+    description: 'Draw 2 cards. Exhaust.',
+    exhaust: true,
+    effects: [{ type: 'draw', amount: 2 }]
+  },
+  boneFlurry: {
+    id: 'boneFlurry',
+    name: 'Bone Flurry',
+    type: 'attack',
+    cost: 2,
+    description: 'Deal 3 damage three times.',
+    effects: [{ type: 'damage', amount: 3, hits: 3 }]
+  },
+  veteranStrike: {
+    id: 'veteranStrike',
+    name: 'Veteran Strike',
+    type: 'attack',
+    cost: 1,
+    description: 'Deal 6 damage.',
+    effects: [{ type: 'damage', amount: 6 }]
+  },
+  focusBreath: {
+    id: 'focusBreath',
+    name: 'Focus Breath',
+    type: 'skill',
+    cost: 0,
+    description: 'Draw 1 card. Exhaust.',
+    exhaust: true,
+    effects: [{ type: 'draw', amount: 1 }]
   }
 };
 

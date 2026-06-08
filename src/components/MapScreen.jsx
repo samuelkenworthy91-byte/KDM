@@ -1,4 +1,6 @@
 import React from 'react';
+import InventoryPanel from './InventoryPanel.jsx';
+import { equipment } from '../data/equipment.js';
 import { fightingArts as fightingArtData } from '../data/fightingArts.js';
 
 const NODE_LABELS = {
@@ -15,7 +17,10 @@ export default function MapScreen({
   onSelectNode,
   resources,
   survivorName,
-  fightingArts = []
+  fightingArts = [],
+  inventory,
+  craftedEquipment = [],
+  revealAllNodeTypes = false
 }) {
   return (
     <section className="map-screen">
@@ -38,6 +43,18 @@ export default function MapScreen({
         </div>
       )}
 
+      <div className="status-panels">
+        <InventoryPanel inventory={inventory} />
+        <div className="inventory-panel">
+          <strong>Equipment</strong>
+          <div>
+            {craftedEquipment.length
+              ? craftedEquipment.map(id => <span key={id}>{equipment[id]?.name || id}</span>)
+              : <span>None</span>}
+          </div>
+        </div>
+      </div>
+
       <div className="hunt-map" aria-label="Hunt map">
         {map.map((row, rowIndex) => (
           <div key={rowIndex} className="map-row">
@@ -51,6 +68,7 @@ export default function MapScreen({
                   : node.available
                     ? 'available'
                     : 'locked';
+                const showType = revealAllNodeTypes || node.available || node.completed;
 
                 return (
                   <button
@@ -60,7 +78,9 @@ export default function MapScreen({
                     disabled={!node.available || node.completed}
                     onClick={() => onSelectNode(node)}
                   >
-                    <span className="node-type">{NODE_LABELS[node.type]}</span>
+                    <span className="node-type">
+                      {showType ? NODE_LABELS[node.type] : 'Unknown'}
+                    </span>
                     <span className="node-state">
                       {node.completed ? 'Completed' : node.available ? 'Available' : 'Locked'}
                     </span>

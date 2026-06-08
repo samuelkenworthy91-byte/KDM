@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import InventoryPanel from '../components/InventoryPanel.jsx';
 import { resources } from '../data/resources.js';
 
-export default function ResourceScreen({ choices, onChoose, onContinue }) {
+export default function ResourceScreen({ choices, inventory, onChoose, onContinue }) {
   const [selected, setSelected] = useState(null);
 
   const choose = offer => {
@@ -13,6 +14,7 @@ export default function ResourceScreen({ choices, onChoose, onContinue }) {
     <section className="event-screen resource-screen">
       <p className="eyebrow">Scavenged Remains</p>
       <h2>Choose What You Carry</h2>
+      <InventoryPanel inventory={inventory} />
 
       {!selected ? (
         <div className="event-choice-grid">

@@ -3,6 +3,7 @@ import Card from '../components/Card.jsx';
 import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorPanel from '../components/SurvivorPanel.jsx';
 import { fightingArts } from '../data/fightingArts.js';
+import { equipment } from '../data/equipment.js';
 import { createCombatState, endTurn, playCard } from '../game/combatLogic.js';
 
 export default function CombatScreen({ monster, runBonus, onVictory, onDefeat }) {
@@ -57,6 +58,13 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
         <div className="active-passives">
           <strong>Fighting Arts:</strong>{' '}
           {runBonus.fightingArts.map(id => fightingArts[id]?.name || id).join(', ')}
+        </div>
+      )}
+
+      {!!runBonus?.craftedEquipment?.length && (
+        <div className="active-passives">
+          <strong>Equipment:</strong>{' '}
+          {runBonus.craftedEquipment.map(id => equipment[id]?.name || id).join(', ')}
         </div>
       )}
 
