@@ -17,6 +17,7 @@ export default function GraveLegacyScreen({ summary, onChooseLegacy }) {
           {summary?.nodesCompleted ?? 0}
         </p>
         <p>settlementMemory earned from this run: +{summary?.settlementMemoryEarned ?? 0}</p>
+        <p>Resources returned to settlement before burial.</p>
       </div>
 
       <div className="grave-card-grid" aria-label="Grave legacy options">

@@ -1,7 +1,10 @@
 import React from 'react';
+import { resources } from '../data/resources.js';
 
 export default function RunSummaryScreen({ summary, onContinue }) {
   const isDeath = summary?.outcome === 'death';
+  const resourceEntries = Object.entries(summary?.resources || {})
+    .filter(([, amount]) => amount > 0);
 
   return (
     <section className="summary-screen">
@@ -37,8 +40,22 @@ export default function RunSummaryScreen({ summary, onContinue }) {
           <dd>+{summary?.settlementMemoryEarned ?? 0}</dd>
         </div>
         <div>
-          <dt>Spoils</dt>
-          <dd>{summary?.resources?.length ? summary.resources.join(', ') : 'None'}</dd>
+          <dt>Elites Defeated</dt>
+          <dd>{summary?.elitesDefeated ?? 0}</dd>
+        </div>
+        <div>
+          <dt>Resources Collected This Run</dt>
+          <dd>
+            {resourceEntries.length
+              ? resourceEntries
+                  .map(([id, amount]) => `${resources[id]?.name || id} x${amount}`)
+                  .join(', ')
+              : 'None'}
+          </dd>
+        </div>
+        <div>
+          <dt>Resources Returned To Settlement</dt>
+          <dd>{resourceEntries.length ? 'All gathered resources transferred' : 'None'}</dd>
         </div>
       </dl>
       <button type="button" onClick={onContinue}>

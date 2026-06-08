@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Card from '../components/Card.jsx';
 import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorPanel from '../components/SurvivorPanel.jsx';
+import { equipment } from '../data/equipment.js';
+import { fightingArts } from '../data/fightingArts.js';
 import { createCombatState, endTurn, playCard } from '../game/combatLogic.js';
 
 export default function CombatScreen({ monster, runBonus, onVictory, onDefeat }) {
@@ -33,7 +35,7 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
           <div>{combat.status === 'won' ? 'Victory!' : 'Defeat'}</div>
           <button
             type="button"
-            onClick={combat.status === 'won' ? onVictory : handleDefeat}
+            onClick={combat.status === 'won' ? () => onVictory(combat) : handleDefeat}
           >
             {combat.status === 'won' ? 'Continue Hunt' : 'View Run Summary'}
           </button>
@@ -43,6 +45,20 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
       {runBonus?.firstCombatStrength > 0 && (
         <div className="run-bonus-note" role="status">
           Oath of Vengeance active: +1 strength for first combat.
+        </div>
+      )}
+
+      {!!runBonus?.fightingArts?.length && (
+        <div className="active-passives">
+          <strong>Fighting Arts:</strong>{' '}
+          {runBonus.fightingArts.map(id => fightingArts[id]?.name || id).join(', ')}
+        </div>
+      )}
+
+      {!!runBonus?.equippedGear?.length && (
+        <div className="active-passives">
+          <strong>Equipped Gear:</strong>{' '}
+          {runBonus.equippedGear.map(item => equipment[item.id]?.name || item.name).join(', ')}
         </div>
       )}
 

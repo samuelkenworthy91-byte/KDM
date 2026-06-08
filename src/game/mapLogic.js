@@ -1,5 +1,5 @@
 const MAP_ROWS = 5;
-const NODE_TYPES = ['fight', 'elite', 'event', 'resource', 'craft'];
+const NODE_TYPES = ['fight', 'elite', 'event', 'resource', 'workshop'];
 
 function shuffle(items) {
   const result = [...items];

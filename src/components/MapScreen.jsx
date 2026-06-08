@@ -5,7 +5,7 @@ const NODE_LABELS = {
   elite: 'Elite',
   event: 'Event',
   resource: 'Resource',
-  craft: 'Craft',
+  workshop: 'Workshop',
   boss: 'Boss'
 };
 
@@ -18,7 +18,7 @@ export default function MapScreen({ map, onSelectNode, resources }) {
           <h2>Choose Your Path</h2>
         </div>
         <div className="resource-summary">
-          Spoils: {resources.length ? resources.join(', ') : 'None'}
+          Gathered: {resources.length ? resources.join(', ') : 'None'}
         </div>
       </header>
 
