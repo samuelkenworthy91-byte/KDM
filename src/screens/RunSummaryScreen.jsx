@@ -27,6 +27,18 @@ export default function RunSummaryScreen({ summary, onContinue }) {
             <dd>{summary.killedBy}</dd>
           </div>
         )}
+        {summary?.quarryName && (
+          <div>
+            <dt>Quarry</dt>
+            <dd>{summary.quarryName} Level {summary.quarryLevel}</dd>
+          </div>
+        )}
+        {isDeath && (
+          <div>
+            <dt>Population</dt>
+            <dd>Population -1</dd>
+          </div>
+        )}
         <div>
           <dt>Nodes Completed</dt>
           <dd>{summary?.nodesCompleted ?? 0}</dd>
@@ -58,6 +70,11 @@ export default function RunSummaryScreen({ summary, onContinue }) {
           <dd>{resourceEntries.length ? 'All gathered resources transferred' : 'None'}</dd>
         </div>
       </dl>
+      {!!summary?.unlockMessages?.length && (
+        <div className="unlock-messages">
+          {summary.unlockMessages.map(message => <p key={message}>{message}</p>)}
+        </div>
+      )}
       <button type="button" onClick={onContinue}>
         {isDeath ? 'Choose Grave Legacy' : 'Return to Settlement'}
       </button>

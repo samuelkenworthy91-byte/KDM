@@ -49,7 +49,8 @@ button:hover:not(:disabled) {
 
 .placeholder-screen,
 .victory-screen,
-.summary-screen {
+.summary-screen,
+.event-screen {
   max-width: 620px;
   margin: 4rem auto;
   border: 1px solid #494136;
@@ -61,6 +62,7 @@ button:hover:not(:disabled) {
 .placeholder-screen h2,
 .victory-screen h2,
 .summary-screen h2,
+.event-screen h2,
 .grave-legacy-screen h2,
 .screen-header h2 {
   margin-top: 0;
@@ -115,6 +117,79 @@ button:hover:not(:disabled) {
   padding: 0.7rem;
   background: #11100e;
   color: #e0e0e0;
+}
+
+.survivor-name-form select,
+.creation-form input {
+  border: 1px solid #494136;
+  padding: 0.7rem;
+  background: #11100e;
+  color: #e0e0e0;
+}
+
+.creation-form {
+  display: grid;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.settlement-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+
+.settlement-tabs button.active {
+  border-color: #d09b48;
+  background: #5a3c1c;
+}
+
+.level-buttons {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.recipe-group + .recipe-group {
+  margin-top: 1.5rem;
+  border-top: 1px solid #3f3a33;
+  padding-top: 1rem;
+}
+
+.history-list {
+  padding-left: 1.25rem;
+}
+
+.history-list li {
+  margin: 0.7rem 0;
+  line-height: 1.45;
+}
+
+.unlock-messages {
+  margin: 1rem 0;
+  border: 1px solid #7d6b3d;
+  padding: 0.75rem;
+  background: #282315;
+  color: #e8bd69;
+}
+
+.monster-passives {
+  margin-top: 0.75rem;
+  border-top: 1px solid #494136;
+  padding-top: 0.65rem;
+  color: #c9b58f;
+}
+
+.monster-passives p {
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
+.reward-note {
+  border: 1px solid #7d6b3d;
+  padding: 0.65rem;
+  background: #282315;
+  color: #e8bd69;
 }
 
 .settlement-stats,
@@ -463,6 +538,20 @@ button:hover:not(:disabled) {
   padding-right: 1.5rem;
 }
 
+.card-type,
+.card-source {
+  display: block;
+  color: #9d917f;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card-source {
+  margin-top: 0.75rem;
+  color: #b58a4a;
+}
+
 .card-cost {
   position: absolute;
   top: 0.75rem;
@@ -600,6 +689,29 @@ button:hover:not(:disabled) {
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.event-choices {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.event-outcome {
+  margin-top: 1.25rem;
+  border-top: 1px solid #494136;
+  padding-top: 1rem;
+  text-align: left;
+}
+
+.event-outcome li {
+  margin: 0.45rem 0;
+  color: #c9b58f;
+}
+
+.event-outcome button {
+  display: block;
+  margin: 1rem auto 0;
 }
 
 @media (max-width: 600px) {

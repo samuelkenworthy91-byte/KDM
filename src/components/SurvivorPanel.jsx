@@ -9,6 +9,8 @@ export default function SurvivorPanel({ survivor }) {
       <p>Block: {survivor.block}</p>
       <p>Strength: {survivor.strength || 0}</p>
       <p>Energy: {survivor.energy} / 3</p>
+      <p>Survival: {survivor.survival || 0}</p>
+      {(survivor.bleed || 0) > 0 && <p>Bleeding: {survivor.bleed}</p>}
     </div>
   );
 }

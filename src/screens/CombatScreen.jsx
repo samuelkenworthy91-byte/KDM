@@ -8,7 +8,7 @@ import { createCombatState, endTurn, playCard } from '../game/combatLogic.js';
 
 export default function CombatScreen({ monster, runBonus, onVictory, onDefeat }) {
   const [combat, setCombat] = useState(() => createCombatState(monster, runBonus));
-  const currentIntent = combat.monster.intents[combat.intentIndex];
+  const currentIntent = combat.currentIntent;
   const combatOver = combat.status !== 'playing';
 
   const handlePlayCard = cardIndex => {

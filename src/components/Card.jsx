@@ -11,7 +11,9 @@ export default function Card({ card, disabled, onPlay }) {
     >
       <div className="card-cost">{card.unplayable ? '-' : card.cost}</div>
       <h3>{card.name}</h3>
+      <div className="card-type">{card.type}</div>
       <p>{card.description}</p>
+      {card.source && <small className="card-source">Source: {card.source}</small>}
     </button>
   );
 }

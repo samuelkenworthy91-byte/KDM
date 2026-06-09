@@ -1,5 +1,5 @@
 const MAP_ROWS = 5;
-const NODE_TYPES = ['fight', 'elite', 'event', 'resource', 'workshop'];
+const NODE_TYPES = ['fight', 'elite', 'event', 'resource', 'workshopEvent'];
 
 function shuffle(items) {
   const result = [...items];
@@ -44,19 +44,22 @@ function connectRows(currentRow, nextRow) {
   });
 }
 
-export function generateMap() {
+export function generateMap(options = {}) {
   const rowSizes = Array.from(
     { length: MAP_ROWS - 1 },
     () => Math.floor(Math.random() * 2) + 2
   );
   const nodeCount = rowSizes.reduce((total, size) => total + size, 0);
+  const baseTypes = options.moreResources
+    ? [...NODE_TYPES, 'resource', 'resource']
+    : NODE_TYPES;
   const typePool = shuffle([
-    ...NODE_TYPES,
+    ...baseTypes,
     ...Array.from(
-      { length: nodeCount - NODE_TYPES.length },
+      { length: Math.max(0, nodeCount - baseTypes.length) },
       () => NODE_TYPES[Math.floor(Math.random() * NODE_TYPES.length)]
     )
-  ]);
+  ]).slice(0, nodeCount);
 
   let typeIndex = 0;
   const map = rowSizes.map((size, row) =>

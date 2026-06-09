@@ -5,11 +5,11 @@ const NODE_LABELS = {
   elite: 'Elite',
   event: 'Event',
   resource: 'Resource',
-  workshop: 'Workshop',
+  workshopEvent: 'Workshop',
   boss: 'Boss'
 };
 
-export default function MapScreen({ map, onSelectNode, resources }) {
+export default function MapScreen({ map, onSelectNode, resources, revealAll }) {
   return (
     <section className="map-screen">
       <header className="screen-header">
@@ -36,6 +36,11 @@ export default function MapScreen({ map, onSelectNode, resources }) {
                     ? 'available'
                     : 'locked';
 
+                const nodeLabel =
+                  revealAll || node.available || node.completed
+                    ? NODE_LABELS[node.type]
+                    : 'Unknown';
+
                 return (
                   <button
                     key={node.id}
@@ -44,7 +49,7 @@ export default function MapScreen({ map, onSelectNode, resources }) {
                     disabled={!node.available || node.completed}
                     onClick={() => onSelectNode(node)}
                   >
-                    <span className="node-type">{NODE_LABELS[node.type]}</span>
+                    <span className="node-type">{nodeLabel}</span>
                     <span className="node-state">
                       {node.completed ? 'Completed' : node.available ? 'Available' : 'Locked'}
                     </span>

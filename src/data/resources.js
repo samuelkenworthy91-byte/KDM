@@ -9,7 +9,9 @@ export const resources = {
   fur: { id: 'fur', name: 'Fur', type: 'basic' },
   horn: { id: 'horn', name: 'Horn', type: 'rare' },
   ichor: { id: 'ichor', name: 'Ichor', type: 'rare' },
-  monsterTooth: { id: 'monsterTooth', name: 'Monster Tooth', type: 'monster' }
+  monsterTooth: { id: 'monsterTooth', name: 'Monster Tooth', type: 'monster' },
+  phoenixAsh: { id: 'phoenixAsh', name: 'Phoenix Ash', type: 'rare' },
+  timeBone: { id: 'timeBone', name: 'Time Bone', type: 'rare' }
 };
 
 export const resourceIds = Object.keys(resources);
