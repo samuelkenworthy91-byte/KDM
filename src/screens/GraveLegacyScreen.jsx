@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { graveLegacyList } from '../data/graveLegacies.js';
 
-export default function GraveLegacyScreen({ summary, onChooseLegacy }) {
-  const [selectedLegacyId, setSelectedLegacyId] = useState(graveLegacyList[0].id);
-  const selectedLegacy = graveLegacyList.find(legacy => legacy.id === selectedLegacyId);
+export default function GraveLegacyScreen({ summary, showAllChoices, onChooseLegacy }) {
+  const visibleLegacies = showAllChoices ? graveLegacyList : graveLegacyList.slice(0, 4);
+  const [selectedLegacyId, setSelectedLegacyId] = useState(visibleLegacies[0].id);
+  const selectedLegacy = visibleLegacies.find(legacy => legacy.id === selectedLegacyId);
 
   return (
     <section className="grave-legacy-screen">
@@ -20,7 +21,7 @@ export default function GraveLegacyScreen({ summary, onChooseLegacy }) {
       </div>
 
       <div className="grave-card-grid" aria-label="Grave legacy options">
-        {graveLegacyList.map(legacy => (
+        {visibleLegacies.map(legacy => (
           <button
             key={legacy.id}
             type="button"

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import Card from '../components/Card.jsx';
 import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorPanel from '../components/SurvivorPanel.jsx';
-import { createCombatState, endTurn, playCard } from '../game/combatLogic.js';
+import { createCombatState, endTurn, playCard, useSurvivalAction } from '../game/combatLogic.js';
 
-export default function CombatScreen({ monster, runBonus, onVictory, onDefeat }) {
+export default function CombatScreen({ monster, runBonus, equippedGear, hasMonsterBane, onVictory, onDefeat }) {
   const [combat, setCombat] = useState(() => createCombatState(monster, runBonus));
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
@@ -12,6 +12,13 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
   const handlePlayCard = cardIndex => {
     setCombat(current => playCard(cardIndex, current));
   };
+
+  const survivalActions = [
+    { id: 'dodge', name: 'Dodge', cost: 1, effect: '+5 block' },
+    { id: 'counter', name: 'Counter', cost: 1, effect: 'Deal 3 damage' },
+    { id: 'focus', name: 'Focus', cost: 1, effect: 'Draw 1 card' },
+    { id: 'endure', name: 'Endure', cost: 2, effect: 'Remove 1 Panic' }
+  ];
 
   const handleDefeat = () => {
     onDefeat({
@@ -25,7 +32,7 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
     <section className="combat-screen">
       <div className="combatants">
         <SurvivorPanel survivor={combat.survivor} />
-        <MonsterPanel monster={combat.monster} intent={currentIntent} />
+        <MonsterPanel monster={combat.monster} intent={currentIntent} hasMonsterBane={hasMonsterBane} />
       </div>
 
       {combatOver && (
@@ -33,7 +40,9 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
           <div>{combat.status === 'won' ? 'Victory!' : 'Defeat'}</div>
           <button
             type="button"
-            onClick={combat.status === 'won' ? onVictory : handleDefeat}
+            onClick={combat.status === 'won'
+              ? () => onVictory({ survivor: combat.survivor })
+              : handleDefeat}
           >
             {combat.status === 'won' ? 'Continue Hunt' : 'View Run Summary'}
           </button>
@@ -45,10 +54,49 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
           Oath of Vengeance active: +1 strength for first combat.
         </div>
       )}
+      {[
+        ...(runBonus?.survivor?.injuries || []),
+        ...(runBonus?.survivor?.scars || []),
+        ...(runBonus?.survivor?.disorders || [])
+      ].length > 0 && (
+        <div className="run-bonus-note" role="status">
+          Survivor conditions are active in this combat.
+        </div>
+      )}
+
+      <section className="survival-command-bar">
+        <div>
+          <strong>Survival Actions</strong>
+          <span>{combat.survivor.survival} / {combat.survivor.maxSurvival}</span>
+        </div>
+        <div className="survival-action-buttons">
+          {survivalActions.map(action => {
+            const used = combat.survivalActionsUsed.includes(action.id);
+            const insufficient = combat.survivor.survival < action.cost;
+            const reason = used
+              ? 'Already used this turn'
+              : insufficient
+                ? 'Not enough survival'
+                : `${action.name}: ${action.effect}`;
+            return (
+              <button
+                type="button"
+                key={action.id}
+                disabled={combatOver || used || insufficient}
+                title={reason}
+                onClick={() => setCombat(current => useSurvivalAction(action.id, current))}
+              >
+                {action.name} ({action.cost})
+              </button>
+            );
+          })}
+        </div>
+        {combat.survivalFeedback && <p role="status">{combat.survivalFeedback}</p>}
+      </section>
 
       <div className="combat-controls">
         <div>
-          Draw: {combat.drawPile.length} | Discard: {combat.discardPile.length}
+          Draw: {combat.drawPile.length} | Discard: {combat.discardPile.length} | Exhaust: {combat.exhaustPile.length}
         </div>
         <button type="button" onClick={() => setCombat(endTurn)} disabled={combatOver}>
           End Turn
@@ -68,6 +116,18 @@ export default function CombatScreen({ monster, runBonus, onVictory, onDefeat })
           </button>
         )}
       </div>
+
+      <details className="combat-deck-list">
+        <summary>Deck ({combat.runDeck.length} cards)</summary>
+        {equippedGear?.length > 0 && <p>Equipped gear: {equippedGear.join(', ')}</p>}
+        <ul>
+          {combat.runDeck.map((card, index) => (
+            <li key={`${card.id}-${index}`}>
+              {card.name}{card.source ? ` - ${card.source}` : ''}
+            </li>
+          ))}
+        </ul>
+      </details>
 
       <div className="hand" aria-label="Card hand">
         {combat.hand.map((card, index) => {
