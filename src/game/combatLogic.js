@@ -1,6 +1,6 @@
-import { starterDeck } from '../data/cards.js';
+import { cards } from '../data/cards.js';
 import { monsters } from '../data/monsters.js';
-import { discardCard, drawCards, shuffleCards } from './deckLogic.js';
+import { buildRunDeck, drawCards, shuffleCards } from './deckLogic.js';
 
 const HAND_SIZE = 5;
 const ENERGY_PER_TURN = 3;
@@ -29,22 +29,43 @@ function getCombatStatus(survivor, monster) {
 
 export function createCombatState(monsterOverride = monsters.whiteLion, runBonus = {}) {
   const extraMaxHp = runBonus.extraMaxHp || 0;
-  const strength = runBonus.firstCombatStrength || 0;
+  const arts = runBonus.survivor?.fightingArts || [];
+  const strength = (runBonus.firstCombatStrength || 0) + (runBonus.survivor?.strength || 0);
+  const handSize = HAND_SIZE + (runBonus.extraFirstTurnDraw || 0) + (arts.includes('focusedBreath') ? 1 : 0);
+  const maxHp = runBonus.survivor?.maxHp || 30;
+  const currentHp = runBonus.survivor?.hp ?? maxHp;
   const survivor = {
-    name: 'Survivor',
-    hp: 30 + extraMaxHp,
-    maxHp: 30 + extraMaxHp,
-    block: 0,
-    energy: ENERGY_PER_TURN,
+    name: runBonus.survivor?.name || 'Survivor',
+    hp: Math.min(currentHp + extraMaxHp, maxHp + extraMaxHp),
+    maxHp: maxHp + extraMaxHp,
+    block:
+      (runBonus.startingBlock || 0) +
+      (arts.includes('tumble') ? 3 : 0) +
+      (arts.includes('scarTissue') ? 2 : 0),
+    energy: Math.max(0, ENERGY_PER_TURN - (runBonus.firstTurnEnergyPenalty || 0)),
     strength
   };
   const monster = {
     ...monsterOverride,
+    hp: Math.max(
+      1,
+      (monsterOverride.hp || monsterOverride.maxHp) +
+        (runBonus.monsterBonusHp || 0) -
+        (runBonus.monsterStartsWounded || 0)
+    ),
     block: monsterOverride.block ?? 0,
-    maxHp: monsterOverride.maxHp ?? monsterOverride.hp,
-    intents: monsterOverride.intents.map(intent => ({ ...intent }))
+    maxHp: (monsterOverride.maxHp ?? monsterOverride.hp) + (runBonus.monsterBonusHp || 0),
+    intents: monsterOverride.intents.map(intent => ({
+      ...intent,
+      effects: intent.effects.map(effect =>
+        effect.type === 'dealDamage'
+          ? { ...effect, amount: effect.amount + (runBonus.monsterEnrage || 0) }
+          : { ...effect }
+      )
+    }))
   };
-  const initialDraw = drawCards(shuffleCards(starterDeck), [], [], HAND_SIZE);
+  const runDeck = runBonus.runDeck || buildRunDeck({ survivor: runBonus.survivor });
+  const initialDraw = drawCards(shuffleCards(runDeck), [], [], handSize);
 
   return {
     survivor,
@@ -52,7 +73,13 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     drawPile: initialDraw.deck,
     hand: initialDraw.hand,
     discardPile: initialDraw.discard,
+    exhaustPile: [],
+    runDeck,
     intentIndex: 0,
+    fightingArts: arts,
+    firstAttackBonus: runBonus.firstAttackBonus || 0,
+    firstAttackPlayed: false,
+    nextAttackBonus: 0,
     status: 'playing'
   };
 }
@@ -76,11 +103,29 @@ export function playCard(cardIndex, state) {
   let drawPile = state.drawPile;
   let hand = state.hand;
   let discardPile = state.discardPile;
+  let exhaustPile = state.exhaustPile || [];
+  let nextAttackBonus = state.nextAttackBonus || 0;
+  const isAttack = card.type === 'attack';
 
   card.effects.forEach(effect => {
     switch (effect.type) {
       case 'damage':
-        monster = applyDamage(monster, effect.amount + (survivor.strength || 0));
+        monster = applyDamage(
+          monster,
+          effect.amount +
+          (survivor.strength || 0) +
+          (state.fightingArts?.includes('clawStyle') ? 1 : 0) +
+          (state.fightingArts?.includes('berserker') && survivor.block === 0 ? 1 : 0) +
+          (!state.firstAttackPlayed ? state.firstAttackBonus || 0 : 0) +
+          (isAttack ? nextAttackBonus : 0)
+        );
+        if (isAttack) nextAttackBonus = 0;
+        break;
+      case 'removeMonsterBlock':
+        monster = { ...monster, block: Math.max(0, monster.block - effect.amount) };
+        break;
+      case 'removeAllMonsterBlock':
+        monster = { ...monster, block: 0 };
         break;
       case 'block':
         survivor = { ...survivor, block: survivor.block + effect.amount };
@@ -101,21 +146,47 @@ export function playCard(cardIndex, state) {
         discardPile = result.discard;
         break;
       }
+      case 'discard': {
+        const discardIndex = hand.findIndex(item => item !== card);
+        if (discardIndex >= 0) {
+          discardPile = [...discardPile, hand[discardIndex]];
+          hand = hand.filter((_, index) => index !== discardIndex);
+        }
+        break;
+      }
+      case 'addPanic':
+        discardPile = [...discardPile, ...Array(effect.amount).fill(cards.panic)];
+        break;
+      case 'removePanic': {
+        const panicIndex = discardPile.findIndex(item => item.id === 'panic');
+        if (panicIndex >= 0) discardPile = discardPile.filter((_, index) => index !== panicIndex);
+        break;
+      }
+      case 'nextAttackBonus':
+        nextAttackBonus += effect.amount;
+        break;
       default:
         break;
     }
   });
 
   const playedCardIndex = hand.indexOf(card);
-  const discarded = discardCard(hand, discardPile, playedCardIndex);
+  const nextHand = playedCardIndex >= 0
+    ? hand.filter((_, index) => index !== playedCardIndex)
+    : hand;
+  if (card.exhaust) exhaustPile = [...exhaustPile, card];
+  else discardPile = [...discardPile, card];
 
   return {
     ...state,
     survivor,
     monster,
     drawPile,
-    hand: discarded.hand,
-    discardPile: discarded.discard,
+    hand: nextHand,
+    discardPile,
+    exhaustPile,
+    nextAttackBonus,
+    firstAttackPlayed: state.firstAttackPlayed || card.type === 'attack',
     status: getCombatStatus(survivor, monster)
   };
 }
@@ -124,12 +195,21 @@ export function applyMonsterIntent(monster, state) {
   const intent = monster.intents[state.intentIndex];
   let survivor = { ...state.survivor };
   let nextMonster = { ...monster, block: 0 };
+  let drawPile = state.drawPile;
+  let discardPile = state.discardPile;
+  const playerHadNoBlock = survivor.block === 0;
 
-  if (intent.type === 'attack') {
-    survivor = applyDamage(survivor, intent.damage);
-  } else if (intent.type === 'block') {
-    nextMonster.block += intent.block;
-  }
+  intent.effects.forEach(effect => {
+    if (effect.type === 'dealDamage') {
+      survivor = applyDamage(survivor, effect.amount);
+    } else if (effect.type === 'bonusIfPlayerNoBlock' && playerHadNoBlock) {
+      survivor = applyDamage(survivor, effect.amount);
+    } else if (effect.type === 'gainBlock') {
+      nextMonster.block += effect.amount;
+    } else if (effect.type === 'addPanic') {
+      discardPile = [...discardPile, ...Array(effect.amount).fill(cards.panic)];
+    }
+  });
 
   survivor.block = 0;
 
@@ -137,6 +217,8 @@ export function applyMonsterIntent(monster, state) {
     ...state,
     survivor,
     monster: nextMonster,
+    drawPile,
+    discardPile,
     status: getCombatStatus(survivor, nextMonster)
   };
 }

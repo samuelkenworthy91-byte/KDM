@@ -5,7 +5,7 @@ const NODE_LABELS = {
   elite: 'Elite',
   event: 'Event',
   resource: 'Resource',
-  craft: 'Craft',
+  rest: 'Rest Stop',
   boss: 'Boss'
 };
 

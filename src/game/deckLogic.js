@@ -1,3 +1,51 @@
+import { cards, starterCardIds } from '../data/cards.js';
+import { equipment } from '../data/equipment.js';
+
+export function getStarterDeck() {
+  return getCardsFromIds(starterCardIds);
+}
+
+export function getCardsFromIds(cardIds = [], source) {
+  return cardIds.flatMap(cardId => {
+    const card = cards[cardId];
+    if (!card) {
+      console.warn(`Skipping missing card id "${cardId}"${source ? ` from ${source}` : ''}.`);
+      return [];
+    }
+    return [{ ...card, ...(source ? { source } : {}) }];
+  });
+}
+
+export function getEquipmentCardIds(equippedGear = []) {
+  return equippedGear.flatMap(itemOrId => {
+    const item = typeof itemOrId === 'string'
+      ? equipment[itemOrId]
+      : itemOrId?.equipmentId
+        ? equipment[itemOrId.equipmentId]
+        : itemOrId;
+    return item?.cardPackage || [];
+  });
+}
+
+export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] }) {
+  const personalIds = survivor?.personalDeckAdditions || survivor?.deckAdditions || [];
+  const deck = [
+    ...getStarterDeck(),
+    ...getCardsFromIds(personalIds, survivor?.name ? `${survivor.name}'s progress` : 'Survivor progress')
+  ];
+
+  equippedGear.forEach(itemOrId => {
+    const item = typeof itemOrId === 'string'
+      ? equipment[itemOrId]
+      : itemOrId?.equipmentId
+        ? equipment[itemOrId.equipmentId]
+        : itemOrId;
+    if (item) deck.push(...getCardsFromIds(item.cardPackage, item.name));
+  });
+
+  return [...deck, ...getCardsFromIds(temporaryCards, 'Hunt event')];
+}
+
 export function shuffleCards(cards) {
   const shuffled = [...cards];
 

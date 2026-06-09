@@ -12,6 +12,12 @@ export default function RunSummaryScreen({ summary, onContinue }) {
           <dt>Outcome</dt>
           <dd>{isDeath ? 'Survivor death' : 'Victory'}</dd>
         </div>
+        {summary?.recoveredHp > 0 && (
+          <div>
+            <dt>Between-Hunt Recovery</dt>
+            <dd>Recovered {summary.recoveredHp} HP between hunts.</dd>
+          </div>
+        )}
         {summary?.survivorName && (
           <div>
             <dt>Survivor</dt>
@@ -22,6 +28,18 @@ export default function RunSummaryScreen({ summary, onContinue }) {
           <div>
             <dt>Killed By</dt>
             <dd>{summary.killedBy}</dd>
+          </div>
+        )}
+        {isDeath && (
+          <div>
+            <dt>Population</dt>
+            <dd>Population -1</dd>
+          </div>
+        )}
+        {summary?.quarryName && (
+          <div>
+            <dt>Quarry</dt>
+            <dd>{summary.quarryName} Level {summary.quarryLevel}</dd>
           </div>
         )}
         <div>
@@ -41,6 +59,7 @@ export default function RunSummaryScreen({ summary, onContinue }) {
           <dd>{summary?.resources?.length ? summary.resources.join(', ') : 'None'}</dd>
         </div>
       </dl>
+      {summary?.discoveryMessage && <p className="unlock-message">{summary.discoveryMessage}</p>}
       <button type="button" onClick={onContinue}>
         {isDeath ? 'Choose Grave Legacy' : 'Return to Settlement'}
       </button>

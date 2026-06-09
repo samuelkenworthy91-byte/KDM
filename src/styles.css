@@ -38,6 +38,460 @@ button:hover:not(:disabled) {
   background-color: #50361d;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.title-screen {
+  padding: 3rem 0;
+}
+
+.title-copy {
+  margin-bottom: 2.5rem;
+  text-align: center;
+}
+
+.title-copy h1 {
+  margin: 0.25rem 0;
+  color: #ded0b4;
+  font-family: Georgia, serif;
+  font-size: clamp(2.2rem, 7vw, 4.5rem);
+}
+
+.title-copy > p:last-child {
+  color: #a69c8d;
+  font-size: 1.1rem;
+}
+
+.save-slot-grid,
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.save-slot-card,
+.item-card {
+  border: 1px solid #494136;
+  padding: 1.25rem;
+  background: #171512;
+}
+
+.save-slot-card h2,
+.item-card h4 {
+  margin-top: 0.25rem;
+  color: #ded0b4;
+  font-family: Georgia, serif;
+}
+
+.slot-details {
+  margin: 1rem 0;
+}
+
+.slot-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #302c27;
+  padding: 0.45rem 0;
+}
+
+.slot-details dt {
+  color: #958b7c;
+}
+
+.slot-details dd {
+  margin: 0;
+  text-align: right;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.danger-button {
+  border-color: #743d3d;
+  background: #3a2020;
+}
+
+.secondary-button {
+  border-color: #575047;
+  background: #25211d;
+}
+
+.create-settlement-screen {
+  max-width: 520px;
+  margin: 4rem auto;
+  border: 1px solid #494136;
+  padding: 2rem;
+  background: #171512;
+}
+
+.create-settlement-screen h2 {
+  color: #ded0b4;
+  font-family: Georgia, serif;
+}
+
+.field-label {
+  display: block;
+  margin: 1rem 0 0.4rem;
+  color: #bcae96;
+  font-weight: bold;
+}
+
+input,
+select {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #5a5043;
+  padding: 0.7rem;
+  background: #0f0e0d;
+  color: #e0e0e0;
+}
+
+.population-roll {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.25rem 0;
+  border: 1px solid #302c27;
+  padding: 1rem;
+}
+
+.settlement-hub {
+  margin-top: 1.5rem;
+}
+
+.settlement-header {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid #494136;
+  padding: 1rem 1.25rem;
+  background: #171512;
+}
+
+.settlement-header h2 {
+  margin: 0;
+  color: #ded0b4;
+  font-family: Georgia, serif;
+}
+
+.settlement-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  color: #bcae96;
+}
+
+.settlement-tabs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.settlement-tabs button {
+  text-transform: capitalize;
+}
+
+.settlement-tabs button.active,
+.quarry-list button.selected {
+  border-color: #d09b48;
+  background: #50361d;
+}
+
+.settlement-panel {
+  border: 1px solid #494136;
+  padding: 1.25rem;
+  background: #12110f;
+}
+
+.settlement-panel h3 {
+  color: #cdbd9f;
+  font-family: Georgia, serif;
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+}
+
+.quarry-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.quarry-list button {
+  display: grid;
+  gap: 0.3rem;
+  text-align: left;
+}
+
+.quarry-list button span {
+  color: #b9b1a5;
+  font-size: 0.85rem;
+  font-weight: normal;
+}
+
+.primary-action {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.9rem;
+}
+
+.stash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.45rem;
+}
+
+.stash-grid span {
+  border: 1px solid #302c27;
+  padding: 0.5rem;
+  background: #171512;
+}
+
+.hunt-hints {
+  margin: 1rem 0;
+  border-left: 3px solid #b58a4a;
+  padding: 0.5rem 1rem;
+  background: #211a12;
+}
+
+.hunt-hints h3 {
+  margin: 0 0 0.5rem;
+}
+
+.hunt-hints p {
+  margin: 0.35rem 0;
+}
+
+.item-grid {
+  margin-bottom: 2rem;
+}
+
+.item-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-card p {
+  line-height: 1.45;
+}
+
+.item-card button {
+  margin-top: auto;
+}
+
+.item-card.built {
+  border-color: #526847;
+  background: #171d15;
+}
+
+.effect-text {
+  color: #d1b77e;
+}
+
+.muted-text {
+  color: #91897d;
+  font-size: 0.88rem;
+}
+
+.cost-list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.75rem 0 1rem;
+  font-size: 0.9rem;
+}
+
+.cost-list span {
+  padding: 0.2rem 0;
+}
+
+.cost-list .missing {
+  color: #db7770;
+}
+
+.cost-list .met {
+  color: #8fcf72;
+}
+
+.missing {
+  color: #db7770;
+}
+
+.met {
+  color: #8fcf72;
+}
+
+.recipe-group {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #302c27;
+}
+
+.summary-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-stat-grid span {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid #302c27;
+  padding: 0.8rem;
+  background: #171512;
+}
+
+.summary-stat-grid strong {
+  color: #9d917f;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.survivor-form {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 0.65rem;
+  margin-bottom: 2rem;
+}
+
+.quarry-card {
+  border: 1px solid #302c27;
+  padding: 0.75rem;
+  background: #171512;
+}
+
+.quarry-card > button {
+  width: 100%;
+}
+
+.quarry-card p {
+  margin: 0.55rem 0;
+  color: #b9b1a5;
+  font-size: 0.9rem;
+}
+
+.content-registry {
+  margin-top: 2rem;
+  border: 1px solid #494136;
+  padding: 1rem;
+  background: #171512;
+}
+
+.content-registry summary {
+  color: #cdbd9f;
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-weight: bold;
+}
+
+.registry-list {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.registry-list p,
+.history-list li {
+  border-bottom: 1px solid #302c27;
+  padding: 0.5rem 0;
+}
+
+.history-list small {
+  display: block;
+  color: #81786c;
+}
+
+.event-screen,
+.loot-reward-screen,
+.survivor-progress-screen {
+  max-width: 760px;
+  margin: 3rem auto;
+  border: 1px solid #494136;
+  padding: 2rem;
+  background: #171512;
+}
+
+.event-screen h2,
+.loot-reward-screen h2,
+.survivor-progress-screen h2 {
+  color: #ded0b4;
+  font-family: Georgia, serif;
+}
+
+.event-description,
+.event-outcome > p {
+  color: #c6bba9;
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.event-choices,
+.loot-choice-grid,
+.progress-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.5rem;
+}
+
+.event-choices button,
+.loot-choice-grid button,
+.progress-choice-grid button {
+  min-height: 110px;
+  text-align: left;
+}
+
+.loot-choice-grid button,
+.progress-choice-grid button {
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+}
+
+.loot-choice-grid span,
+.progress-choice-grid span {
+  color: #b9b1a5;
+  line-height: 1.4;
+}
+
+.event-outcome ul {
+  border: 1px solid #3d382f;
+  padding: 1rem 1rem 1rem 2rem;
+  background: #11100e;
+}
+
+.intent {
+  border-left: 3px solid #b58a4a;
+  padding: 0.65rem 0.8rem;
+  background: #211a12;
+  color: #e8bd69;
+}
+
+.intent p {
+  margin: 0.45rem 0;
+  color: #ddd0b9;
+  font-family: Georgia, serif;
+  line-height: 1.45;
+}
+
+.intent small,
+.monster-passive {
+  color: #a99f91;
+}
+
 .eyebrow {
   margin-bottom: 0.25rem;
   color: #b58a4a;
@@ -279,6 +733,12 @@ button:hover:not(:disabled) {
   padding-right: 1.5rem;
 }
 
+.card-source {
+  display: block;
+  margin-top: 0.75rem;
+  color: #b58a4a;
+}
+
 .card-cost {
   position: absolute;
   top: 0.75rem;
@@ -311,6 +771,31 @@ button:hover:not(:disabled) {
 
 .combat-result button {
   margin-top: 0.75rem;
+}
+
+.combat-deck-list,
+.gear-card-summary {
+  margin: 1rem 0;
+  border: 1px solid #494136;
+  padding: 0.8rem 1rem;
+  background: #171512;
+}
+
+.combat-deck-list summary {
+  color: #cdbd9f;
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-weight: bold;
+}
+
+.combat-deck-list ul,
+.gear-card-summary ul {
+  columns: 2;
+}
+
+.gear-card-summary > div {
+  border-top: 1px solid #302c27;
+  padding-top: 0.75rem;
 }
 
 .map-screen {
@@ -419,6 +904,31 @@ button:hover:not(:disabled) {
 }
 
 @media (max-width: 600px) {
+  .settlement-header {
+    grid-template-columns: 1fr;
+  }
+
+  .settlement-stats {
+    justify-content: flex-start;
+  }
+
+  .settlement-tabs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .survivor-form {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .population-roll {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .combatants {
     grid-template-columns: 1fr;
   }

@@ -1,18 +1,18 @@
 import React from 'react';
 
-// Displays monster information during a fight. Shows HP and the next intent.
-export default function MonsterPanel({ monster, intent }) {
-  const intentText =
-    intent.type === 'attack'
-      ? `${intent.name}: Attack for ${intent.damage}`
-      : `${intent.name}: Gain ${intent.block} block`;
-
+export default function MonsterPanel({ monster, intent, hasMonsterBane }) {
   return (
     <div className="combatant-panel monster-panel">
       <h2>{monster.name}</h2>
       <p>HP: {monster.hp} / {monster.maxHp}</p>
       <p>Block: {monster.block}</p>
-      <p className="intent">Next Intent: {intentText}</p>
+      <div className="intent">
+        <strong>{hasMonsterBane ? intent.name : 'Creature Tell'}</strong>
+        <p>{hasMonsterBane ? intent.revealedText : intent.tellText}</p>
+      </div>
+      {hasMonsterBane && monster.passiveText && (
+        <p className="monster-passive"><strong>Known behaviour:</strong> {monster.passiveText}</p>
+      )}
     </div>
   );
 }
