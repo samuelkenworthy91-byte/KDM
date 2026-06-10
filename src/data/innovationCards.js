@@ -24,7 +24,8 @@ export const BASE_INNOVATION_POOL_IDS = [
   'bloodletting',
   'graves',
   'oralTradition',
-  'sharedWarnings'
+  'sharedWarnings',
+  'trailSignals'
 ];
 
 export const innovationCards = {
@@ -76,6 +77,31 @@ export const innovationCards = {
     ['New survivors start with +1 survival.', 'Adds Monster Stories to the pool.'],
     { addsToInnovationPool: ['monsterStories'], tags: ['survival', 'bane'] }
   ),
+  trailSignals: card(
+    'trailSignals', 'Trail Signals', 'survival',
+    'The settlement learns how to send more than one survivor into the dark without losing them immediately.',
+    ['Maximum hunt party size becomes at least 2.', 'Adds Shared Burden to the innovation pool.'],
+    { addsToInnovationPool: ['sharedBurden'], tags: ['party', 'survival'] }
+  ),
+  sharedBurden: card(
+    'sharedBurden', 'Shared Burden', 'survival',
+    'Survivors learn how to carry wounds, gear, fear and food between them.',
+    ['Maximum hunt party size becomes at least 3.', 'Adds Lantern Procession to the innovation pool.'],
+    {
+      addsToInnovationPool: ['lanternProcession'],
+      unlockRequirement: { type: 'partyProgress', innovationId: 'trailSignals', lanternYear: 3, quarryLevel: 2 },
+      tags: ['party', 'survival']
+    }
+  ),
+  lanternProcession: card(
+    'lanternProcession', 'Lantern Procession', 'culture',
+    'Four lanterns moving together look almost like courage.',
+    ['Maximum hunt party size becomes 4.'],
+    {
+      unlockRequirement: { type: 'partyProgress', innovationId: 'sharedBurden', lanternYear: 6, quarryLevel: 3 },
+      tags: ['party', 'culture']
+    }
+  ),
   riteOfForgetting: card('riteOfForgetting', 'Rite of Forgetting', 'ritual', 'A lesson can be named and released into smoke.', ['Unlocks card forgetting.'], { tags: ['memory'] }),
   deathArchive: card('deathArchive', 'Death Archive', 'legacy', 'Every grave is indexed by wound and final lesson.', ['Expands grave legacy choices.'], { tags: ['legacy'] }),
   trialNames: card('trialNames', 'Trial Names', 'identity', 'A new name declares a way of facing darkness.', ['New survivors may choose a starting trait.'], { tags: ['identity'] }),
@@ -113,6 +139,14 @@ export const innovationCards = {
   shellSanctum: card('shellSanctum', 'Shell Sanctum', 'quarry craft', 'Warm shell protects the settlement core.', ['Unlocks Shell Sanctum rumour.'], { unlocksBuildings: ['shellSanctum'] }),
   prideHall: card('prideHall', 'Pride Hall', 'quarry craft', 'Royal trophies become a warning against weakness.', ['Unlocks Pride Hall rumour.'], { unlocksBuildings: ['prideHall'] }),
   judgementRite: card('judgementRite', 'Judgement Rite', 'ritual', 'Survivors name weakness before it can name them.', ['Reveals Pride King countermeasures.'])
+  ,
+  riverRites: card('riverRites', 'River Rites', 'quarry lore', 'The settlement studies tracks left by remembered water.', ['Reveals river craft and drowning countermeasures.']),
+  toxinLessons: card('toxinLessons', 'Toxin Lessons', 'quarry lore', 'Ridiculous glands become measured poisons.', ['Reveals toxin preparation themes.']),
+  sootChorus: card('sootChorus', 'Soot Chorus', 'quarry lore', 'Breath and rhythm become a shared warning.', ['Reveals smoke and song craft.'])
+  ,
+  trophyRites: card('trophyRites', 'Trophy Rites', 'ritual', 'The settlement decides which trophies belong to the living.', ['Records victories over those who come to collect.'], { tags: ['nemesis', 'memory'] }),
+  settlementLaw: card('settlementLaw', 'Settlement Law', 'law', 'Spoken rules give shape to punishments and protections.', ['The settlement remembers the verdict it survived.'], { tags: ['nemesis', 'law'] }),
+  mirrorDoctrine: card('mirrorDoctrine', 'Mirror Doctrine', 'knowledge', 'Strength is studied together with the weakness it casts behind it.', ['Records the fall of the reflective tyrant.'], { tags: ['nemesis', 'knowledge'] })
 };
 
 export const innovationCardList = Object.values(innovationCards);
@@ -122,8 +156,11 @@ export const QUARRY_INNOVATION_POOL = {
   wailingAntelope: ['organGrinder', 'antelopeLarder', 'hornCraft', 'stomachLore'],
   ashPhoenix: ['phoenixPyre', 'monsterArchive', 'ashRitual', 'timeKeeping'],
   bloatedGodling: ['stormShrine', 'thunderWorkshop'],
+  crimsonCrocodile: ['redTannery', 'riverRites'],
+  frogdog: ['wetYard', 'toxinLessons'],
   silkMatriarch: ['silkLoom', 'venomLab'],
   bloomKnight: ['duelistGarden', 'petalForge'],
+  smogSingers: ['smogKiln', 'sootChorus'],
   chitinCrusader: ['chitinFoundry', 'armourDoctrine'],
   drakeEmperor: ['crystalForge', 'fireRite'],
   sunSovereign: ['sunMirror', 'shellSanctum'],

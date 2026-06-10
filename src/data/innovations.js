@@ -126,7 +126,7 @@ export const innovations = {
     unlockSource: 'Pale Hunt Lion',
     unlockText: 'Defeat Pale Hunt Lion Level 2.',
     effects: ['Unlocks advanced Pale Hunt Lion gear.'],
-    unlocksRecipes: ['lionFangKatar', 'maneCloak', 'catEyeCharm']
+    unlocksRecipes: ['paleFangKatar', 'maneCloak', 'catEyeCharm', 'pouncingGreaves', 'whiskerNeedle', 'predatorMask', 'whiteClawTrap', 'huntingHideWrap']
   },
   antelopeLarder: {
     id: 'antelopeLarder',
@@ -138,7 +138,7 @@ export const innovations = {
     unlockSource: 'Wailing Antelope',
     unlockText: 'Defeat Wailing Antelope Level 2.',
     effects: ['Unlocks Wailing Antelope gear and survival improvements.'],
-    unlocksRecipes: ['wailingHornBow', 'stomachStoneCharm', 'trampleBoots']
+    unlocksRecipes: ['wailingHornBow', 'stomachStoneCharm', 'trampleBoots', 'hungerDrum', 'gutCordWrap', 'grassDevourerMask']
   },
   phoenixPyre: {
     id: 'phoenixPyre',
@@ -150,8 +150,36 @@ export const innovations = {
     unlockSource: 'Ash Phoenix',
     unlockText: 'Defeat Ash Phoenix Level 2.',
     effects: ['Unlocks Ash Phoenix gear and deck-control equipment.'],
-    unlocksRecipes: ['ashFeatherMantle', 'timeBoneBlade', 'memoryGlassEye']
+    unlocksRecipes: ['ashFeatherMantle', 'timeBoneBlade', 'memoryGlassEye', 'burntWingFan', 'emberThreadWrap', 'ashClockCharm']
   }
 };
+
+const quarryLocations = [
+  ['stormShrine', 'Storm Shrine', 'bloatedGodling', { thunderGland: 1, bone: 1 }, 'Channels storm-charged remains.', ['thunderMaul', 'stormGutCharm', 'swollenHideVest', 'staticNeedle', 'godlingDrum', 'crackedMolarBlade']],
+  ['redTannery', 'Red Tannery', 'crimsonCrocodile', { crimsonScale: 1, hide: 1 }, 'Cures river scales and dense red leather.', ['crimsonScaleShield', 'riverToothBlade', 'redLeatherCoat', 'drowningHook', 'bloodMudPaint', 'crocodileEyeCharm']],
+  ['wetYard', 'Wet Yard', 'frogdog', { rubberyHide: 1, organ: 1 }, 'Contains toxins and elastic quarry parts.', ['frogdogTongueWhip', 'rubberyHideSuit', 'toxicGlandBomb', 'wetBoneClub', 'bulgingEyeCharm', 'leapingBoots']],
+  ['silkLoom', 'Silk Loom', 'silkMatriarch', { silkGland: 1, bone: 1 }, 'Works shell-strong silk and measured venom.', ['silkThreadBow', 'venomSacNeedle', 'webbedHideMantle', 'spiderEyeCharm', 'eggPouch', 'skitterWraps']],
+  ['duelistGarden', 'Duelist Garden', 'bloomKnight', { bloomPetal: 1, hide: 1 }, 'Cultivates living weapons and precise armor.', ['duelistThornRapier', 'bloomPetalCloak', 'polishedStemSpear', 'floralSinewBowstring', 'knightSeedCharm', 'perfectStepBoots']],
+  ['smogKiln', 'Smog Kiln', 'smogSingers', { sootLung: 1, scrap: 1 }, 'Fires soot, tar, and resonant bone.', ['smogPipeFlute', 'sootLungMask', 'harmonyBoneBlade', 'tarFeatherCloak', 'chokingMask', 'chorusBell']],
+  ['chitinFoundry', 'Chitin Foundry', 'chitinCrusader', { chitinPlate: 1, scrap: 1 }, 'Layers shell and hardening resin.', ['chitinPlateArmor', 'beetleHornHammer', 'resinBloodShield', 'jewelWingCharm', 'dungCoreBomb', 'crusaderShellHelm']],
+  ['crystalForge', 'Crystal Forge', 'drakeEmperor', { crystalBone: 1, scrap: 1 }, 'Shapes heatproof scale and crystal bone.', ['drakeScaleMail', 'crystalBoneBlade', 'fireGlandBomb', 'imperialHornHelm', 'moltenEyeCharm', 'emberCrown']],
+  ['shellSanctum', 'Shell Sanctum', 'sunSovereign', { sunShell: 1, hide: 1 }, 'Tempers radiant shell beneath heavy cloth.', ['sunShellShield', 'radiantEyeCharm', 'solarIchorBlade', 'blindingScaleCloak', 'warmPearlAmulet', 'noonMirror']],
+  ['prideHall', 'Pride Hall', 'prideKing', { prideMane: 1, bone: 1 }, 'Turns royal trophies into demanding gear.', ['prideManeCloak', 'kingClawGauntlet', 'goldenFangBlade', 'regalHideArmor', 'judgmentEyeCharm', 'royalChallengeHorn']]
+];
+
+quarryLocations.forEach(([id, name, quarryId, cost, description, unlocksRecipes]) => {
+  innovations[id] = {
+    id,
+    name,
+    category: 'quarry',
+    cost,
+    description,
+    unlockRequirement: { type: 'quarryDiscovery', quarryId },
+    unlockSource: quarryId,
+    unlockText: `Discover ${quarryId}.`,
+    effects: [`Unlocks ${name} recipes.`],
+    unlocksRecipes
+  };
+});
 
 export const innovationList = Object.values(innovations);

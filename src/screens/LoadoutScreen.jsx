@@ -9,10 +9,20 @@ function GearCards({ gear }) {
   return (
     <article className="item-card">
       <h4>{item?.name || gear.equipmentId}</h4>
-      <p>{item?.passiveText}</p>
-      <p className="muted-text">
-        Adds: {item?.cardPackage.map(cardId => cards[cardId]?.name || cardId).join(', ') || 'No cards'}
+      <p>
+        Type: {item?.weaponType || 'Non-weapon'} | Hands: {item?.hands ?? 0} | Slot: {item?.slot}
       </p>
+      <p>Keywords: {item?.keywords?.join(', ') || 'Survival'}</p>
+      <p>{item?.passiveText}</p>
+      {item?.affectsOtherSurvivors && <p className="effect-text">Affects other survivors.</p>}
+      {item?.deckIdentity && <p className="effect-text">Deck identity: {item.deckIdentity}</p>}
+      <ul>
+        {(item?.cardPackage || []).map(cardId => (
+          <li key={cardId}>
+            <strong>{cards[cardId]?.name || cardId}</strong>: {cards[cardId]?.description}
+          </li>
+        ))}
+      </ul>
     </article>
   );
 }
@@ -24,6 +34,7 @@ export default function LoadoutScreen({
   onConfirm,
   onDestroyBoundGear,
   onAddTestResources,
+  confirmLabel = 'Confirm Loadout and Choose Quarry',
   onBack
 }) {
   const [selectedInstanceIds, setSelectedInstanceIds] = useState([]);
@@ -87,11 +98,27 @@ export default function LoadoutScreen({
           return (
             <article className={`item-card ${selected ? 'built' : ''}`} key={gear.instanceId}>
               <h4>{equipment[gear.equipmentId]?.name || gear.equipmentId}</h4>
-              <p>{equipment[gear.equipmentId]?.passiveText}</p>
-              <p className="muted-text">
-                Adds: {(equipment[gear.equipmentId]?.cardPackage || [])
-                  .map(cardId => cards[cardId]?.name || cardId).join(', ')}
+              <p>
+                Type: {equipment[gear.equipmentId]?.weaponType || 'Non-weapon'} |{' '}
+                Hands: {equipment[gear.equipmentId]?.hands ?? 0} | Slot: {equipment[gear.equipmentId]?.slot}
               </p>
+              <p>Keywords: {equipment[gear.equipmentId]?.keywords?.join(', ') || 'Survival'}</p>
+              <p>{equipment[gear.equipmentId]?.passiveText}</p>
+              {equipment[gear.equipmentId]?.affectsOtherSurvivors && (
+                <p className="effect-text">Affects other survivors.</p>
+              )}
+              {equipment[gear.equipmentId]?.deckIdentity && (
+                <p className="effect-text">
+                  This gear adds a {equipment[gear.equipmentId].deckIdentity} package.
+                </p>
+              )}
+              <ul>
+                {(equipment[gear.equipmentId]?.cardPackage || []).map(cardId => (
+                  <li key={cardId}>
+                    <strong>{cards[cardId]?.name || cardId}</strong>: {cards[cardId]?.description}
+                  </li>
+                ))}
+              </ul>
               <button
                 type="button"
                 disabled={!selected && selectedInstanceIds.length >= remainingSlots}
@@ -114,7 +141,9 @@ export default function LoadoutScreen({
               <strong>{item?.name || gear.equipmentId} adds:</strong>
               <ul>
                 {(item?.cardPackage || []).map((cardId, cardIndex) => (
-                  <li key={`${cardId}-${cardIndex}`}>{cards[cardId]?.name || cardId}</li>
+                  <li key={`${cardId}-${cardIndex}`}>
+                    <strong>{cards[cardId]?.name || cardId}</strong>: {cards[cardId]?.description}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -129,7 +158,7 @@ export default function LoadoutScreen({
       )}
       <div className="button-row">
         <button type="button" onClick={() => onConfirm(selectedInstanceIds)}>
-          Confirm Loadout and Choose Quarry
+          {confirmLabel}
         </button>
         <button type="button" className="secondary-button" onClick={onBack}>Back</button>
       </div>

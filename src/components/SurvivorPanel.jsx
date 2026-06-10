@@ -12,6 +12,13 @@ export default function SurvivorPanel({ survivor }) {
       <p>Energy: {survivor.energy} / 3</p>
       {survivor.bleed > 0 && <p>Bleed: {survivor.bleed}</p>}
       {survivor.marked > 0 && <p>Marked</p>}
+      {Object.entries(survivor.hitLocations || {})
+        .filter(([, wound]) => wound.wounded)
+        .map(([location, wound]) => (
+          <p key={location}>
+            {location}: {wound.severe ? 'serious' : 'light'} wound
+          </p>
+        ))}
     </div>
   );
 }

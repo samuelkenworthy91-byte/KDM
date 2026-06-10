@@ -68,7 +68,13 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
       : itemOrId?.equipmentId
         ? equipment[itemOrId.equipmentId]
         : itemOrId;
-    if (item) deck.push(...getCardsFromIds(item.cardPackage, item.name, 'gear'));
+    if (item) {
+      deck.push(...getCardsFromIds(item.cardPackage, item.name, 'gear').map(card => ({
+        ...card,
+        weaponType: item.weaponType || null,
+        keywords: [...new Set([...(card.keywords || []), ...(item.keywords || [])])]
+      })));
+    }
   });
 
   return [...deck, ...getCardsFromIds(temporaryCards, 'Hunt event', 'event')];

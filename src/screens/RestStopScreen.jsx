@@ -1,7 +1,7 @@
 import React from 'react';
 
 const choices = [
-  { id: 'bindWounds', name: 'Bind Wounds', description: 'Heal 25% of max HP.' },
+  { id: 'bindWounds', name: 'Bind Wounds', description: 'Heal 25% of max HP and remove one light wound.' },
   { id: 'shareStories', name: 'Share Stories', description: 'Gain 1 survival.' },
   { id: 'sharpenGear', name: 'Sharpen Gear', description: 'Your first attack next combat deals +2 damage.' },
   { id: 'keepWatch', name: 'Keep Watch', description: 'Start the next combat with +2 block.' }

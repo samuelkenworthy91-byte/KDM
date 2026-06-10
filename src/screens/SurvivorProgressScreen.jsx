@@ -3,10 +3,13 @@ import {
   fightingArts,
   getSurvivorMonsterBaneId
 } from '../data/fightingArts.js';
+import { getMonsterSurvivorRewardChoices } from '../data/monsterSurvivorRewards.js';
+import { quarries } from '../data/quarries.js';
 
 export default function SurvivorProgressScreen({
   survivorName,
   quarryId,
+  level,
   offerBane,
   ownedArts,
   oralTradition,
@@ -14,41 +17,43 @@ export default function SurvivorProgressScreen({
 }) {
   const baneId = `monsterBane_${quarryId}`;
   const ownedBaneId = getSurvivorMonsterBaneId({ fightingArts: ownedArts });
-  const availableGeneralArts = ['clawStyle', 'berserker', 'tumble', 'scarTissue', 'hardened', 'focusedBreath']
-    .filter(id => fightingArts[id]?.implemented && !ownedArts.includes(id));
+  const includeBane = offerBane && !ownedBaneId;
+  const themedRewards = getMonsterSurvivorRewardChoices(quarryId, level, { includeBane });
+  const targetCount = level + 2;
   const rewards = [
-    ...(offerBane && !ownedBaneId ? [{
+    ...(includeBane ? [{
       id: baneId,
       name: fightingArts[baneId]?.name,
-      description: fightingArts[baneId]?.description
+      description: fightingArts[baneId]?.description,
+      label: 'Monster Bane',
+      rarity: level === 3 ? 'Rare' : 'Uncommon'
     }] : []),
-    {
-      id: 'survival',
-      name: 'Hard-Won Composure',
-      description: 'Gain +1 survival.'
-    },
-    {
-      id: 'veteranStrike',
-      name: 'Veteran Strike',
-      description: 'Add Veteran Strike to this survivor’s personal deck.'
-    },
-    ...(oralTradition ? [{
-      id: 'hardWonGuard',
-      name: 'Hard-Won Guard',
-      description: 'Add Hard-Won Guard to this survivor’s personal deck.'
-    }] : []),
-    ...availableGeneralArts.slice(0, 1).map(id => ({
-      id,
-      name: fightingArts[id].name,
-      description: fightingArts[id].description
+    ...themedRewards.map(reward => ({
+      id: reward.id,
+      name: reward.name,
+      description: `${reward.description} ${reward.effectText}`,
+      label: reward.family === 'mimic'
+        ? 'Mimic Technique'
+        : reward.family === 'support' ? 'Party Support' : 'Counter Technique',
+      rarity: reward.rarity.charAt(0).toUpperCase() + reward.rarity.slice(1)
     }))
   ];
+  if (rewards.length < targetCount) {
+    rewards.push({
+      id: 'survival',
+      name: 'Hard-Won Composure',
+      description: 'Gain +1 survival.',
+      label: 'Stat Reward',
+      rarity: 'Common'
+    });
+  }
 
   return (
     <section className="survivor-progress-screen">
       <p className="eyebrow">Survivor Progress</p>
       <h2>{survivorName} Returns Changed</h2>
-      <p>Choose one lesson from the victory.</p>
+      <p>{quarries[quarryId]?.name} - Level {level} {level === 3 ? 'Rare' : ''}</p>
+      <p>Choose one lesson from {rewards.length} rewards.</p>
       {ownedBaneId && (
         <p className="muted-text">
           This survivor already has {fightingArts[ownedBaneId]?.name || ownedBaneId}.
@@ -59,6 +64,7 @@ export default function SurvivorProgressScreen({
         {rewards.map(reward => (
           <button type="button" key={reward.id} onClick={() => onChoose(reward.id)}>
             <strong>{reward.name}</strong>
+            <span>{reward.label} - {reward.rarity}</span>
             <span>{reward.description}</span>
           </button>
         ))}

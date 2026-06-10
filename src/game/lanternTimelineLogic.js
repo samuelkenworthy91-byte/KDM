@@ -2,6 +2,8 @@ import {
   getTimelineEntry,
   randomLanternYearEvents
 } from '../data/lanternTimeline.js';
+import { getNemesisForLanternYear } from '../data/nemesisEncounters.js';
+import { quarries } from '../data/quarries.js';
 
 const BASIC_IDS = ['bone', 'hide', 'sinew', 'organ', 'scrap', 'claw'];
 
@@ -125,12 +127,9 @@ export function applyLanternYearTimeline(settlement, year) {
       ...new Set([...next.innovationDeckState.availableInnovationPoolIds, ...innovationIds])
     ]
   };
-  next.discoveredQuarries = [
-    ...new Set([...next.discoveredQuarries, ...(event.unlocksQuarryRumours || [])])
-  ];
-  next.unlockedQuarries = [
-    ...new Set([...next.unlockedQuarries, ...(event.unlocksQuarryRumours || [])])
-  ];
+  const quarryRumours = (event.unlocksQuarryRumours || []).filter(id => quarries[id]?.role === 'quarry');
+  next.discoveredQuarries = [...new Set([...next.discoveredQuarries, ...quarryRumours])];
+  next.unlockedQuarries = [...new Set([...next.unlockedQuarries, ...quarryRumours])];
   const historyEntry = {
     lanternYear: year,
     id: event.id,
@@ -140,6 +139,7 @@ export function applyLanternYearTimeline(settlement, year) {
     choiceId: null,
     timestamp: new Date().toISOString()
   };
+  const nemesis = getNemesisForLanternYear(year);
   return {
     ...next,
     timelineHistory: [...(next.timelineHistory || []), historyEntry],
@@ -152,7 +152,17 @@ export function applyLanternYearTimeline(settlement, year) {
           description: historyEntry.description,
           choices: event.choices
         }
-      : null
+      : null,
+    pendingNemesisEncounter: nemesis
+      ? {
+          nemesisId: nemesis.id,
+          lanternYear: year,
+          stage: 'lore',
+          selectedSurvivorId: null,
+          memorySpent: false,
+          healingSpent: false
+        }
+      : next.pendingNemesisEncounter || null
   };
 }
 

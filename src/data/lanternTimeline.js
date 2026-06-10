@@ -27,7 +27,7 @@ export const lanternTimeline = [
   entry(8, 'huntCallsBack', 'The Hunt Calls Back', 'An old trail appears fresh beside the settlement.', 'pressure',
     { nextRunMonsterBonusHp: 3 }, { unlocksQuarryRumours: ['silkMatriarch'] }),
   entry(10, 'nemesisShadow', 'Nemesis Shadow', 'A deliberate shadow begins following settlement history.', 'nemesis',
-    {}, { unlocksQuarryRumours: ['cruelCollector'] }),
+    {}),
   entry(12, 'settlementSchism', 'Settlement Schism', 'The settlement divides over which memories deserve to survive.', 'pressure', {},
     { choices: [
       { id: 'preserve', text: 'Preserve memory', effects: { gainSettlementMemory: 2 } },
@@ -39,7 +39,7 @@ export const lanternTimeline = [
       { id: 'lose', text: 'Accept the loss', effects: { populationLoss: 1 } }
     ] }),
   entry(20, 'watchingDark', 'The Watching Dark', 'Something beyond the campaign has learned the settlement name.', 'nemesis',
-    {}, { unlocksQuarryRumours: ['watcherInspired'] })
+    {})
 ];
 
 export const randomLanternYearEvents = [

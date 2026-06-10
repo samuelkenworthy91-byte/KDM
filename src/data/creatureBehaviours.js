@@ -1,7 +1,17 @@
 import { quarryList } from './quarries.js';
 
-const intent = (id, name, tellText, revealedText, effects, tags, weight = 1, levelWeights = {}) => ({
-  id, name, tellText, revealedText, effects, tags, weight, levelWeights
+const intent = (id, name, tellText, revealedText, effects, tags, weight = 1, levelWeights = {}, levelMin = 1, tierMin = null) => ({
+  id,
+  name,
+  tellText,
+  revealedText,
+  effects,
+  tags,
+  weight,
+  levelWeights,
+  levelMin,
+  tierMin,
+  aggressionWeight: weight
 });
 
 const mainIntents = {
@@ -85,6 +95,72 @@ const mainIntents = {
   ]
 };
 
+const advancedIntentNames = {
+  paleHuntLion: ['White Pounce', 'Raking Sprint', 'Kingless Feast', 'Perfect Predator'],
+  wailingAntelope: ['Ravenous Devour', 'Stone Trample', 'Hunger Wail', 'Blind-Sky Kick'],
+  ashPhoenix: ['Stolen Moment', 'Cinder Talons', 'Broken Hour', 'Yesterday Burns'],
+  bloatedGodling: ['Thunder Swallow', 'Rolling Collapse', 'Living Storm', 'Organ Avalanche'],
+  crimsonCrocodile: ['Red River Rush', 'Lockjaw Drag', 'Still-Water Death', 'Endless Roll'],
+  frogdog: ['Barbed Tongue', 'Toxic Landing', 'Many-Mouth Hunger', 'Impossible Kick'],
+  silkMatriarch: ['Gilded Web', 'Brood Rush', 'Widow Crown', 'Thousand-Leg Eclipse'],
+  bloomKnight: ['Thorn Challenge', 'Petal Counter', 'Perfect Garden', 'Last-Duel Thrust'],
+  smogSingers: ['Black Harmony', 'Tar-Lung Pulse', 'Final Chorus', 'Breathless Refrain'],
+  chitinCrusader: ['Resin Charge', 'Plate Grind', 'Amber Fortress', 'Crusader Impalement'],
+  drakeEmperor: ['Furnace Sweep', 'Crystal Edict', 'Imperial Wildfire', 'Crown-Melting Bite'],
+  sunSovereign: ['Noon Collapse', 'Radiant Shellburst', 'Captured Day', 'Sovereign Eclipse'],
+  prideKing: ['Royal Pursuit', 'Golden Judgment', 'Crownless Fury', 'Perfect Dominion']
+};
+
+function advancedIntents(quarryId) {
+  const names = advancedIntentNames[quarryId] || ['Violent Rush', 'Cruel Guard', 'Deadly Pattern', 'Final Violence'];
+  return [
+    intent(
+      `${quarryId}Level2Strike`,
+      names[0],
+      'The creature lowers its center and commits its whole body.',
+      `${names[0]}: deals heavy damage and punishes an empty guard.`,
+      [{ type: 'dealDamage', amount: 9 }, { type: 'bonusIfPlayerNoBlock', amount: 3 }],
+      ['attack', 'heavy', 'dangerous'],
+      3,
+      { 2: 1, 3: 2 },
+      2
+    ),
+    intent(
+      `${quarryId}Level2Pattern`,
+      names[1],
+      'Several parts of the creature move in a single practiced rhythm.',
+      `${names[1]}: strikes twice, reduces block, and applies Marked.`,
+      [{ type: 'reducePlayerBlock', amount: 2 }, { type: 'multiHitDamage', amount: 4, hits: 2 }, { type: 'applyMarked', amount: 1 }],
+      ['attack', 'multi', 'dangerous'],
+      3,
+      { 3: 2 },
+      2
+    ),
+    intent(
+      `${quarryId}Level3Deadly`,
+      names[2],
+      'The creature becomes completely still. The tell feels wrong.',
+      `${names[2]}: deals major damage, adds Panic, and restores the creature.`,
+      [{ type: 'dealDamage', amount: 12 }, { type: 'addPanic', amount: 1 }, { type: 'healMonster', amount: 4 }],
+      ['attack', 'panic', 'rare', 'deadly'],
+      5,
+      { 3: 3 },
+      3
+    ),
+    intent(
+      `${quarryId}Level3Rare`,
+      names[3],
+      'Every defensive line closes around a single future attack.',
+      `${names[3]}: gains block and prepares a much stronger next attack.`,
+      [{ type: 'gainBlock', amount: 10 }, { type: 'nextAttackBonus', amount: 5 }, { type: 'monsterEnrage', amount: 1 }],
+      ['guard', 'rare', 'deadly'],
+      4,
+      { 3: 3 },
+      3
+    )
+  ];
+}
+
 const genericSets = {
   predator: mainIntents.paleHuntLion,
   brute: mainIntents.bloatedGodling,
@@ -123,10 +199,18 @@ const passiveText = {
 };
 
 function buildPack(quarry) {
-  const intents = mainIntents[quarry.id] ||
+  const baseIntents = mainIntents[quarry.id] ||
     genericSets[quarry.fallbackBehaviourId] ||
     genericSets[quarry.designTags?.[0]] ||
     genericSets.brute;
+  const intents = quarry.role === 'quarry'
+    ? [...baseIntents, ...advancedIntents(quarry.id)]
+    : baseIntents;
+  const levelIntents = {
+    1: intents.filter(item => (item.levelMin || 1) <= 1).map(item => item.id),
+    2: intents.filter(item => (item.levelMin || 1) <= 2).map(item => item.id),
+    3: intents.filter(item => (item.levelMin || 1) <= 3).map(item => item.id)
+  };
   return {
     id: quarry.behaviourId || `fallback_${quarry.id}`,
     creatureId: quarry.id,
@@ -134,9 +218,10 @@ function buildPack(quarry) {
     passiveTell: passiveText[quarry.id]?.tell ||
       `${quarry.displayName} shifts according to its ${quarry.designTags.join(' and ')} nature.`,
     passiveRevealedText: passiveText[quarry.id]?.revealed ||
-      `${quarry.displayName} uses a ${quarry.implemented ? 'unique' : 'fallback'} ${quarry.designTags.join('/')} behaviour pack.`,
+      `${quarry.displayName} uses a ${quarry.behaviourType === 'fallback' ? 'fallback' : 'unique'} ${quarry.designTags.join('/')} behaviour pack.`,
     passiveRules: passiveRules[quarry.id] || [],
     intents: intents.map(item => ({ ...item, effects: item.effects.map(effect => ({ ...effect })) })),
+    levelIntents,
     levelScaling: {
       1: { hp: 1, damage: 0, dangerousWeight: 0 },
       2: { hp: 1.35, damage: 1, dangerousWeight: 1 },

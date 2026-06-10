@@ -4,8 +4,20 @@ import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorPanel from '../components/SurvivorPanel.jsx';
 import { createCombatState, endTurn, playCard, useSurvivalAction } from '../game/combatLogic.js';
 
-export default function CombatScreen({ monster, runBonus, equippedGear, hasMonsterBane, onVictory, onDefeat }) {
-  const [combat, setCombat] = useState(() => createCombatState(monster, runBonus));
+export default function CombatScreen({
+  monster,
+  runBonus,
+  equippedGear,
+  hasMonsterBane,
+  victoryButtonText = 'Continue Hunt',
+  defeatButtonText = 'View Run Summary',
+  onVictory,
+  onDefeat
+}) {
+  const [combat, setCombat] = useState(() => createCombatState(monster, {
+    ...runBonus,
+    hasMonsterBane
+  }));
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
 
@@ -32,7 +44,12 @@ export default function CombatScreen({ monster, runBonus, equippedGear, hasMonst
     <section className="combat-screen">
       <div className="combatants">
         <SurvivorPanel survivor={combat.survivor} />
-        <MonsterPanel monster={combat.monster} intent={currentIntent} hasMonsterBane={hasMonsterBane} />
+        <MonsterPanel
+          monster={combat.monster}
+          intent={currentIntent}
+          hasMonsterBane={hasMonsterBane}
+          intentHintLevel={combat.intentHintLevel}
+        />
       </div>
 
       {combatOver && (
@@ -44,7 +61,7 @@ export default function CombatScreen({ monster, runBonus, equippedGear, hasMonst
               ? () => onVictory({ survivor: combat.survivor })
               : handleDefeat}
           >
-            {combat.status === 'won' ? 'Continue Hunt' : 'View Run Summary'}
+            {combat.status === 'won' ? victoryButtonText : defeatButtonText}
           </button>
         </div>
       )}

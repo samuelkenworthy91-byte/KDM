@@ -1,9 +1,13 @@
+import { quarries } from '../data/quarries.js';
+import { createWeaponProficiency } from '../data/weaponProficiency.js';
+import { createHitLocations } from '../data/woundTables.js';
+
 const LEGACY_SAVE_KEY = 'settlement';
 const ACTIVE_SLOT_KEY = 'lanternDeckbuilder.activeSlot';
 const SLOT_COUNT = 3;
 const BASE_INNOVATION_POOL_IDS = [
   'language', 'symposium', 'ammonia', 'cooking', 'bloodletting', 'graves',
-  'oralTradition', 'sharedWarnings'
+  'oralTradition', 'sharedWarnings', 'trailSignals'
 ];
 const CHILD_TRAIT_ALIASES = {
   'Lantern-Touched': 'lanternEyed',
@@ -15,6 +19,21 @@ const CHILD_TRAIT_ALIASES = {
   Scarless: 'scarless',
   'Lucky Birth': 'luckyBirth',
   'Wolf Smile': 'wolfSmile'
+};
+const QUARRY_LOCATION_IDS = {
+  paleHuntLion: 'lionTrophyHall',
+  wailingAntelope: 'antelopeLarder',
+  ashPhoenix: 'phoenixPyre',
+  bloatedGodling: 'stormShrine',
+  crimsonCrocodile: 'redTannery',
+  frogdog: 'wetYard',
+  silkMatriarch: 'silkLoom',
+  bloomKnight: 'duelistGarden',
+  smogSingers: 'smogKiln',
+  chitinCrusader: 'chitinFoundry',
+  drakeEmperor: 'crystalForge',
+  sunSovereign: 'shellSanctum',
+  prideKing: 'prideHall'
 };
 
 function normalizePersonalAddition(addition, fallbackSourceType = 'personal') {
@@ -81,13 +100,18 @@ export function createSurvivor(name = 'Nameless Survivor', gender = 'other', opt
     injuries: [],
     scars: [],
     disorders: [],
+    hitLocations: createHitLocations(),
+    treatmentNotes: [],
+    woundHistory: [],
+    history: [],
     permanentModifiers: {},
     forgottenCardsLog: [],
     lastForgetLanternYear: null,
     completedRuns: 0,
     kills: 0,
     deckAdditions: [],
-    boundGear: []
+    boundGear: [],
+    weaponProficiency: createWeaponProficiency()
   };
 }
 
@@ -110,6 +134,8 @@ export const defaultSettlement = {
   deadSurvivors: 0,
   survivors: [],
   activeSurvivorId: null,
+  maxHuntPartySize: 1,
+  huntingParty: [],
   intimacyHistory: [],
   lanternYear: 0,
   lastIntimacyLanternYear: null,
@@ -131,9 +157,17 @@ export const defaultSettlement = {
   timelineHistory: [],
   lastTimelineEvent: null,
   pendingTimelineEvent: null,
+  pendingNemesisEncounter: null,
+  revealedNemesisIds: [],
+  seenNemesisLoreIds: [],
+  settlementHistory: [],
+  lastNemesisResult: null,
   discoveredQuarries: ['paleHuntLion'],
   unlockedQuarries: ['paleHuntLion'],
   rumouredInnovations: []
+  ,
+  unlockedRecipeFamilies: ['paleHuntLion'],
+  rumourTexts: []
 };
 
 export function getSaveSlotKey(slotId) {
@@ -175,6 +209,9 @@ export function normalizeSettlement(data = {}) {
         injuries: Array.isArray(survivor.injuries) ? survivor.injuries : [],
         scars: Array.isArray(survivor.scars) ? survivor.scars : [],
         disorders: Array.isArray(survivor.disorders) ? survivor.disorders : [],
+        hitLocations: createHitLocations(survivor.hitLocations),
+        treatmentNotes: Array.isArray(survivor.treatmentNotes) ? survivor.treatmentNotes : [],
+        woundHistory: Array.isArray(survivor.woundHistory) ? survivor.woundHistory : [],
         traits: Array.isArray(survivor.traits)
           ? survivor.traits.map(trait => CHILD_TRAIT_ALIASES[trait] || trait)
           : [],
@@ -214,6 +251,7 @@ export function normalizeSettlement(data = {}) {
           Math.max(1, Number(survivor.maxSurvival) || 3)
         ),
         deckAdditions: [],
+        weaponProficiency: createWeaponProficiency(survivor.weaponProficiency),
         boundGear: Array.isArray(survivor.boundGear)
           ? survivor.boundGear.map((gear, index) => typeof gear === 'string'
             ? { instanceId: `bound-${survivor.id}-${index}-${gear}`, equipmentId: gear }
@@ -260,6 +298,12 @@ export function normalizeSettlement(data = {}) {
       ? innovationDeckState.builtInnovationIds
       : [])
   ])];
+  const discoveredQuarryIds = Array.isArray(data.discoveredQuarries)
+    ? data.discoveredQuarries.filter(id => quarries[id]?.role === 'quarry')
+    : Array.isArray(data.unlockedQuarries)
+      ? data.unlockedQuarries.filter(id => quarries[id]?.role === 'quarry')
+      : [];
+  const migratedLocationIds = discoveredQuarryIds.map(id => QUARRY_LOCATION_IDS[id]).filter(Boolean);
 
   return {
     ...defaultSettlement,
@@ -276,13 +320,22 @@ export function normalizeSettlement(data = {}) {
         disorders: Array.isArray(grave.disorders) ? grave.disorders : [],
         fightingArts: Array.isArray(grave.fightingArts) ? grave.fightingArts : [],
         traits: Array.isArray(grave.traits) ? grave.traits : [],
-        gearLostNames: Array.isArray(grave.gearLostNames) ? grave.gearLostNames : []
+        gearLostNames: Array.isArray(grave.gearLostNames) ? grave.gearLostNames : [],
+        weaponProficiency: createWeaponProficiency(grave.weaponProficiency),
+        proficientWeaponTypes: Array.isArray(grave.proficientWeaponTypes)
+          ? grave.proficientWeaponTypes
+          : [],
+        masteredWeaponTypes: Array.isArray(grave.masteredWeaponTypes)
+          ? grave.masteredWeaponTypes
+          : []
       }))
       : [],
     stash: data.stash || {},
-    builtInnovations: Array.isArray(data.builtInnovations)
-      ? [...new Set(['lanternHearth', ...data.builtInnovations])]
-      : ['lanternHearth'],
+    builtInnovations: [...new Set([
+      'lanternHearth',
+      ...(Array.isArray(data.builtInnovations) ? data.builtInnovations : []),
+      ...migratedLocationIds
+    ])],
     craftedGear: allGearIds,
     totalCraftedGear: Math.max(
       Number.isFinite(data.totalCraftedGear) ? data.totalCraftedGear : 0,
@@ -299,6 +352,13 @@ export function normalizeSettlement(data = {}) {
       : (Array.isArray(data.graveHistory) ? data.graveHistory.length : 0),
     survivors,
     activeSurvivorId,
+    maxHuntPartySize: Math.min(4, Math.max(1, Number(data.maxHuntPartySize) || 1)),
+    huntingParty: (Array.isArray(data.huntingParty) ? data.huntingParty : [activeSurvivorId])
+      .filter((id, index, ids) =>
+        id && ids.indexOf(id) === index &&
+        livingSurvivors.some(survivor => survivor.id === id)
+      )
+      .slice(0, Math.min(4, Math.max(1, Number(data.maxHuntPartySize) || 1))),
     intimacyHistory: Array.isArray(data.intimacyHistory) ? data.intimacyHistory : [],
     lanternYear: Number.isFinite(data.lanternYear) ? data.lanternYear : 0,
     lastIntimacyLanternYear: Number.isFinite(data.lastIntimacyLanternYear)
@@ -352,16 +412,39 @@ export function normalizeSettlement(data = {}) {
     timelineHistory: Array.isArray(data.timelineHistory) ? data.timelineHistory : [],
     lastTimelineEvent: data.lastTimelineEvent || null,
     pendingTimelineEvent: data.pendingTimelineEvent || null,
+    pendingNemesisEncounter: data.pendingNemesisEncounter || null,
+    revealedNemesisIds: Array.isArray(data.revealedNemesisIds)
+      ? [...new Set(data.revealedNemesisIds)]
+      : [],
+    seenNemesisLoreIds: Array.isArray(data.seenNemesisLoreIds)
+      ? [...new Set(data.seenNemesisLoreIds)]
+      : [],
+    settlementHistory: Array.isArray(data.settlementHistory) ? data.settlementHistory : [],
+    lastNemesisResult: data.lastNemesisResult || null,
     rumouredInnovations: Array.isArray(data.rumouredInnovations) ? data.rumouredInnovations : [],
+    unlockedRecipeFamilies: [...new Set([
+      'paleHuntLion',
+      ...(Array.isArray(data.unlockedRecipeFamilies) ? data.unlockedRecipeFamilies : []),
+      ...discoveredQuarryIds
+    ])],
+    rumourTexts: Array.isArray(data.rumourTexts) ? [...new Set(data.rumourTexts)] : [],
     discoveredQuarries: Array.isArray(data.discoveredQuarries)
-      ? [...new Set(['paleHuntLion', ...data.discoveredQuarries])]
+      ? [...new Set(['paleHuntLion', ...data.discoveredQuarries.filter(id =>
+        quarries[id]?.role === 'quarry'
+      )])]
       : Array.isArray(data.unlockedQuarries)
-        ? [...new Set(['paleHuntLion', ...data.unlockedQuarries])]
+        ? [...new Set(['paleHuntLion', ...data.unlockedQuarries.filter(id =>
+          quarries[id]?.role === 'quarry'
+        )])]
         : ['paleHuntLion'],
     unlockedQuarries: Array.isArray(data.unlockedQuarries)
-      ? [...new Set(['paleHuntLion', ...data.unlockedQuarries])]
+      ? [...new Set(['paleHuntLion', ...data.unlockedQuarries.filter(id =>
+        quarries[id]?.role === 'quarry'
+      )])]
       : Array.isArray(data.discoveredQuarries)
-        ? [...new Set(['paleHuntLion', ...data.discoveredQuarries])]
+        ? [...new Set(['paleHuntLion', ...data.discoveredQuarries.filter(id =>
+          quarries[id]?.role === 'quarry'
+        )])]
         : ['paleHuntLion']
   };
 }

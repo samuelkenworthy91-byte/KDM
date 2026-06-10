@@ -1,3 +1,6 @@
+import { gearCards } from './gearCards.js';
+import { monsterRewardCards } from './monsterSurvivorRewards.js';
+
 function card(id, name, cost, description, effects, options = {}) {
   return {
     id,
@@ -8,13 +11,15 @@ function card(id, name, cost, description, effects, options = {}) {
     type: options.type || 'skill',
     tags: options.tags || [],
     sourceType: options.sourceType || 'personal',
-    exhaust: options.exhaust
+    sourceGearId: options.sourceGearId,
+    exhaust: options.exhaust,
+    implemented: options.implemented !== false
   };
 }
 
 export const cards = {
-  foundingStone: card('foundingStone', 'Founding Stone', 1, 'Deal 6 damage. Exhaust.', [{ type: 'damage', amount: 6 }], { type: 'attack', exhaust: true }),
-  wildSwing: card('wildSwing', 'Wild Swing', 2, 'Deal 10 damage.', [{ type: 'damage', amount: 10 }], { type: 'attack' }),
+  foundingStone: card('foundingStone', 'Founding Stone', 1, 'Deal 6 damage. Exhaust.', [{ type: 'damage', amount: 6 }], { type: 'attack', tags: ['brutal'], exhaust: true }),
+  wildSwing: card('wildSwing', 'Wild Swing', 2, 'Deal 10 damage.', [{ type: 'damage', amount: 10 }], { type: 'attack', tags: ['brutal', 'hideBreaker'] }),
   scramble: card('scramble', 'Scramble', 1, 'Gain 5 block.', [{ type: 'block', amount: 5 }]),
   desperateDodge: card('desperateDodge', 'Desperate Dodge', 1, 'Gain 4 block. Gain 8 instead while below half HP.', [{ type: 'conditionalBlock', amount: 4, lowHpAmount: 8 }]),
   encourage: card('encourage', 'Encourage', 0, 'Gain 1 survival. Draw 1 card.', [{ type: 'survival', amount: 1 }, { type: 'draw', amount: 1 }]),
@@ -32,7 +37,7 @@ export const cards = {
 
   hack: card('hack', 'Hack', 1, 'Deal 5 damage.', [{ type: 'damage', amount: 5 }], { type: 'attack' }),
   carve: card('carve', 'Carve', 1, 'Deal 3 damage. Draw 1 card.', [{ type: 'damage', amount: 3 }, { type: 'draw', amount: 1 }], { type: 'attack' }),
-  skullCrack: card('skullCrack', 'Skull Crack', 1, 'Remove 4 monster block, then deal 4 damage.', [{ type: 'removeMonsterBlock', amount: 4 }, { type: 'damage', amount: 4 }], { type: 'attack' }),
+  skullCrack: card('skullCrack', 'Skull Crack', 1, 'Remove 4 monster block, then deal 4 damage.', [{ type: 'removeMonsterBlock', amount: 4 }, { type: 'damage', amount: 4 }], { type: 'attack', tags: ['breaker', 'headHunter'] }),
   guardBreak: card('guardBreak', 'Guard Break', 1, 'Remove all monster block. Exhaust.', [{ type: 'removeAllMonsterBlock' }], { exhaust: true }),
   boneDart: card('boneDart', 'Bone Dart', 0, 'Deal 2 damage. Draw 1. Exhaust.', [{ type: 'damage', amount: 2 }, { type: 'draw', amount: 1 }], { type: 'attack', exhaust: true }),
   quickToss: card('quickToss', 'Quick Toss', 1, 'Deal 3 damage twice.', [{ type: 'damage', amount: 3 }, { type: 'damage', amount: 3 }], { type: 'attack' }),
@@ -56,6 +61,8 @@ export const cards = {
   ashCycle: card('ashCycle', 'Ash Cycle', 0, 'Draw 2, then discard 1.', [{ type: 'draw', amount: 2 }, { type: 'discard', amount: 1 }]),
   delayedCut: card('delayedCut', 'Delayed Cut', 1, 'Deal 5 damage. Gain 1 energy.', [{ type: 'damage', amount: 5 }, { type: 'energy', amount: 1 }], { type: 'attack' }),
   memoryFilter: card('memoryFilter', 'Memory Filter', 0, 'Draw 2. Exhaust.', [{ type: 'draw', amount: 2 }], { exhaust: true }),
+  lanternFocus: card('lanternFocus', 'Lantern Focus', 0, 'Gain 1 survival. Draw 1. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'draw', amount: 1 }], { exhaust: true }),
+  pinningShot: card('pinningShot', 'Pinning Shot', 1, 'Remove 3 monster block, then deal 3 damage.', [{ type: 'removeMonsterBlock', amount: 3 }, { type: 'damage', amount: 3 }, { type: 'markMonster' }], { type: 'attack', tags: ['ranged', 'precise', 'limbHunter'] }),
   measuredStrike: card(
     'measuredStrike',
     'Measured Strike',
@@ -97,6 +104,8 @@ export const cards = {
     { tags: ['personal'], sourceType: 'personal' }
   )
 };
+
+Object.assign(cards, gearCards, monsterRewardCards);
 
 export const starterCardIds = [
   'foundingStone',

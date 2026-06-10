@@ -31,6 +31,48 @@ export const scars = {
     name: 'Dead-Eye Calm',
     effect: 'Start combat with +1 survival.',
     implemented: true
+  },
+  crackedBrowScar: {
+    id: 'crackedBrowScar',
+    name: 'Cracked Brow Scar',
+    effect: 'A precise attack can turn this old injury into focus.',
+    implemented: true
+  },
+  offHandScar: {
+    id: 'offHandScar',
+    name: 'Off-Hand Scar',
+    effect: 'The first one-handed attack each combat may draw 1.',
+    implemented: true
+  },
+  stubbornStepScar: {
+    id: 'stubbornStepScar',
+    name: 'Stubborn Step',
+    effect: 'The first Dodge each combat gains additional block.',
+    implemented: true
+  },
+  thunderScar: {
+    id: 'thunderScar',
+    name: 'Thunder Scar',
+    effect: 'Start combat with +1 survival.',
+    implemented: true
+  },
+  fearListenerScar: {
+    id: 'fearListenerScar',
+    name: 'Fear Listener',
+    effect: 'The first Panic each combat can become survival.',
+    implemented: true
+  },
+  webBurnScar: {
+    id: 'webBurnScar',
+    name: 'Web-Burn Scar',
+    effect: 'A reminder that binding can be broken.',
+    implemented: true
+  },
+  radiantBlindness: {
+    id: 'radiantBlindness',
+    name: 'Radiant Blindness',
+    effect: 'Strange attacks gain power, but precise attacks are impaired.',
+    implemented: true
   }
 };
 

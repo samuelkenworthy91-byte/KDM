@@ -3,9 +3,11 @@ import { cards, starterCardIds, trainingCardIds } from '../data/cards.js';
 import { childTraits, normalizeChildTraitId } from '../data/childTraits.js';
 import { equipmentList } from '../data/equipment.js';
 import { fightingArts } from '../data/fightingArts.js';
+import { monsterSurvivorRewards } from '../data/monsterSurvivorRewards.js';
 import { getDrawableInnovationIds, innovationCards } from '../data/innovationCards.js';
 import { injuries } from '../data/injuries.js';
 import { getNextTimelineMilestone } from '../data/lanternTimeline.js';
+import { nemesisEncounters, nemesisList } from '../data/nemesisEncounters.js';
 import { innovationList, innovations } from '../data/innovations.js';
 import {
   memoryInnovationList,
@@ -15,11 +17,17 @@ import { disorders } from '../data/disorders.js';
 import { scars } from '../data/scars.js';
 import {
   getAvailableQuarryLevel,
+  getQuarryBehaviourLabel,
+  getQuarryBehaviourNote,
   isQuarryUnlocked,
   quarries,
   quarryList
 } from '../data/quarries.js';
 import { resources } from '../data/resources.js';
+import {
+  weaponProficiencyDefinitions,
+  weaponTypes
+} from '../data/weaponProficiency.js';
 import {
   canAffordCost,
   canBuildUnlocked,
@@ -34,6 +42,12 @@ import {
 } from '../game/memoryInnovationLogic.js';
 
 const tabs = ['overview', 'survivors', 'armory', 'innovations', 'population', 'graveyard', 'quarries'];
+const monsterRewardTraitCatalog = Object.fromEntries(
+  Object.values(monsterSurvivorRewards)
+    .flatMap(entry => Object.values(entry.levelRewards).flat())
+    .filter(reward => reward.type === 'trait')
+    .map(reward => [reward.id, reward])
+);
 
 function CostList({ cost, stash }) {
   const entries = formatCostWithMissing(cost, stash);
@@ -157,17 +171,51 @@ function SurvivorCard({
       <ConditionList label="Injuries" ids={survivor.injuries} catalog={injuries} />
       <ConditionList label="Scars" ids={survivor.scars} catalog={scars} />
       <ConditionList label="Disorders" ids={survivor.disorders} catalog={disorders} />
+      {Object.entries(survivor.hitLocations || {}).some(([, wound]) => wound.wounded) && (
+        <p>
+          <strong>Hit locations:</strong>{' '}
+          {Object.entries(survivor.hitLocations)
+            .filter(([, wound]) => wound.wounded)
+            .map(([location, wound]) =>
+              `${location} (${wound.severe ? 'serious' : 'light'}: ${wound.penalty})`
+            )
+            .join('; ')}
+        </p>
+      )}
+      {!!survivor.treatmentNotes?.length && (
+        <p><strong>Treatment notes:</strong> {survivor.treatmentNotes.slice(-3).join(' ')}</p>
+      )}
       <details className="survivor-details">
         <summary>Survivor details</summary>
         <ConditionList
           label="Traits"
           ids={survivor.traits}
-          catalog={{ ...startingTraits, ...childTraits }}
+          catalog={{ ...startingTraits, ...childTraits, ...monsterRewardTraitCatalog }}
         />
         {survivor.appearance && <p><strong>Appearance:</strong> {survivor.appearance}</p>}
         <p><strong>Fighting arts:</strong> {survivor.fightingArts?.length
           ? survivor.fightingArts.map(id => fightingArts[id]?.name || id).join(', ')
           : 'None'}</p>
+        <div className="personal-card-list">
+          <strong>Weapon Proficiency</strong>
+          {weaponTypes.map(type => {
+            const progress = survivor.weaponProficiency?.[type] || { xp: 0, level: 0, mastered: false };
+            const definition = weaponProficiencyDefinitions[type];
+            return (
+              <p key={type}>
+                <strong>{definition.name}:</strong> {progress.xp}/8 XP, Level {progress.level}
+                {progress.mastered ? ' (Mastered)' : ''}
+                <br />
+                <span className="muted-text">
+                  {progress.level >= 2 ? definition.level2
+                    : progress.level >= 1 ? definition.level1
+                      : `Unlocks at 2 XP: ${definition.level1}`}
+                  {progress.mastered ? ` Mastery: ${definition.mastery}` : ''}
+                </span>
+              </p>
+            );
+          })}
+        </div>
         <div className="personal-card-list">
           <strong>Future Deck Profile</strong>
           <p className="muted-text">
@@ -290,7 +338,18 @@ function SurvivorCard({
           : 'None'}</p>
         {[...(survivor.injuries || []), ...(survivor.scars || []), ...(survivor.disorders || [])].map(id => {
           const condition = injuries[id] || scars[id] || disorders[id];
-          return condition ? <p className="muted-text" key={id}><strong>{condition.name}:</strong> {condition.effect}</p> : null;
+          if (!condition) return null;
+          if (disorders[id]) {
+            return (
+              <div className="muted-text" key={id}>
+                <p><strong>{condition.name}:</strong> {condition.description}</p>
+                <p><strong>Downside:</strong> {condition.downside}</p>
+                <p><strong>Upside:</strong> {condition.upside}</p>
+                <p><strong>Trigger:</strong> {condition.trigger}</p>
+              </div>
+            );
+          }
+          return <p className="muted-text" key={id}><strong>{condition.name}:</strong> {condition.effect}</p>;
         })}
       </details>
       <button type="button" disabled={active} onClick={() => onSelect(survivor.id)}>
@@ -464,17 +523,25 @@ export default function SettlementScreen({
   const validFemaleParticipant = livingFemales.some(survivor => survivor.id === intimacyFemaleId);
   const activeSurvivor = livingSurvivors.find(survivor => survivor.id === settlement.activeSurvivorId);
   const discoveredQuarries = quarryList.filter(quarry =>
-    settlement.discoveredQuarries.includes(quarry.id) || isQuarryUnlocked(quarry, settlement)
+    quarry.role === 'quarry' &&
+    (settlement.discoveredQuarries.includes(quarry.id) || isQuarryUnlocked(quarry, settlement))
   );
-  const unlockedHuntableQuarries = discoveredQuarries.filter(quarry => quarry.huntable);
+  const unlockedHuntableQuarries = discoveredQuarries.filter(quarry =>
+    quarry.role === 'quarry' && quarry.huntable
+  );
   const rumouredQuarries = quarryList.filter(quarry =>
     quarry.huntable &&
     quarry.role === 'quarry' &&
     !settlement.discoveredQuarries.includes(quarry.id)
   );
   const lockedArchiveQuarries = quarryList.filter(quarry =>
+    quarry.role === 'quarry' &&
     !unlockedHuntableQuarries.includes(quarry) && !rumouredQuarries.includes(quarry)
   );
+  const revealedNemeses = settlement.revealedNemesisIds
+    .map(id => nemesisEncounters[id])
+    .filter(Boolean);
+  const unknownThreatCount = Math.max(0, nemesisList.length - revealedNemeses.length);
   const hasPersonalCard = livingSurvivors.some(survivor =>
     starterCardIds.some(cardId => !survivor.forgottenCardIds?.includes(cardId)) ||
     survivor.personalDeckAdditions.some(addition => {
@@ -548,6 +615,7 @@ export default function SettlementScreen({
         </div>
         <div className="settlement-stats">
           <span>Population: {settlement.population}</span>
+          <span>Hunt party slots: {settlement.maxHuntPartySize}/4</span>
           <span>Memory: {settlement.settlementMemory}</span>
           <span>Lantern Year: {settlement.lanternYear}</span>
           <span>Save Slot {activeSlot}</span>
@@ -622,6 +690,19 @@ export default function SettlementScreen({
                 </p>
               ))}
             </details>
+            <h4>Timeline Threats</h4>
+            {revealedNemeses.length ? revealedNemeses.map(nemesis => (
+              <p key={nemesis.id}><strong>{nemesis.displayName}</strong> - {nemesis.description}</p>
+            )) : <p>No timeline threat has entered the lanternlight.</p>}
+            {unknownThreatCount > 0 && (
+              <p>Something watches from beyond the lanternlight. ({unknownThreatCount} unknown threats)</p>
+            )}
+            {settlement.lastNemesisResult && (
+              <p>
+                Latest nemesis result: <strong>{settlement.lastNemesisResult.nemesisName}</strong>{' '}
+                - {settlement.lastNemesisResult.result}
+              </p>
+            )}
           </section>
           <h3>Current Hunter</h3>
           {activeSurvivor ? (
@@ -772,15 +853,37 @@ export default function SettlementScreen({
           {Object.entries(recipeGroups).map(([buildingId, recipes]) => (
             <section className="recipe-group" key={buildingId}>
               <h3>{innovations[buildingId]?.name || buildingId}</h3>
+              {recipes[0]?.quarryId && (
+                <p className="muted-text">
+                  Unlocked by: {quarries[recipes[0].quarryId]?.name || recipes[0].quarryId}
+                </p>
+              )}
               <div className="item-grid">
                 {recipes.map(recipe => (
                   <article className="item-card" key={recipe.id}>
+                    <p className="eyebrow">{recipe.slot}</p>
                     <h4>{recipe.name}</h4>
+                    <p>
+                      <strong>Type:</strong> {recipe.weaponType || 'Non-weapon'} |{' '}
+                      <strong>Hands:</strong> {recipe.hands} | <strong>Speed:</strong> {recipe.speedStyle}
+                    </p>
+                    <p><strong>Keywords:</strong> {recipe.keywords?.join(', ') || 'Survival'}</p>
                     <p>{recipe.description}</p>
                     <p className="effect-text">{recipe.passiveText}</p>
-                    <p className="muted-text">
-                      Cards: {recipe.cardPackage.map(cardId => cards[cardId]?.name || cardId).join(', ')}
-                    </p>
+                    {recipe.deckIdentity && (
+                      <p className="effect-text">Deck identity: {recipe.deckIdentity}</p>
+                    )}
+                    <p className="muted-text"><strong>Adds:</strong></p>
+                    <ul>
+                      {recipe.cardPackage.map(cardId => (
+                        <li key={cardId}>
+                          <strong>{cards[cardId]?.name || cardId}</strong>: {cards[cardId]?.description}
+                          {cards[cardId]?.tags?.length
+                            ? ` [${cards[cardId].tags.filter(tag => tag !== 'quarrySpecific').join(', ')}]`
+                            : ''}
+                        </li>
+                      ))}
+                    </ul>
                     <p className="muted-text">[Requires: Build {innovations[recipe.buildingId]?.name}]</p>
                     <CostList cost={recipe.cost} stash={settlement.stash} />
                     <button type="button" disabled={!canAffordCost(recipe.cost, settlement.stash)} onClick={() => onCraft(recipe)}>Craft</button>
@@ -939,6 +1042,13 @@ export default function SettlementScreen({
                   <p>Completed runs: {grave.completedRuns || 0}</p>
                   <p>Traits lost: {grave.traits?.join(', ') || 'None recorded'}</p>
                   <p>Fighting arts lost: {grave.fightingArts?.join(', ') || 'None recorded'}</p>
+                  <p>
+                    Weapon proficiency: {grave.proficientWeaponTypes?.length
+                      ? grave.proficientWeaponTypes.map(item =>
+                        `${item.name || item.type} ${item.mastered ? '(Mastered)' : `(${item.xp} XP)`}`
+                      ).join(', ')
+                      : 'None recorded'}
+                  </p>
                   <p>Gear lost: {grave.gearLostNames?.join(', ') || 'None'}</p>
                   <p>
                     Lost with {grave.injuries?.length || 0} injuries, {grave.scars?.length || 0} scars,{' '}
@@ -976,7 +1086,8 @@ export default function SettlementScreen({
                   <p>Levels unlocked: 1-{getAvailableQuarryLevel(quarry.id, settlement)}</p>
                   <p>Resources: {quarry.uniqueResources.map(resourceId => resources[resourceId]?.name || resourceId).join(', ')}</p>
                   <p>Buildings: {quarry.buildingUnlocks.join(', ') || 'None'}</p>
-                  <p>Behaviour: {quarry.implemented ? 'Fully implemented' : 'Fallback behaviour'}</p>
+                  <p>{getQuarryBehaviourLabel(quarry)}</p>
+                  {getQuarryBehaviourNote(quarry) && <p>{getQuarryBehaviourNote(quarry)}</p>}
                   <p>Monster Bane: {baneSurvivors.length ? baneSurvivors.map(survivor => survivor.name).join(', ') : 'No living survivor'}</p>
                 </article>
               );
@@ -989,10 +1100,17 @@ export default function SettlementScreen({
                 <h4>{quarry.displayName}</h4>
                 <p>{quarry.role} | {quarry.designTags.join(', ')}</p>
                 <p>{quarry.unlockHint}</p>
-                <p>Behaviour: {quarry.implemented ? 'Fully implemented' : 'Fallback behaviour'}</p>
+                <p>{getQuarryBehaviourLabel(quarry)}</p>
+                {getQuarryBehaviourNote(quarry) && <p>{getQuarryBehaviourNote(quarry)}</p>}
               </article>
             ))}
           </div>
+          {settlement.rumourTexts?.length > 0 && (
+            <>
+              <h3>Quarry Rumours</h3>
+              {settlement.rumourTexts.map(text => <p key={text}>{text}</p>)}
+            </>
+          )}
           <label className="field-label" htmlFor="quarry-level">Quarry level</label>
           <select id="quarry-level" value={selectedLevel} onChange={event => onSelectLevel(Number(event.target.value))}>
             {Array.from({ length: getAvailableQuarryLevel(selectedQuarry, settlement) }, (_, index) => index + 1)
@@ -1005,11 +1123,23 @@ export default function SettlementScreen({
               {lockedArchiveQuarries.map(quarry => (
                 <p key={quarry.id}>
                   <strong>{quarry.displayName}</strong> | {quarry.role} |{' '}
-                  {quarry.huntable ? 'Fallback supported' : 'Archive only'} | {quarry.unlockHint}
+                  {quarry.huntable ? getQuarryBehaviourLabel(quarry) : 'Archive only'} | {quarry.unlockHint}
                 </p>
               ))}
             </div>
           </details>
+          <h3>Timeline Threats</h3>
+          <h4>Revealed Nemesis</h4>
+          {revealedNemeses.length ? revealedNemeses.map(nemesis => (
+            <article className="quarry-card" key={nemesis.id}>
+              <h4>{nemesis.displayName}</h4>
+              <p>{nemesis.description}</p>
+            </article>
+          )) : <p>None revealed.</p>}
+          <h4>Unknown Threats</h4>
+          {unknownThreatCount > 0
+            ? <p>Something watches from beyond the lanternlight.</p>
+            : <p>No unknown timeline threats remain.</p>}
         </div>
       )}
     </section>

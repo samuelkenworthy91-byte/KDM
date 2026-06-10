@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import MapScreen from './components/MapScreen.jsx';
 import { cards, starterCardIds, trainingCardIds } from './data/cards.js';
 import { childTraitList, childTraits, normalizeChildTraitId } from './data/childTraits.js';
 import { getCreatureBehaviour } from './data/creatureBehaviours.js';
 import { equipment } from './data/equipment.js';
 import { events } from './data/events.js';
+import { disorders } from './data/disorders.js';
+import {
+  getNemesisBehaviour,
+  nemesisEncounters
+} from './data/nemesisEncounters.js';
 import {
   fightingArts,
   generalFightingArts,
@@ -24,10 +29,14 @@ import {
   getDiscoveryChoices,
   quarryList,
   quarries,
-  rollGenericBossRewards,
-  rollQuarryLoot
+  rollTierGenericBossRewards
 } from './data/quarries.js';
+import { findMonsterSurvivorReward } from './data/monsterSurvivorRewards.js';
+import { addWeaponProficiencyXp, getProficientWeaponSummary } from './data/weaponProficiency.js';
 import { genericResourceIds, resources as resourceData } from './data/resources.js';
+import { getQuarryDiscoveryEvent } from './data/quarryDiscoveryEvents.js';
+import { createMonsterWeakPoints, getBrokenWeakPointRewards } from './data/weakPoints.js';
+import { treatWound } from './data/woundTables.js';
 import { addResources, canAffordCost, deductCost } from './game/craftingLogic.js';
 import {
   addUniqueCondition,
@@ -57,6 +66,7 @@ import {
   setActiveSlot
 } from './game/saveLogic.js';
 import CombatScreen from './screens/CombatScreen.jsx';
+import PartyCombatScreen from './screens/PartyCombatScreen.jsx';
 import CreateSettlementScreen from './screens/CreateSettlementScreen.jsx';
 import EventScreen from './screens/EventScreen.jsx';
 import GraveLegacyScreen from './screens/GraveLegacyScreen.jsx';
@@ -64,7 +74,13 @@ import LootRewardScreen from './screens/LootRewardScreen.jsx';
 import InnovationDrawScreen from './screens/InnovationDrawScreen.jsx';
 import LoadoutScreen from './screens/LoadoutScreen.jsx';
 import MonsterDiscoveryScreen from './screens/MonsterDiscoveryScreen.jsx';
+import NemesisLorePopup from './screens/NemesisLorePopup.jsx';
+import NemesisPreparationScreen from './screens/NemesisPreparationScreen.jsx';
+import NemesisResultScreen from './screens/NemesisResultScreen.jsx';
+import NemesisWarningScreen from './screens/NemesisWarningScreen.jsx';
 import QuarrySelectionScreen from './screens/QuarrySelectionScreen.jsx';
+import PartySelectionScreen from './screens/PartySelectionScreen.jsx';
+import QuarryDiscoveryLoreScreen from './screens/QuarryDiscoveryLoreScreen.jsx';
 import RestStopScreen from './screens/RestStopScreen.jsx';
 import RunSummaryScreen from './screens/RunSummaryScreen.jsx';
 import SettlementScreen from './screens/SettlementScreen.jsx';
@@ -84,19 +100,20 @@ function chooseHuntEvent(level) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function createScaledMonster(quarryId, level, type) {
+function createScaledMonster(quarryId, level, type, partySize = 1) {
   const quarry = quarries[quarryId] || quarryList[0];
   const behaviour = getCreatureBehaviour(quarry.id);
   const scaling = behaviour?.levelScaling?.[level] || { hp: 1, damage: 0, dangerousWeight: 0 };
+  const tierScaling = quarry.tierScaling || { hp: 1, damage: 0, aggression: 0 };
   const nodeMultiplier = type === 'boss' ? 1.5 : type === 'elite' ? 1.25 : 1;
   const encounterDamageBonus = type === 'boss'
     ? (level >= 2 ? 3 : 2)
     : type === 'elite'
       ? (level >= 2 ? 2 : 1)
       : 0;
-  const damageBonus = encounterDamageBonus + (scaling.damage || 0);
+  const damageBonus = encounterDamageBonus + (scaling.damage || 0) + (tierScaling.damage || 0);
   const baseHp = 30 + Math.min(18, quarry.designTags.length * 3);
-  const hp = Math.round(baseHp * nodeMultiplier * scaling.hp);
+  const hp = Math.round(baseHp * nodeMultiplier * scaling.hp * (tierScaling.hp || 1) * partySize);
   const scaleEffect = effect => (
     ['dealDamage', 'multiHitDamage'].includes(effect.type)
       ? { ...effect, amount: effect.amount + damageBonus }
@@ -120,26 +137,38 @@ function createScaledMonster(quarryId, level, type) {
     };
     return descriptions[effect.type] || effect.type;
   };
-  const scaledIntents = (behaviour?.intents || []).flatMap(intent => {
+  const scaledIntents = (behaviour?.intents || [])
+    .filter(intent => (intent.levelMin || 1) <= level)
+    .filter(intent => !intent.tierMin || quarry.tierRank >= intent.tierMin)
+    .flatMap(intent => {
     const effects = intent.effects.map(scaleEffect);
+    const partyAggressionBonus = partySize <= 1 ? 0 : (partySize - 1) * 0.05;
     const copies = Math.max(
       1,
-      (intent.weight || 1) +
+      (intent.aggressionWeight || intent.weight || 1) +
       (intent.levelWeights?.[level] || 0) +
+      (intent.tags?.includes('dangerous') ? tierScaling.aggression || 0 : 0) +
       (intent.tags?.some(tag => ['heavy', 'precision', 'punishment'].includes(tag))
         ? scaling.dangerousWeight || 0
         : 0)
     );
+    const targetingRule = intent.targetingRule ||
+      (level >= 3 && intent.tags?.includes('dangerous') ? 'lowestHp'
+        : level >= 2 && intent.tags?.includes('precision') ? 'mostBlock'
+          : intent.tags?.includes('wild') ? 'random' : 'front');
     const scaledIntent = {
       ...intent,
       effects,
+      targetingRule,
+      partyAggressionBonus,
       revealedText: `${intent.name}: ${effects.map(describeEffect).join('; ')}.`
     };
-    return Array.from({ length: copies }, (_, copyIndex) => ({
+    const weightedCopies = copies + (Math.random() < partyAggressionBonus ? 1 : 0);
+    return Array.from({ length: weightedCopies }, (_, copyIndex) => ({
       ...scaledIntent,
       id: `${scaledIntent.id}-${copyIndex}`
     }));
-  });
+  }).sort(() => Math.random() - 0.5);
 
   return {
     id: `${quarry.id}-${level}-${type}`,
@@ -147,14 +176,57 @@ function createScaledMonster(quarryId, level, type) {
     quarryId,
     name: quarry.displayName,
     level,
+    tier: quarry.tier,
+    tierRank: quarry.tierRank,
     passiveTell: behaviour?.passiveTell || '',
     passiveText: behaviour?.passiveRevealedText || '',
     passiveRules: behaviour?.passiveRules || [],
     hp,
     maxHp: hp,
     block: 0,
+    weakPoints: createMonsterWeakPoints(quarry.id, level),
     intents: scaledIntents
   };
+}
+
+function createNemesisMonster(nemesisId) {
+  const encounter = nemesisEncounters[nemesisId];
+  const behaviour = getNemesisBehaviour(nemesisId);
+  if (!encounter || !behaviour) return null;
+  const hpByNemesis = {
+    cruelCollector: 48,
+    maskedJudge: 55,
+    wanderingKiller: 50,
+    shadowStalker: 62,
+    mirrorTyrant: 72
+  };
+  const hp = hpByNemesis[nemesisId] || 50;
+  return {
+    id: `nemesis-${nemesisId}`,
+    baseId: nemesisId,
+    quarryId: nemesisId,
+    name: encounter.displayName,
+    passiveTell: behaviour.passiveTell,
+    passiveText: behaviour.passiveRevealedText,
+    passiveRules: behaviour.passiveRules,
+    hp,
+    maxHp: hp,
+    block: 0,
+    intents: behaviour.intents
+  };
+}
+
+function removeRandomResources(stash, amount) {
+  const next = { ...stash };
+  const available = Object.keys(next).flatMap(id => Array(next[id] || 0).fill(id));
+  const removed = [];
+  for (let count = 0; count < amount && available.length; count += 1) {
+    const index = Math.floor(Math.random() * available.length);
+    const [id] = available.splice(index, 1);
+    next[id] = Math.max(0, (next[id] || 0) - 1);
+    removed.push(resourceData[id]?.name || id);
+  }
+  return { stash: next, removed };
 }
 
 function getLoadoutBonus(settlement, monsterId, quarryId) {
@@ -162,14 +234,27 @@ function getLoadoutBonus(settlement, monsterId, quarryId) {
   const equipped = (activeSurvivor?.boundGear || [])
     .map(gear => equipment[gear.equipmentId])
     .filter(Boolean);
-  const bonus = { extraMaxHp: 0, startingBlock: 0, strength: 0, extraFirstTurnDraw: 0 };
+  const bonus = {
+    extraMaxHp: 0,
+    startingBlock: 0,
+    strength: 0,
+    extraFirstTurnDraw: 0,
+    startingSurvival: 0,
+    counterDamageBonus: 0,
+    monsterStartsWounded: 0
+  };
 
   equipped.forEach(item => {
-    if (item.id === 'hideWraps' || item.id === 'maneCloak') bonus.startingBlock += 3;
+    if (item.id === 'hideWraps') bonus.startingBlock += 3;
+    if (item.id === 'maneCloak') bonus.startingBlock += 2;
     if (item.id === 'monsterGrease') bonus.startingBlock += 2;
     if (item.id === 'rawhideVest') bonus.extraMaxHp += 2;
+    if (item.id === 'huntingHideWrap') bonus.extraMaxHp += 1;
     if (item.id === 'clawCharm' || item.id === 'bloodPaint') bonus.strength += 1;
     if (item.id === 'catEyeCharm') bonus.extraFirstTurnDraw += 1;
+    if (item.id === 'predatorMask') bonus.startingSurvival += 1;
+    if (item.id === 'pouncingGreaves') bonus.counterDamageBonus += 1;
+    if (item.id === 'whiteClawTrap') bonus.monsterStartsWounded += 2;
   });
 
   if (
@@ -202,6 +287,12 @@ export default function App() {
   const [resourceReward, setResourceReward] = useState(null);
   const [currentEvent, setCurrentEvent] = useState(null);
   const [runSurvivor, setRunSurvivor] = useState(null);
+  const [runParty, setRunParty] = useState([]);
+  const [selectedPartyIds, setSelectedPartyIds] = useState([]);
+  const [loadoutPartyIndex, setLoadoutPartyIndex] = useState(0);
+  const [partyCombatBonuses, setPartyCombatBonuses] = useState([]);
+  const [pendingPartyEffects, setPendingPartyEffects] = useState([]);
+  const [survivorRewardQueue, setSurvivorRewardQueue] = useState([]);
   const [runDeck, setRunDeck] = useState([]);
   const [runEquippedGear, setRunEquippedGear] = useState([]);
   const [runModifiers, setRunModifiers] = useState({});
@@ -221,6 +312,23 @@ export default function App() {
     scars: [],
     disorders: []
   });
+  const [nemesisResult, setNemesisResult] = useState(null);
+  const [pendingQuarryDiscoveryId, setPendingQuarryDiscoveryId] = useState(null);
+
+  useEffect(() => {
+    if (!settlement?.pendingNemesisEncounter) return;
+    if (screen === 'runSummary' && runSummary?.outcome === 'death') return;
+    const forcedScreens = new Set([
+      'settlement', 'survivorProgress', 'monsterDiscovery', 'runSummary'
+    ]);
+    if (forcedScreens.has(screen)) {
+      setScreen(settlement.pendingNemesisEncounter.stage === 'lore'
+        ? 'nemesisLore'
+        : settlement.pendingNemesisEncounter.stage === 'warning'
+          ? 'nemesisWarning'
+          : 'nemesisPreparation');
+    }
+  }, [settlement?.pendingNemesisEncounter, screen, runSummary?.outcome]);
 
   const updateSettlement = updater => {
     setSettlement(current => {
@@ -292,32 +400,42 @@ export default function App() {
 
   const startRun = () => {
     if (!settlement || settlement.population <= 0) return;
-    const activeSurvivor = settlement.survivors.find(
-      survivor => survivor.id === settlement.activeSurvivorId && survivor.alive !== false
-    );
-    if (!activeSurvivor) return;
+    const selectedParty = selectedPartyIds
+      .slice(0, settlement.maxHuntPartySize)
+      .map(id => settlement.survivors.find(survivor => survivor.id === id && survivor.alive !== false))
+      .filter(Boolean);
+    if (!selectedParty.length) return;
+    const activeSurvivor = selectedParty[0];
     const nextRunBonus = settlement.nextRunBonus || {};
     const startingResources = [];
     const activeRunBonus = {};
-    const equippedGear = (activeSurvivor.boundGear || [])
-      .map(gear => equipment[gear.equipmentId])
-      .filter(Boolean);
-    const huntSurvivor = {
-      ...activeSurvivor,
-      hp: activeSurvivor.injuries?.includes('deepCut')
-        ? Math.max(1, activeSurvivor.hp - 1)
-        : activeSurvivor.hp
-    };
-    const nextRunDeck = buildRunDeck({ survivor: huntSurvivor, equippedGear });
-    if (huntSurvivor.disorders?.includes('nightTerrors')) {
-      nextRunDeck.push(...getCardsFromIds(['panic'], 'Night Terrors'));
-    }
+    const huntParty = selectedParty.map(survivor => ({
+      ...survivor,
+      hp: survivor.injuries?.includes('deepCut') ? Math.max(1, survivor.hp - 1) : survivor.hp
+    }));
+    const partyDecks = huntParty.map(survivor => {
+      const equippedGear = (survivor.boundGear || []).map(gear => equipment[gear.equipmentId]).filter(Boolean);
+      const deck = buildRunDeck({ survivor, equippedGear });
+      if (equippedGear.some(item => item.id === 'predatorMask') && !(survivor.scars || []).length) {
+        deck.push(...getCardsFromIds(['panic'], 'Predator Mask'));
+      }
+      if (survivor.disorders?.includes('nightTerrors')) {
+        deck.push(...getCardsFromIds(['panic'], 'Night Terrors'));
+      }
+      return deck;
+    });
+    const equippedGear = (activeSurvivor.boundGear || []).map(gear => equipment[gear.equipmentId]).filter(Boolean);
+    const huntSurvivor = huntParty[0];
+    const nextRunDeck = partyDecks[0];
 
     if (nextRunBonus.randomMonsterPart) {
       startingResources.push(RANDOM_MONSTER_PARTS[Math.floor(Math.random() * RANDOM_MONSTER_PARTS.length)]);
     }
     if (nextRunBonus.extraMaxHp) activeRunBonus.extraMaxHp = nextRunBonus.extraMaxHp;
     if (nextRunBonus.firstCombatStrength) activeRunBonus.firstCombatStrength = nextRunBonus.firstCombatStrength;
+    if (nextRunBonus.extraFirstTurnDraw) activeRunBonus.extraFirstTurnDraw = nextRunBonus.extraFirstTurnDraw;
+    if (nextRunBonus.startingBlock) activeRunBonus.firstCombatBlock = nextRunBonus.startingBlock;
+    if (nextRunBonus.startingSurvival) activeRunBonus.startingSurvival = nextRunBonus.startingSurvival;
     if (nextRunBonus.nextCombatMonsterBonusHp) {
       activeRunBonus.nextCombatMonsterBonusHp = nextRunBonus.nextCombatMonsterBonusHp;
     }
@@ -341,6 +459,9 @@ export default function App() {
         randomMonsterPart: false,
         extraMaxHp: 0,
         firstCombatStrength: 0,
+        extraFirstTurnDraw: 0,
+        startingBlock: 0,
+        startingSurvival: 0,
         nextCombatMonsterBonusHp: 0
       }
     }));
@@ -348,8 +469,15 @@ export default function App() {
     setCurrentNode(null);
     setRunResources(startingResources);
     setRunSurvivor(huntSurvivor);
+    setRunParty(huntParty);
     setRunEquippedGear(equippedGear.map(item => item.id));
     setRunDeck(nextRunDeck);
+    setPartyCombatBonuses(huntParty.map((survivor, index) => ({
+      survivor,
+      runDeck: partyDecks[index],
+      huntDeckConditionsApplied: true
+    })));
+    setPendingPartyEffects([]);
     setRunModifiers({});
     setResourceReward(null);
     setRunBonus(activeRunBonus);
@@ -362,22 +490,56 @@ export default function App() {
 
   const prepareHunt = survivorId => {
     if (settlement.pendingTimelineEvent) return;
-    updateSettlement(current => ({ ...current, activeSurvivorId: survivorId }));
-    setScreen('loadout');
+    const firstId = survivorId || settlement.activeSurvivorId ||
+      settlement.survivors.find(survivor => survivor.alive !== false)?.id;
+    if (!firstId) return;
+    setSelectedPartyIds([firstId]);
+    setLoadoutPartyIndex(0);
+    setScreen('partySelection');
   };
 
   const selectNode = node => {
     if (!node.available || node.completed) return;
     setCurrentNode(node);
+    const completedCount = runMap.flat().filter(item => item.completed).length;
+    const livingParty = runParty.filter(survivor => survivor.hp > 0);
+    const nodeSurvivor = livingParty[completedCount % Math.max(1, livingParty.length)];
+    if (nodeSurvivor && !['fight', 'elite', 'boss'].includes(node.type)) {
+      setRunSurvivor(nodeSurvivor);
+      const equipped = (nodeSurvivor.boundGear || []).map(gear => equipment[gear.equipmentId]).filter(Boolean);
+      setRunDeck(buildRunDeck({ survivor: nodeSurvivor, equippedGear: equipped }));
+    }
 
     if (['fight', 'elite', 'boss'].includes(node.type)) {
       const monsterId = quarries[selectedQuarry]?.monsterId;
+      const partyBonuses = runParty.filter(survivor => survivor.hp > 0).map((survivor, index) => {
+        const partySettlement = { ...settlement, activeSurvivorId: survivor.id };
+        const loadoutBonus = getLoadoutBonus(partySettlement, monsterId, selectedQuarry);
+        return {
+          ...partyCombatBonuses.find(bonus => bonus.survivor.id === survivor.id),
+          ...loadoutBonus,
+          survivor,
+          runDeck: partyCombatBonuses.find(bonus => bonus.survivor.id === survivor.id)?.runDeck,
+          startingBlock:
+            (loadoutBonus.startingBlock || 0) +
+            (runModifiers.nextCombatStartBlock || 0) +
+            (runBonus.firstCombatBlock || 0),
+          firstTurnEnergyPenalty: runModifiers.nextCombatEnergyPenalty || 0,
+          monsterBaneDamageBonus:
+            settlement.builtInnovations.includes('monsterArchive') &&
+            survivor.fightingArts?.includes(getMonsterBaneId(selectedQuarry)) ? 1 : 0,
+          hasMonsterBane: survivor.fightingArts?.includes(getMonsterBaneId(selectedQuarry)),
+          huntDeckConditionsApplied: true
+        };
+      });
+      setPartyCombatBonuses(partyBonuses);
       const loadoutBonus = getLoadoutBonus(settlement, monsterId, selectedQuarry);
       const firstCombatStrength = runBonus.firstCombatStrength || 0;
       setCombatBonus({
         ...loadoutBonus,
         extraMaxHp: (loadoutBonus.extraMaxHp || 0) + (runBonus.extraMaxHp || 0),
         firstCombatStrength: firstCombatStrength + (loadoutBonus.strength || 0),
+        extraFirstTurnDraw: (loadoutBonus.extraFirstTurnDraw || 0) + (runBonus.extraFirstTurnDraw || 0),
         startingBlock:
           (loadoutBonus.startingBlock || 0) +
           (runModifiers.nextCombatStartBlock || 0) +
@@ -386,7 +548,10 @@ export default function App() {
         monsterBonusHp:
           (runModifiers.nextCombatMonsterBonusHp || 0) +
           (runBonus.nextCombatMonsterBonusHp || 0),
-        monsterStartsWounded: runModifiers.monsterStartsWounded || 0,
+        monsterStartsWounded:
+          (runModifiers.monsterStartsWounded || 0) +
+          (loadoutBonus.monsterStartsWounded || 0),
+        counterDamageBonus: loadoutBonus.counterDamageBonus || 0,
         monsterEnrage: runModifiers.monsterEnrage || 0,
         firstAttackBonus:
           (runModifiers.firstAttackBonus || 0) +
@@ -396,7 +561,17 @@ export default function App() {
           runSurvivor?.fightingArts?.includes(getMonsterBaneId(selectedQuarry))
             ? 1
             : 0,
-        survivor: runSurvivor,
+        survivor: (runBonus.startingSurvival || loadoutBonus.startingSurvival)
+          ? {
+            ...runSurvivor,
+            survival: Math.min(
+              runSurvivor.maxSurvival || 3,
+              (runSurvivor.survival || 0) +
+                (runBonus.startingSurvival || 0) +
+                (loadoutBonus.startingSurvival || 0)
+            )
+          }
+          : runSurvivor,
         runDeck,
         huntDeckConditionsApplied: true
       });
@@ -405,6 +580,8 @@ export default function App() {
         ...current,
         firstCombatBlock: 0,
         firstHuntAttackBonus: 0,
+        extraFirstTurnDraw: 0,
+        startingSurvival: 0,
         nextCombatMonsterBonusHp: 0
       }));
       if (firstCombatStrength) setRunBonus(current => ({ ...current, firstCombatStrength: 0 }));
@@ -419,6 +596,9 @@ export default function App() {
       return;
     }
     if (node.type === 'event') {
+      if (nodeSurvivor?.disorders?.includes('paranoia')) {
+        setRunDeck(current => [...current, cards.panic]);
+      }
       setCurrentEvent(chooseHuntEvent(selectedLevel));
       setScreen('event');
       return;
@@ -444,6 +624,71 @@ export default function App() {
   };
 
   const handleCombatVictory = combatResult => {
+    if (combatResult?.survivors) {
+      const survivorsAfterCombat = combatResult.survivors.map(survivor => ({
+        ...survivor,
+        kills: (survivor.kills || 0) + 1
+      }));
+      const fallen = survivorsAfterCombat.filter(survivor => survivor.hp <= 0);
+      const living = survivorsAfterCombat.filter(survivor => survivor.hp > 0);
+      const brokenWeakPoints = combatResult.brokenWeakPoints || [];
+      const harvestResults = getBrokenWeakPointRewards(brokenWeakPoints);
+      if (fallen.length) {
+        updateSettlement(current => ({
+          ...current,
+          population: Math.max(0, current.population - fallen.length),
+          deadSurvivors: current.deadSurvivors + fallen.length,
+          survivors: current.survivors.map(survivor => fallen.some(item => item.id === survivor.id)
+            ? { ...survivor, alive: false, hp: 0, boundGear: [] }
+            : survivor),
+          graveHistory: [
+            ...fallen.map(survivor => ({
+              survivorName: survivor.name,
+              survivorId: survivor.id,
+              killedBy: combatResult.monster?.name || quarries[selectedQuarry].name,
+              quarryId: selectedQuarry,
+              quarryLevel: selectedLevel,
+              huntPartyMembers: survivorsAfterCombat.map(item => item.name),
+              weaponProficiency: survivor.weaponProficiency || {},
+              proficientWeaponTypes: getProficientWeaponSummary(survivor.weaponProficiency),
+              supportGearCarried: (survivor.boundGear || [])
+                .map(gear => equipment[gear.equipmentId])
+                .filter(item => item?.supportGear)
+                .map(item => item.name),
+              injuries: survivor.injuries || [],
+              scars: survivor.scars || [],
+              disorders: survivor.disorders || [],
+              woundHistory: survivor.woundHistory || [],
+              finalWound: survivor.woundHistory?.at(-1) || null,
+              gearLostCount: survivor.boundGear?.length || 0,
+              gearLostNames: (survivor.boundGear || []).map(gear =>
+                equipment[gear.equipmentId]?.name || gear.equipmentId),
+              rewardsMissed: true,
+              timestamp: new Date().toISOString()
+            })),
+            ...current.graveHistory
+          ]
+        }));
+      }
+      setRunParty(living);
+      setRunSurvivor(living[0]);
+      const isBoss = currentNode?.type === 'boss';
+      setBossGenericRewards(isBoss ? rollTierGenericBossRewards(selectedQuarry, selectedLevel) : []);
+      setPendingCombatVictory({
+        isBoss,
+        survivors: living,
+        brokenWeakPoints,
+        harvestResults,
+        wounds: combatResult.wounds || []
+      });
+      setLootChoices(getCreatureSpecificLootChoices(
+        selectedQuarry,
+        selectedLevel,
+        harvestResults
+      ));
+      setScreen('lootReward');
+      return;
+    }
     let survivorAfterCombat = {
       ...runSurvivor,
       hp: combatResult?.survivor?.hp ?? runSurvivor.hp,
@@ -462,24 +707,30 @@ export default function App() {
       recordConditionGain('scars', scarId);
     }
     setRunSurvivor(survivorAfterCombat);
-    const genericRewards = isBoss ? rollGenericBossRewards(3) : [];
+    const genericRewards = isBoss
+      ? rollTierGenericBossRewards(selectedQuarry, selectedLevel)
+      : [];
     setBossGenericRewards(genericRewards);
     setPendingCombatVictory({
       isBoss,
       survivor: survivorAfterCombat
     });
     setLootChoices(
-      isBoss
-        ? getCreatureSpecificLootChoices(selectedQuarry, selectedLevel)
-        : rollQuarryLoot(selectedQuarry, selectedLevel).slice(0, 3)
+      getCreatureSpecificLootChoices(selectedQuarry, selectedLevel)
     );
     setScreen('lootReward');
   };
 
-  const finishBossVictory = (selectedResource, survivorAfterFight) => {
+  const finishBossVictory = (selectedResources, survivorAfterFight) => {
     const completedMap = completeMapNode(runMap, currentNode.id);
     const progress = getRunProgress(completedMap, currentNode);
-    const allRewards = [...runResources, ...bossGenericRewards, selectedResource];
+    const monsterPartRewards = Array.isArray(selectedResources)
+      ? selectedResources
+      : [selectedResources].filter(Boolean);
+    const allRewards = [...runResources, ...bossGenericRewards, ...monsterPartRewards];
+    const usedWeaponTypes = [...new Set(runEquippedGear
+      .map(equipmentId => equipment[equipmentId]?.weaponType)
+      .filter(Boolean))];
     const recoveryAmount = Math.min(
       Math.ceil(survivorAfterFight.maxHp / 3),
       survivorAfterFight.maxHp - survivorAfterFight.hp
@@ -539,6 +790,10 @@ export default function App() {
           scars: survivorAfterFight.scars || [],
           disorders: survivorAfterFight.disorders || [],
           permanentModifiers: survivorAfterFight.permanentModifiers || {},
+          weaponProficiency: addWeaponProficiencyXp(
+            survivorAfterFight.weaponProficiency,
+            usedWeaponTypes
+          ),
           kills: survivorAfterFight.kills || 0,
           completedRuns: (survivor.completedRuns || 0) + 1
         }
@@ -564,7 +819,95 @@ export default function App() {
     });
     const archiveBuilt = settlement.builtInnovations.includes('monsterArchive');
     const monsterStoriesBuilt = settlement.builtMemoryInnovations.includes('monsterStories');
-    setProgressOfferBane(archiveBuilt || monsterStoriesBuilt || Math.random() < 0.65);
+    const baneCharmEquipped = runEquippedGear.includes('catEyeCharm') ||
+      runEquippedGear.includes('radiantEyeCharm');
+    const baseBaneChance = selectedLevel === 3 ? 0.9 : selectedLevel === 2 ? 0.75 : 0.5;
+    setProgressOfferBane(
+      archiveBuilt || monsterStoriesBuilt ||
+      Math.random() < Math.min(0.98, baseBaneChance + (baneCharmEquipped ? 0.15 : 0))
+    );
+    setScreen('survivorProgress');
+  };
+
+  const finishPartyBossVictory = (selectedResources, survivingParty) => {
+    const completedMap = completeMapNode(runMap, currentNode.id);
+    const progress = getRunProgress(completedMap, currentNode);
+    const monsterParts = Array.isArray(selectedResources)
+      ? selectedResources
+      : [selectedResources].filter(Boolean);
+    const allRewards = [...runResources, ...bossGenericRewards, ...monsterParts];
+    const healedParty = survivingParty.map(survivor => {
+      const recovery = Math.min(
+        Math.ceil(survivor.maxHp / 3),
+        survivor.maxHp - survivor.hp
+      );
+      return { ...survivor, hp: survivor.hp + recovery, recoveredHp: recovery };
+    });
+    const summary = {
+      outcome: 'victory',
+      survivorName: healedParty.map(survivor => survivor.name).join(', '),
+      survivorIds: healedParty.map(survivor => survivor.id),
+      partyMembers: healedParty.map(survivor => survivor.name),
+      quarryName: quarries[selectedQuarry].name,
+      quarryLevel: selectedLevel,
+      nodesCompleted: progress.nodesCompleted,
+      rowReached: progress.rowReached,
+      settlementMemoryEarned: progress.nodesCompleted,
+      resources: allRewards.map(id => resourceData[id]?.name || id),
+      populationBefore: settlement.population,
+      populationAfter: settlement.population,
+      lanternYearBefore: settlement.lanternYear,
+      lanternYearAfter: settlement.lanternYear + 1
+    };
+
+    setRunMap(completedMap);
+    setRunResources(allRewards);
+    setRunParty(healedParty);
+    setRunSummary(summary);
+    setSurvivorRewardQueue(healedParty.map(survivor => survivor.id));
+    updateSettlement(current => {
+      const nextYear = current.lanternYear + 1;
+      const next = {
+        ...current,
+        settlementMemory: current.settlementMemory + progress.nodesCompleted,
+        stash: addResources(current.stash, allRewards),
+        totalRuns: current.totalRuns + 1,
+        completedHunts: current.completedHunts + 1,
+        lanternYear: nextYear,
+        survivors: current.survivors.map(survivor => {
+          const returning = healedParty.find(item => item.id === survivor.id);
+          if (!returning) return survivor;
+          const weaponTypes = [...new Set((returning.boundGear || [])
+            .map(gear => equipment[gear.equipmentId]?.weaponType)
+            .filter(Boolean))];
+          return {
+            ...survivor,
+            ...returning,
+            alive: true,
+            weaponProficiency: addWeaponProficiencyXp(returning.weaponProficiency, weaponTypes),
+            completedRuns: (survivor.completedRuns || 0) + 1
+          };
+        }),
+        defeatedQuarryLevels: {
+          ...current.defeatedQuarryLevels,
+          [selectedQuarry]: Math.max(current.defeatedQuarryLevels?.[selectedQuarry] || 0, selectedLevel)
+        },
+        innovationDeckState: {
+          ...current.innovationDeckState,
+          availableInnovationPoolIds: [
+            ...new Set([
+              ...current.innovationDeckState.availableInnovationPoolIds,
+              ...(QUARRY_INNOVATION_POOL[selectedQuarry] || [])
+            ])
+          ]
+        }
+      };
+      return applyLanternYearTimeline(next, nextYear);
+    });
+    const archiveBuilt = settlement.builtInnovations.includes('monsterArchive');
+    const monsterStoriesBuilt = settlement.builtMemoryInnovations.includes('monsterStories');
+    const baseBaneChance = selectedLevel === 3 ? 0.9 : selectedLevel === 2 ? 0.75 : 0.5;
+    setProgressOfferBane(archiveBuilt || monsterStoriesBuilt || Math.random() < baseBaneChance);
     setScreen('survivorProgress');
   };
 
@@ -573,6 +916,75 @@ export default function App() {
     defeatedRunState = null,
     immediateConditionGains = { injuries: [], scars: [], disorders: [] }
   ) => {
+    if (deathDetails?.survivors) {
+      const fallen = deathDetails.survivors.filter(survivor => survivor.hp <= 0);
+      const progress = getRunProgress();
+      const summary = {
+        outcome: 'death',
+        survivorName: fallen.map(survivor => survivor.name).join(', '),
+        partyMembers: deathDetails.survivors.map(survivor => survivor.name),
+        quarryName: quarries[selectedQuarry]?.name,
+        quarryLevel: selectedLevel,
+        killedBy: deathDetails.killedBy,
+        killedById: deathDetails.killedById,
+        nodesCompleted: progress.nodesCompleted,
+        rowReached: progress.rowReached,
+        settlementMemoryEarned: progress.nodesCompleted,
+        resources: runResources.map(id => resourceData[id]?.name || id),
+        populationBefore: settlement.population,
+        populationAfter: Math.max(0, settlement.population - fallen.length),
+        lanternYearBefore: settlement.lanternYear,
+        lanternYearAfter: settlement.lanternYear + 1
+      };
+      setRunSummary(summary);
+      updateSettlement(current => {
+        const nextYear = current.lanternYear + 1;
+        const next = {
+          ...current,
+          population: Math.max(0, current.population - fallen.length),
+          deadSurvivors: current.deadSurvivors + fallen.length,
+          totalRuns: current.totalRuns + 1,
+          lanternYear: nextYear,
+          settlementMemory: current.settlementMemory + progress.nodesCompleted,
+          stash: addResources(current.stash, runResources),
+          survivors: current.survivors.map(survivor => fallen.some(item => item.id === survivor.id)
+            ? { ...survivor, alive: false, hp: 0, boundGear: [] }
+            : survivor),
+          activeSurvivorId: current.survivors.find(survivor =>
+            !fallen.some(item => item.id === survivor.id) && survivor.alive !== false)?.id || null,
+          graveHistory: [
+            ...fallen.map(survivor => ({
+              survivorName: survivor.name,
+              survivorId: survivor.id,
+              killedBy: deathDetails.killedBy,
+              quarryId: selectedQuarry,
+              quarryLevel: selectedLevel,
+              huntPartyMembers: deathDetails.survivors.map(item => item.name),
+              weaponProficiency: survivor.weaponProficiency || {},
+              proficientWeaponTypes: getProficientWeaponSummary(survivor.weaponProficiency),
+              supportGearCarried: (survivor.boundGear || [])
+                .map(gear => equipment[gear.equipmentId])
+                .filter(item => item?.supportGear)
+                .map(item => item.name),
+              injuries: survivor.injuries || [],
+              scars: survivor.scars || [],
+              disorders: survivor.disorders || [],
+              woundHistory: survivor.woundHistory || [],
+              finalWound: survivor.woundHistory?.at(-1) || null,
+              gearLostCount: survivor.boundGear?.length || 0,
+              gearLostNames: (survivor.boundGear || []).map(gear =>
+                equipment[gear.equipmentId]?.name || gear.equipmentId),
+              rewardsMissed: true,
+              timestamp: new Date().toISOString()
+            })),
+            ...current.graveHistory
+          ]
+        };
+        return applyLanternYearTimeline(next, nextYear);
+      });
+      setScreen('runSummary');
+      return;
+    }
     const fallenSurvivor = defeatedRunState?.runSurvivor || runSurvivor;
     const fallenResources = defeatedRunState?.runResources || runResources;
     const lostGear = fallenSurvivor?.boundGear || [];
@@ -583,6 +995,8 @@ export default function App() {
       survivorId: fallenSurvivor?.id,
       survivorTraits: fallenSurvivor?.traits || [],
       survivorFightingArts: fallenSurvivor?.fightingArts || [],
+      survivorWeaponProficiency: fallenSurvivor?.weaponProficiency || {},
+      proficientWeaponTypes: getProficientWeaponSummary(fallenSurvivor?.weaponProficiency),
       survivorInjuries: fallenSurvivor?.injuries || [],
       survivorScars: fallenSurvivor?.scars || [],
       survivorDisorders: fallenSurvivor?.disorders || [],
@@ -672,6 +1086,9 @@ export default function App() {
       completedRuns: runSummary.survivorCompletedRuns || 0,
       traits: runSummary.survivorTraits || [],
       fightingArts: runSummary.survivorFightingArts || [],
+      weaponProficiency: runSummary.survivorWeaponProficiency || {},
+      proficientWeaponTypes: runSummary.proficientWeaponTypes || [],
+      masteredWeaponTypes: (runSummary.proficientWeaponTypes || []).filter(item => item.mastered),
       injuries: runSummary.survivorInjuries || [],
       scars: runSummary.survivorScars || [],
       disorders: runSummary.survivorDisorders || [],
@@ -741,7 +1158,18 @@ export default function App() {
   };
 
   const handleAttemptInnovation = () => {
-    const drawable = getDrawableInnovationIds(settlement.innovationDeckState);
+    const highestQuarryLevel = Math.max(0, ...Object.values(settlement.defeatedQuarryLevels || {}));
+    const drawable = getDrawableInnovationIds(settlement.innovationDeckState).filter(id => {
+      if (id === 'sharedBurden') {
+        return settlement.innovationDeckState.builtInnovationIds.includes('trailSignals') &&
+          (settlement.lanternYear >= 3 || highestQuarryLevel >= 2);
+      }
+      if (id === 'lanternProcession') {
+        return settlement.innovationDeckState.builtInnovationIds.includes('sharedBurden') &&
+          (settlement.lanternYear >= 6 || highestQuarryLevel >= 3);
+      }
+      return true;
+    });
     const basicIds = ['bone', 'hide', 'sinew', 'organ', 'scrap', 'claw'];
     const availableResources = basicIds.flatMap(resourceId =>
       Array(settlement.stash[resourceId] || 0).fill(resourceId)
@@ -790,6 +1218,13 @@ export default function App() {
     if (!card) return;
     updateSettlement(current => ({
       ...current,
+      maxHuntPartySize: innovationId === 'trailSignals'
+        ? Math.max(2, current.maxHuntPartySize)
+        : innovationId === 'sharedBurden'
+          ? Math.max(3, current.maxHuntPartySize)
+          : innovationId === 'lanternProcession'
+            ? 4
+            : current.maxHuntPartySize,
       builtInnovations: [
         ...new Set([...current.builtInnovations, ...(card.unlocksBuildings || [])])
       ],
@@ -978,18 +1413,25 @@ export default function App() {
     updateSettlement(current => {
       if ((current.settlementMemory || 0) < 1) return current;
       const survivor = current.survivors.find(item =>
-        item.id === survivorId && item.alive !== false && item.hp < item.maxHp
+        item.id === survivorId && item.alive !== false && (
+          item.hp < item.maxHp ||
+          Object.values(item.hitLocations || {}).some(wound => wound.wounded)
+        )
       );
       if (!survivor) return current;
       return {
         ...current,
         settlementMemory: current.settlementMemory - 1,
-        survivors: current.survivors.map(item => item.id === survivorId
-          ? {
-            ...item,
-            hp: Math.min(item.maxHp, item.hp + Math.ceil(item.maxHp / 3))
-          }
-          : item)
+        survivors: current.survivors.map(item => {
+          if (item.id !== survivorId) return item;
+          const lightLocation = Object.entries(item.hitLocations || {})
+            .find(([, wound]) => wound.wounded && !wound.severe)?.[0];
+          const rested = lightLocation ? treatWound(item, lightLocation, 'rest') : item;
+          return {
+            ...rested,
+            hp: Math.min(rested.maxHp, rested.hp + Math.ceil(rested.maxHp / 3))
+          };
+        })
       };
     });
   };
@@ -1019,22 +1461,76 @@ export default function App() {
   };
 
   const handleConfirmLoadout = selectedInstanceIds => {
+    const nemesisPreparation = settlement.pendingNemesisEncounter;
+    const activeSurvivor = settlement.survivors.find(
+      item => item.id === settlement.activeSurvivorId
+    );
+    const limit = settlement.builtInnovations.includes('armoryRack') ? 5 : 4;
+    const remainingSlots = Math.max(0, limit - (activeSurvivor?.boundGear?.length || 0));
+    const selected = settlement.armory
+      .filter(gear => selectedInstanceIds.includes(gear.instanceId))
+      .slice(0, remainingSlots);
+    const preparedSurvivor = activeSurvivor
+      ? { ...activeSurvivor, boundGear: [...(activeSurvivor.boundGear || []), ...selected] }
+      : null;
     updateSettlement(current => {
       const survivor = current.survivors.find(item => item.id === current.activeSurvivorId);
-      const limit = current.builtInnovations.includes('armoryRack') ? 5 : 4;
-      const remainingSlots = Math.max(0, limit - (survivor?.boundGear?.length || 0));
-      const selected = current.armory
+      const currentLimit = current.builtInnovations.includes('armoryRack') ? 5 : 4;
+      const currentRemainingSlots = Math.max(0, currentLimit - (survivor?.boundGear?.length || 0));
+      const currentSelected = current.armory
         .filter(gear => selectedInstanceIds.includes(gear.instanceId))
-        .slice(0, remainingSlots);
-      const selectedIds = new Set(selected.map(gear => gear.instanceId));
+        .slice(0, currentRemainingSlots);
+      const selectedIds = new Set(currentSelected.map(gear => gear.instanceId));
       return {
         ...current,
         armory: current.armory.filter(gear => !selectedIds.has(gear.instanceId)),
         survivors: current.survivors.map(survivor => survivor.id === current.activeSurvivorId
-          ? { ...survivor, boundGear: [...(survivor.boundGear || []), ...selected] }
+          ? { ...survivor, boundGear: [...(survivor.boundGear || []), ...currentSelected] }
           : survivor)
       };
     });
+    if (nemesisPreparation && preparedSurvivor) {
+      const equipped = preparedSurvivor.boundGear
+        .map(gear => equipment[gear.equipmentId])
+        .filter(Boolean);
+      setRunSurvivor(preparedSurvivor);
+      setRunEquippedGear(equipped.map(item => item.id));
+      setRunDeck(buildRunDeck({ survivor: preparedSurvivor, equippedGear: equipped }));
+      setCombatBonus({
+        ...getLoadoutBonus(settlement, null, nemesisPreparation.nemesisId),
+        survivor: {
+          ...preparedSurvivor,
+          survival: Math.min(
+            preparedSurvivor.maxSurvival || 3,
+            (preparedSurvivor.survival || 0) + (nemesisPreparation.startingSurvivalBonus || 0)
+          )
+        },
+        runDeck: buildRunDeck({ survivor: preparedSurvivor, equippedGear: equipped }),
+        huntDeckConditionsApplied: true,
+        monsterEnrage: nemesisPreparation.nemesisId === 'maskedJudge'
+          ? Math.floor((settlement.settlementMemory || 0) / 3)
+          : 0,
+        monsterBaneDamageBonus:
+          settlement.builtInnovations.includes('monsterArchive') &&
+          preparedSurvivor.fightingArts.includes(getMonsterBaneId(nemesisPreparation.nemesisId))
+            ? 1
+            : 0
+      });
+      setScreen('nemesisCombat');
+      return;
+    }
+    if (loadoutPartyIndex < selectedPartyIds.length - 1) {
+      const nextIndex = loadoutPartyIndex + 1;
+      const nextId = selectedPartyIds[nextIndex];
+      setLoadoutPartyIndex(nextIndex);
+      updateSettlement(current => ({ ...current, activeSurvivorId: nextId }));
+      return;
+    }
+    updateSettlement(current => ({
+      ...current,
+      huntingParty: selectedPartyIds.slice(0, current.maxHuntPartySize),
+      activeSurvivorId: selectedPartyIds[0] || current.activeSurvivorId
+    }));
     setScreen('quarrySelection');
   };
 
@@ -1090,6 +1586,9 @@ export default function App() {
     }
     setRunResources(result.runResources);
     setRunSurvivor(result.runSurvivor);
+    setRunParty(current => current.map(survivor =>
+      survivor.id === result.runSurvivor.id ? result.runSurvivor : survivor
+    ));
     setRunModifiers(result.runModifiers);
     updateSettlement(current => ({
       ...current,
@@ -1118,11 +1617,13 @@ export default function App() {
       pendingSpecialChildTrait: result.pendingSpecialChildTrait || current.pendingSpecialChildTrait,
       discoveredQuarries: result.quarryRumour
         ? [...new Set([...current.discoveredQuarries, ...quarryList.filter(quarry =>
+          quarry.role === 'quarry' &&
           !current.discoveredQuarries.includes(quarry.id)
         ).slice(0, 1).map(quarry => quarry.id)])]
         : current.discoveredQuarries,
       unlockedQuarries: result.quarryRumour
         ? [...new Set([...current.unlockedQuarries, ...quarryList.filter(quarry =>
+          quarry.role === 'quarry' &&
           !current.discoveredQuarries.includes(quarry.id)
         ).slice(0, 1).map(quarry => quarry.id)])]
         : current.unlockedQuarries
@@ -1140,21 +1641,50 @@ export default function App() {
 
   const handleRestChoice = choiceId => {
     if (choiceId === 'bindWounds') {
-      setRunSurvivor(current => ({
-        ...current,
-        hp: Math.min(
-          current.maxHp,
-          current.hp + Math.max(
-            0,
-            Math.ceil(current.maxHp * 0.25) - (current.injuries?.includes('twistedAnkle') ? 1 : 0)
+      setRunSurvivor(current => {
+        const lightLocation = Object.entries(current.hitLocations || {})
+          .find(([, wound]) => wound.wounded && !wound.severe)?.[0];
+        const rested = lightLocation ? treatWound(current, lightLocation, 'rest') : current;
+        return {
+          ...rested,
+          hp: Math.min(
+            rested.maxHp,
+            rested.hp + Math.max(
+              0,
+              Math.ceil(rested.maxHp * 0.25) - (rested.injuries?.includes('twistedAnkle') ? 1 : 0)
+            )
           )
-        )
-      }));
+        };
+      });
+      setRunParty(current => current.map(survivor => survivor.id === runSurvivor.id
+        ? (() => {
+          const lightLocation = Object.entries(survivor.hitLocations || {})
+            .find(([, wound]) => wound.wounded && !wound.severe)?.[0];
+          const rested = lightLocation ? treatWound(survivor, lightLocation, 'rest') : survivor;
+          return {
+            ...rested,
+            hp: Math.min(
+              rested.maxHp,
+              rested.hp + Math.max(
+                0,
+                Math.ceil(rested.maxHp * 0.25) -
+                  (rested.injuries?.includes('twistedAnkle') ? 1 : 0)
+              )
+            )
+          };
+        })()
+        : survivor));
     } else if (choiceId === 'shareStories') {
       setRunSurvivor(current => ({
         ...current,
         survival: Math.min(current.maxSurvival || 3, (current.survival || 0) + 1)
       }));
+      setRunParty(current => current.map(survivor => survivor.id === runSurvivor.id
+        ? {
+          ...survivor,
+          survival: Math.min(survivor.maxSurvival || 3, (survivor.survival || 0) + 1)
+        }
+        : survivor));
     } else if (choiceId === 'sharpenGear') {
       setRunModifiers(current => ({ ...current, firstAttackBonus: (current.firstAttackBonus || 0) + 2 }));
     } else {
@@ -1163,28 +1693,51 @@ export default function App() {
     completeCurrentNode();
   };
 
-  const handleLootChoice = resourceId => {
+  const handleLootChoice = resourceIds => {
     const pending = pendingCombatVictory;
     setPendingCombatVictory(null);
     setLootChoices([]);
     if (pending?.isBoss) {
-      finishBossVictory(resourceId, pending.survivor);
+      if (pending.survivors) finishPartyBossVictory(resourceIds, pending.survivors);
+      else finishBossVictory(resourceIds, pending.survivor);
       setBossGenericRewards([]);
       return;
     }
+    const resourceId = Array.isArray(resourceIds) ? resourceIds[0] : resourceIds;
     setRunResources(items => [...items, resourceId]);
     completeCurrentNode();
   };
 
   const handleProgressChoice = rewardId => {
+    const monsterReward = findMonsterSurvivorReward(rewardId);
+    const rewardSurvivorId = survivorRewardQueue[0] || runSummary.survivorId;
     updateSettlement(current => ({
       ...current,
       survivors: current.survivors.map(survivor => {
-        if (survivor.id !== runSummary.survivorId) return survivor;
+        if (survivor.id !== rewardSurvivorId) return survivor;
         if (rewardId === 'survival') {
           return {
             ...survivor,
             survival: Math.min(survivor.maxSurvival || 3, (survivor.survival || 0) + 1)
+          };
+        }
+        if (monsterReward?.type === 'card') {
+          return {
+            ...survivor,
+            personalDeckAdditions: [
+              ...survivor.personalDeckAdditions,
+              {
+                cardId: rewardId,
+                sourceType: 'personal',
+                reason: `${quarries[selectedQuarry].name} Level ${selectedLevel}`
+              }
+            ]
+          };
+        }
+        if (monsterReward?.type === 'trait') {
+          return {
+            ...survivor,
+            traits: [...new Set([...(survivor.traits || []), rewardId])]
           };
         }
         if (cards[rewardId]?.sourceType === 'personal') {
@@ -1217,38 +1770,429 @@ export default function App() {
         return next;
       })
     }));
+    const remainingRewardQueue = survivorRewardQueue.slice(1);
+    setSurvivorRewardQueue(remainingRewardQueue);
+    if (remainingRewardQueue.length) return;
     const discoveryChoices = getDiscoveryChoices(settlement);
-    setScreen(discoveryChoices.length ? 'monsterDiscovery' : 'runSummary');
+    if (discoveryChoices.length) {
+      setScreen('monsterDiscovery');
+    } else {
+      updateSettlement(current => ({
+        ...current,
+        settlementMemory: current.settlementMemory + 1
+      }));
+      setRunSummary(current => ({
+        ...current,
+        discoveryMessage: 'No new quarry rumours were found. The settlement gains 1 Memory instead.'
+      }));
+      setScreen('runSummary');
+    }
   };
 
   const handleMonsterDiscovery = quarryId => {
     const quarry = quarries[quarryId];
-    if (!quarry) return;
-    updateSettlement(current => ({
-      ...current,
-      discoveredQuarries: [...new Set([...current.discoveredQuarries, quarryId])],
-      unlockedQuarries: [...new Set([...current.unlockedQuarries, quarryId])],
-      rumouredInnovations: [
-        ...new Set([
-          ...(current.rumouredInnovations || []),
-          ...(quarry.associatedInnovations || []).slice(0, 1)
-        ])
-      ],
-      innovationDeckState: {
-        ...current.innovationDeckState,
-        availableInnovationPoolIds: [
-          ...new Set([
-            ...current.innovationDeckState.availableInnovationPoolIds,
-            ...(QUARRY_INNOVATION_POOL[quarryId] || [])
-          ])
-        ]
-      }
-    }));
+    const discoveryEvent = getQuarryDiscoveryEvent(quarryId);
+    if (!quarry || quarry.role !== 'quarry' || !quarry.huntable || !discoveryEvent) return;
+    updateSettlement(current => {
+      let settlementMemory = current.settlementMemory || 0;
+      const stash = { ...current.stash };
+      const nextRunBonus = { ...(current.nextRunBonus || {}) };
+      const rumourTexts = [...(current.rumourTexts || [])];
+
+      discoveryEvent.settlementEffects.forEach(effect => {
+        if (effect.type === 'settlementMemory') settlementMemory += effect.amount;
+        if (effect.type === 'resource' || effect.type === 'resourceOrMemory') {
+          if (resourceData[effect.resourceId]) stash[effect.resourceId] = (stash[effect.resourceId] || 0) + effect.amount;
+          else settlementMemory += effect.amount;
+        }
+        if (effect.type === 'resourceOrResource') {
+          const resourceId = effect.resourceIds.find(id => resourceData[id]);
+          if (resourceId) stash[resourceId] = (stash[resourceId] || 0) + effect.amount;
+        }
+        if (effect.type === 'nextHuntModifier') Object.assign(nextRunBonus, effect.effects);
+        if (effect.type === 'rumour') rumourTexts.push(effect.text);
+      });
+
+      return {
+        ...current,
+        settlementMemory,
+        stash,
+        nextRunBonus,
+        rumourTexts: [...new Set(rumourTexts)],
+        discoveredQuarries: [...new Set([...current.discoveredQuarries, quarryId])],
+        unlockedQuarries: [...new Set([...current.unlockedQuarries, quarryId])],
+        builtInnovations: [...new Set([...current.builtInnovations, ...discoveryEvent.unlocksBuildingIds])],
+        unlockedRecipeFamilies: [...new Set([...(current.unlockedRecipeFamilies || []), quarryId])],
+        rumouredInnovations: [
+          ...new Set([...(current.rumouredInnovations || []), ...discoveryEvent.unlocksBuildingIds])
+        ],
+        settlementHistory: [...current.settlementHistory, {
+          type: 'quarryDiscovery',
+          lanternYear: current.lanternYear,
+          quarryId,
+          title: discoveryEvent.title,
+          text: discoveryEvent.historyText,
+          timestamp: new Date().toISOString()
+        }],
+        innovationDeckState: {
+          ...current.innovationDeckState,
+          availableInnovationPoolIds: [
+            ...new Set([
+              ...current.innovationDeckState.availableInnovationPoolIds,
+              ...(QUARRY_INNOVATION_POOL[quarryId] || []),
+              ...discoveryEvent.unlocksInnovationIds
+            ])
+          ]
+        }
+      };
+    });
     setRunSummary(current => ({
       ...current,
       discoveryMessage: `The settlement now knows how to hunt ${quarry.name}.`
     }));
-    setScreen('runSummary');
+    setPendingQuarryDiscoveryId(quarryId);
+    setScreen('quarryDiscoveryLore');
+  };
+
+  const continueNemesisLore = () => {
+    updateSettlement(current => {
+      const pending = current.pendingNemesisEncounter;
+      if (!pending) return current;
+      return {
+        ...current,
+        revealedNemesisIds: [...new Set([...current.revealedNemesisIds, pending.nemesisId])],
+        seenNemesisLoreIds: [...new Set([...current.seenNemesisLoreIds, pending.nemesisId])],
+        pendingNemesisEncounter: { ...pending, stage: 'warning' }
+      };
+    });
+    setScreen('nemesisWarning');
+  };
+
+  const beginNemesisPreparation = () => {
+    const living = settlement.survivors.filter(survivor => survivor.alive !== false);
+    if (!living.length) {
+      const encounter = nemesisEncounters[settlement.pendingNemesisEncounter.nemesisId];
+      const result = {
+        nemesisId: encounter.id,
+        nemesisName: encounter.displayName,
+        result: 'defeat',
+        survivorName: null,
+        text: 'No living survivor could answer the attack. The settlement is defeated.',
+        details: ['Population reduced to 0'],
+        deathSummary: null
+      };
+      updateSettlement(current => ({
+        ...current,
+        population: 0,
+        pendingNemesisEncounter: null,
+        lastNemesisResult: result,
+        settlementHistory: [...current.settlementHistory, {
+          lanternYear: current.lanternYear,
+          nemesisId: encounter.id,
+          nemesisName: encounter.displayName,
+          result: 'defeat',
+          survivorUsed: null,
+          consequences: result.details,
+          rewards: [],
+          deaths: [],
+          timestamp: new Date().toISOString()
+        }]
+      }));
+      setNemesisResult(result);
+      setScreen('nemesisResult');
+      return;
+    }
+    updateSettlement(current => ({
+      ...current,
+      activeSurvivorId: living[0].id,
+      pendingNemesisEncounter: {
+        ...current.pendingNemesisEncounter,
+        stage: 'preparation',
+        selectedSurvivorId: living[0].id
+      }
+    }));
+    setScreen('nemesisPreparation');
+  };
+
+  const selectNemesisSurvivor = survivorId => {
+    updateSettlement(current => ({
+      ...current,
+      activeSurvivorId: survivorId,
+      pendingNemesisEncounter: {
+        ...current.pendingNemesisEncounter,
+        selectedSurvivorId: survivorId
+      }
+    }));
+  };
+
+  const spendNemesisMemory = () => {
+    updateSettlement(current => {
+      if (current.settlementMemory < 1 || current.pendingNemesisEncounter?.memorySpent) return current;
+      return {
+        ...current,
+        settlementMemory: current.settlementMemory - 1,
+        pendingNemesisEncounter: {
+          ...current.pendingNemesisEncounter,
+          memorySpent: true,
+          startingSurvivalBonus: 1
+        }
+      };
+    });
+  };
+
+  const healNemesisSurvivor = resourceId => {
+    updateSettlement(current => {
+      const pending = current.pendingNemesisEncounter;
+      const survivor = current.survivors.find(item => item.id === pending?.selectedSurvivorId);
+      if (!pending || pending.healingSpent || !survivor || (current.stash[resourceId] || 0) < 1) {
+        return current;
+      }
+      return {
+        ...current,
+        stash: deductCost(current.stash, { [resourceId]: 1 }),
+        survivors: current.survivors.map(item => item.id === survivor.id
+          ? { ...item, hp: Math.min(item.maxHp, item.hp + 2) }
+          : item),
+        pendingNemesisEncounter: { ...pending, healingSpent: true }
+      };
+    });
+  };
+
+  const prepareNemesisLoadout = () => {
+    setScreen('loadout');
+  };
+
+  const finishNemesisVictory = combatResult => {
+    const pending = settlement.pendingNemesisEncounter;
+    const encounter = nemesisEncounters[pending?.nemesisId];
+    if (!encounter || !runSurvivor) return;
+    const rewards = encounter.rewards || {};
+    const details = [];
+    if (rewards.settlementMemory) details.push(`+${rewards.settlementMemory} settlement Memory`);
+    (rewards.resources || []).forEach(id => details.push(`+1 ${resourceData[id]?.name || id}`));
+    (rewards.innovationIds || []).forEach(id => details.push(`Innovation added: ${innovationCards[id]?.name || id}`));
+    if (rewards.survivorStrength) details.push(`${runSurvivor.name} gains +${rewards.survivorStrength} strength`);
+    if (rewards.fightingArt) details.push(`${runSurvivor.name} learns a fighting art`);
+    if (rewards.removePanic) details.push(`Remove ${rewards.removePanic} Panic from ${runSurvivor.name}`);
+    const result = {
+      nemesisId: encounter.id,
+      nemesisName: encounter.displayName,
+      result: 'victory',
+      survivorName: runSurvivor.name,
+      text: encounter.victoryText,
+      details,
+      deathSummary: null
+    };
+    updateSettlement(current => {
+      const survivorAfter = combatResult?.survivor || runSurvivor;
+      const randomArt = generalFightingArts.find(art =>
+        !(runSurvivor.fightingArts || []).includes(art.id)
+      );
+      return {
+        ...current,
+        settlementMemory: current.settlementMemory + (rewards.settlementMemory || 0),
+        stash: addResources(current.stash, rewards.resources || []),
+        survivors: current.survivors.map(survivor => {
+          if (survivor.id !== runSurvivor.id) return survivor;
+          let permanentNegativeCards = survivor.permanentNegativeCards || [];
+          if (rewards.removePanic) {
+            let remaining = rewards.removePanic;
+            permanentNegativeCards = permanentNegativeCards.filter(addition => {
+              if (remaining > 0 && getPersonalCardId(addition) === 'panic') {
+                remaining -= 1;
+                return false;
+              }
+              return true;
+            });
+          }
+          return {
+            ...survivor,
+            hp: survivorAfter.hp,
+            survival: survivorAfter.survival,
+            strength: (survivor.strength || 0) + (rewards.survivorStrength || 0),
+            fightingArts: rewards.fightingArt && randomArt
+              ? [...new Set([...survivor.fightingArts, randomArt.id])]
+              : survivor.fightingArts,
+            permanentNegativeCards
+          };
+        }),
+        innovationDeckState: {
+          ...current.innovationDeckState,
+          availableInnovationPoolIds: [
+            ...new Set([
+              ...current.innovationDeckState.availableInnovationPoolIds,
+              ...(rewards.innovationIds || [])
+            ])
+          ]
+        },
+        pendingNemesisEncounter: null,
+        lastNemesisResult: result,
+        settlementHistory: [...current.settlementHistory, {
+          lanternYear: current.lanternYear,
+          nemesisId: encounter.id,
+          nemesisName: encounter.displayName,
+          result: 'victory',
+          survivorUsed: runSurvivor.name,
+          consequences: [],
+          rewards: details,
+          deaths: [],
+          timestamp: new Date().toISOString()
+        }]
+      };
+    });
+    setNemesisResult(result);
+    setScreen('nemesisResult');
+  };
+
+  const finishNemesisDefeat = deathDetails => {
+    const pending = settlement.pendingNemesisEncounter;
+    const encounter = nemesisEncounters[pending?.nemesisId];
+    if (!encounter || !runSurvivor) return;
+    const consequences = encounter.defeatConsequences || {};
+    const lostGear = runSurvivor.boundGear || [];
+    const details = [];
+    const deathSummary = {
+      outcome: 'death',
+      survivorName: runSurvivor.name,
+      survivorId: runSurvivor.id,
+      survivorTraits: runSurvivor.traits || [],
+      survivorFightingArts: runSurvivor.fightingArts || [],
+      survivorWeaponProficiency: runSurvivor.weaponProficiency || {},
+      proficientWeaponTypes: getProficientWeaponSummary(runSurvivor.weaponProficiency),
+      survivorInjuries: runSurvivor.injuries || [],
+      survivorScars: runSurvivor.scars || [],
+      survivorDisorders: runSurvivor.disorders || [],
+      survivorCompletedRuns: runSurvivor.completedRuns || 0,
+      gearLostCount: lostGear.length,
+      gearLostNames: lostGear.map(gear => equipment[gear.equipmentId]?.name || gear.equipmentId),
+      killedBy: encounter.displayName,
+      killedById: encounter.id,
+      nodesCompleted: 0,
+      rowReached: 0,
+      settlementMemoryEarned: 0
+    };
+    updateSettlement(current => {
+      let population = Math.max(0, current.population - 1);
+      let settlementMemory = current.settlementMemory;
+      let stash = current.stash;
+      let builtInnovations = current.builtInnovations;
+      let innovationDeckState = current.innovationDeckState;
+      const randomLoss = consequences.randomResourceLoss
+        ? removeRandomResources(stash, consequences.randomResourceLoss)
+        : { stash, removed: [] };
+      stash = randomLoss.stash;
+      if (consequences.populationLoss) {
+        population = Math.max(0, population - consequences.populationLoss);
+        details.push(`Population -${consequences.populationLoss}`);
+      }
+      if (randomLoss.removed.length) details.push(`Resources lost: ${randomLoss.removed.join(', ')}`);
+      if (consequences.settlementMemoryLoss) {
+        if (settlementMemory > 0) {
+          const loss = Math.min(settlementMemory, consequences.settlementMemoryLoss);
+          settlementMemory -= loss;
+          details.push(`Settlement Memory -${loss}`);
+        } else if (consequences.populationLossIfNoMemory) {
+          population = Math.max(0, population - consequences.populationLossIfNoMemory);
+          details.push(`Population -${consequences.populationLossIfNoMemory}`);
+        }
+      }
+      if (consequences.loseBuiltInnovation) {
+        const removable = builtInnovations.find(id => id !== 'lanternHearth');
+        if (removable) {
+          builtInnovations = builtInnovations.filter(id => id !== removable);
+          innovationDeckState = {
+            ...innovationDeckState,
+            builtInnovationIds: innovationDeckState.builtInnovationIds.filter(id => id !== removable)
+          };
+          details.push(`Innovation lost: ${innovationCards[removable]?.name || removable}`);
+        } else {
+          const loss = Math.min(settlementMemory, consequences.settlementMemoryLossFallback || 0);
+          settlementMemory -= loss;
+          details.push(`Settlement Memory -${loss}`);
+        }
+      }
+      details.unshift(`${runSurvivor.name} died`, `Bound gear destroyed: ${lostGear.length}`);
+      const nextSurvivors = current.survivors.map(survivor => {
+        if (survivor.id !== runSurvivor.id) return survivor;
+        return {
+          ...survivor,
+          alive: false,
+          hp: 0,
+          boundGear: []
+        };
+      });
+      if (consequences.disorderId) {
+        const disorderTarget = nextSurvivors.find(survivor => survivor.alive !== false);
+        if (disorderTarget) {
+          disorderTarget.disorders = [
+            ...new Set([...(disorderTarget.disorders || []), consequences.disorderId])
+          ];
+          details.push(`${disorderTarget.name} gains ${disorders[consequences.disorderId]?.name || consequences.disorderId}`);
+        }
+      }
+      if (consequences.panic) {
+        const target = nextSurvivors.find(survivor => survivor.alive !== false);
+        if (target) {
+          target.permanentNegativeCards = [
+            ...(target.permanentNegativeCards || []),
+            ...Array(consequences.panic).fill(null).map(() => ({
+              cardId: 'panic',
+              sourceType: 'curse',
+              reason: encounter.displayName
+            }))
+          ];
+          details.push(`${target.name} gains ${consequences.panic} Panic`);
+        } else if (consequences.populationLossIfNoSurvivor) {
+          population = Math.max(0, population - consequences.populationLossIfNoSurvivor);
+          details.push(`Population -${consequences.populationLossIfNoSurvivor}`);
+        }
+      }
+      const historyEntry = {
+        lanternYear: current.lanternYear,
+        nemesisId: encounter.id,
+        nemesisName: encounter.displayName,
+        result: 'defeat',
+        survivorUsed: runSurvivor.name,
+        consequences: details,
+        rewards: [],
+        deaths: [runSurvivor.name],
+        timestamp: new Date().toISOString()
+      };
+      return {
+        ...current,
+        population,
+        settlementMemory,
+        stash,
+        builtInnovations,
+        innovationDeckState,
+        survivors: nextSurvivors,
+        activeSurvivorId: nextSurvivors.find(survivor => survivor.alive !== false)?.id || null,
+        deadSurvivors: current.deadSurvivors + 1,
+        pendingNemesisEncounter: null,
+        settlementHistory: [...current.settlementHistory, historyEntry],
+        lastNemesisResult: {
+          nemesisId: encounter.id,
+          nemesisName: encounter.displayName,
+          result: 'defeat',
+          survivorName: runSurvivor.name,
+          text: encounter.defeatText,
+          details,
+          deathSummary
+        }
+      };
+    });
+    const result = {
+      nemesisId: encounter.id,
+      nemesisName: encounter.displayName,
+      result: 'defeat',
+      survivorName: runSurvivor.name,
+      text: encounter.defeatText,
+      details,
+      deathSummary
+    };
+    setRunSummary(deathSummary);
+    setNemesisResult(result);
+    setScreen('nemesisResult');
   };
 
   const handleCreateSurvivor = (name, gender, options) => {
@@ -1390,6 +2334,10 @@ export default function App() {
           completedRuns: deathSurvivor.completedRuns || 0,
           traits: deathSurvivor.traits || [],
           fightingArts: deathSurvivor.fightingArts || [],
+          weaponProficiency: deathSurvivor.weaponProficiency || {},
+          proficientWeaponTypes: getProficientWeaponSummary(deathSurvivor.weaponProficiency),
+          masteredWeaponTypes: getProficientWeaponSummary(deathSurvivor.weaponProficiency)
+            .filter(item => item.mastered),
           injuries: deathSurvivor.injuries || [],
           scars: deathSurvivor.scars || [],
           disorders: deathSurvivor.disorders || [],
@@ -1447,8 +2395,30 @@ export default function App() {
             onReturnToTitle={showTitle}
           />
         ) : <TitleScreen slots={listSaveSlots()} onLoad={handleLoad} onNew={() => {}} onDelete={handleDelete} />;
+      case 'partySelection':
+        return (
+          <PartySelectionScreen
+            settlement={settlement}
+            selectedIds={selectedPartyIds}
+            quarryId={selectedQuarry}
+            onToggle={survivorId => setSelectedPartyIds(current => current.includes(survivorId)
+              ? current.filter(id => id !== survivorId)
+              : current.length < settlement.maxHuntPartySize
+                ? [...current, survivorId]
+                : current)}
+            onContinue={() => {
+              const firstId = selectedPartyIds[0];
+              if (!firstId) return;
+              setLoadoutPartyIndex(0);
+              updateSettlement(current => ({ ...current, activeSurvivorId: firstId }));
+              setScreen('loadout');
+            }}
+            onBack={() => setScreen('settlement')}
+          />
+        );
       case 'loadout': {
         const survivor = settlement.survivors.find(item => item.id === settlement.activeSurvivorId);
+        const isNemesisLoadout = Boolean(settlement.pendingNemesisEncounter);
         return (
           <LoadoutScreen
             survivor={survivor}
@@ -1457,10 +2427,81 @@ export default function App() {
             onConfirm={handleConfirmLoadout}
             onDestroyBoundGear={handleDestroyBoundGear}
             onAddTestResources={handleAddTestGearResources}
-            onBack={() => setScreen('settlement')}
+            confirmLabel={isNemesisLoadout ? 'Confirm Loadout and Face Nemesis' : undefined}
+            onBack={() => setScreen(isNemesisLoadout ? 'nemesisPreparation' : 'partySelection')}
           />
         );
       }
+      case 'nemesisLore': {
+        const pending = settlement.pendingNemesisEncounter;
+        const encounter = nemesisEncounters[pending?.nemesisId];
+        return encounter ? (
+          <NemesisLorePopup
+            encounter={encounter}
+            lanternYear={pending.lanternYear}
+            seen={settlement.seenNemesisLoreIds.includes(encounter.id)}
+            onContinue={continueNemesisLore}
+          />
+        ) : null;
+      }
+      case 'nemesisWarning': {
+        const pending = settlement.pendingNemesisEncounter;
+        const encounter = nemesisEncounters[pending?.nemesisId];
+        return encounter ? (
+          <NemesisWarningScreen
+            encounter={encounter}
+            lanternYear={pending.lanternYear}
+            onPrepare={beginNemesisPreparation}
+          />
+        ) : null;
+      }
+      case 'nemesisPreparation': {
+        const pending = settlement.pendingNemesisEncounter;
+        const encounter = nemesisEncounters[pending?.nemesisId];
+        return encounter ? (
+          <NemesisPreparationScreen
+            encounter={encounter}
+            settlement={settlement}
+            selectedSurvivorId={pending.selectedSurvivorId}
+            onSelectSurvivor={selectNemesisSurvivor}
+            onSpendMemory={spendNemesisMemory}
+            onHeal={healNemesisSurvivor}
+            onContinue={prepareNemesisLoadout}
+          />
+        ) : null;
+      }
+      case 'nemesisCombat': {
+        const pending = settlement.pendingNemesisEncounter;
+        const monster = createNemesisMonster(pending?.nemesisId);
+        return monster ? (
+          <CombatScreen
+            key={`${pending.nemesisId}-${pending.lanternYear}-${runSurvivor?.id}`}
+            monster={monster}
+            runBonus={combatBonus}
+            equippedGear={runEquippedGear}
+            hasMonsterBane={Boolean(
+              runSurvivor?.fightingArts?.includes(getMonsterBaneId(pending.nemesisId))
+            )}
+            victoryButtonText="Resolve Nemesis Victory"
+            defeatButtonText="Resolve Settlement Defeat"
+            onVictory={finishNemesisVictory}
+            onDefeat={finishNemesisDefeat}
+          />
+        ) : null;
+      }
+      case 'nemesisResult':
+        return nemesisResult ? (
+          <NemesisResultScreen
+            result={nemesisResult}
+            onContinue={() => {
+              if (nemesisResult.deathSummary) setScreen('graveLegacy');
+              else {
+                setNemesisResult(null);
+                setScreen('settlement');
+              }
+            }}
+          />
+        ) : null;
       case 'innovationDraw':
         return (
           <InnovationDrawScreen
@@ -1485,20 +2526,34 @@ export default function App() {
             onSelectQuarry={quarryId => { setSelectedQuarry(quarryId); setSelectedLevel(1); }}
             onSelectLevel={setSelectedLevel}
             onStart={startRun}
-            onBack={() => setScreen('loadout')}
+            onBack={() => setScreen('partySelection')}
+            partySize={selectedPartyIds.length}
+            scaledHp={createScaledMonster(
+              selectedQuarry,
+              selectedLevel,
+              'fight',
+              Math.max(1, selectedPartyIds.length)
+            ).maxHp}
           />
         );
       case 'map':
         return <MapScreen map={runMap} onSelectNode={selectNode} resources={runResources.map(id => resourceData[id]?.name || id)} />;
       case 'combat':
         return (
-          <CombatScreen
+          <PartyCombatScreen
             key={currentNode?.id}
-            monster={createScaledMonster(selectedQuarry, selectedLevel, currentNode?.type)}
-            runBonus={combatBonus}
-            equippedGear={runEquippedGear}
+            monster={createScaledMonster(
+              selectedQuarry,
+              selectedLevel,
+              currentNode?.type,
+              runParty.filter(survivor => survivor.hp > 0).length
+            )}
+            partyBonuses={partyCombatBonuses}
+            pendingPartyEffects={pendingPartyEffects}
             hasMonsterBane={Boolean(
-              runSurvivor?.fightingArts?.includes(getMonsterBaneId(selectedQuarry))
+              runParty.some(survivor =>
+                survivor.hp > 0 && survivor.fightingArts?.includes(getMonsterBaneId(selectedQuarry))
+              )
             )}
             onVictory={handleCombatVictory}
             onDefeat={handleCombatDefeat}
@@ -1512,6 +2567,8 @@ export default function App() {
             choices={lootChoices}
             genericRewards={bossGenericRewards}
             bossReward={pendingCombatVictory?.isBoss}
+            brokenWeakPoints={pendingCombatVictory?.brokenWeakPoints || []}
+            wounds={pendingCombatVictory?.wounds || []}
             onChoose={handleLootChoice}
           />
         );
@@ -1541,20 +2598,26 @@ export default function App() {
       case 'rest':
         return <RestStopScreen onChoose={handleRestChoice} />;
       case 'survivorProgress':
+        {
+          const rewardSurvivorId = survivorRewardQueue[0] || runSummary?.survivorId;
+          const rewardSurvivor = settlement.survivors.find(item => item.id === rewardSurvivorId);
         return (
           <SurvivorProgressScreen
-            survivorName={runSummary?.survivorName}
+            key={rewardSurvivorId}
+            survivorName={rewardSurvivor?.name || runSummary?.survivorName}
             quarryId={selectedQuarry}
+            level={selectedLevel}
             offerBane={progressOfferBane}
             oralTradition={
               settlement.builtMemoryInnovations.includes('oralTradition') ||
               settlement.innovationDeckState.builtInnovationIds.includes('oralTradition') ||
               settlement.innovationDeckState.builtInnovationIds.includes('symposium')
             }
-            ownedArts={settlement.survivors.find(item => item.id === runSummary?.survivorId)?.fightingArts || []}
+            ownedArts={rewardSurvivor?.fightingArts || []}
             onChoose={handleProgressChoice}
           />
         );
+        }
       case 'monsterDiscovery': {
         const choices = getDiscoveryChoices(settlement);
         return (
@@ -1565,6 +2628,16 @@ export default function App() {
           />
         );
       }
+      case 'quarryDiscoveryLore':
+        return (
+          <QuarryDiscoveryLoreScreen
+            event={getQuarryDiscoveryEvent(pendingQuarryDiscoveryId)}
+            onContinue={() => {
+              setPendingQuarryDiscoveryId(null);
+              setScreen('runSummary');
+            }}
+          />
+        );
       case 'runSummary':
         return <RunSummaryScreen summary={runSummary} onContinue={continueFromSummary} />;
       case 'graveLegacy':
@@ -1572,7 +2645,10 @@ export default function App() {
           <GraveLegacyScreen
             summary={runSummary}
             showAllChoices={settlement.builtMemoryInnovations.includes('deathArchive')}
-            onChooseLegacy={chooseGraveLegacy}
+            onChooseLegacy={legacy => {
+              chooseGraveLegacy(legacy);
+              setNemesisResult(null);
+            }}
           />
         );
       default:
