@@ -5,16 +5,17 @@ import SurvivorPanel from '../components/SurvivorPanel.jsx';
 import {
   createPartyCombatState,
   endPartyTurn,
+  getPartyCounterPreview,
   getPartyWeakPointPreview,
   playPartyCard,
-  selectPartyWeakPoint,
+  selectPartyCombatTarget,
   treatPartyWound,
   usePartySurvivalAction
 } from '../game/partyCombatLogic.js';
 
 const survivalActions = [
   { id: 'dodge', name: 'Dodge', cost: 1, effect: '+5 block' },
-  { id: 'counter', name: 'Counter', cost: 1, effect: 'Deal 3 damage' },
+  { id: 'counter', name: 'Counter', cost: 1, effect: 'Counter body or weak point' },
   { id: 'focus', name: 'Focus', cost: 1, effect: 'Draw 1 card' },
   { id: 'endure', name: 'Endure', cost: 2, effect: 'Remove 1 Panic' }
 ];
@@ -43,8 +44,14 @@ export default function PartyCombatScreen({
       : combat.members.find(member => member.survivor.id === combatantId)?.survivor.name
   ).filter(Boolean);
   const brokenWeakPoints = (combat.monster.weakPoints || []).filter(weakPoint => weakPoint.broken);
-  const selectedPreview = combat.selectedWeakPointId
-    ? getPartyWeakPointPreview(combat, combat.selectedWeakPointId)
+  const selectedWeakPointId = combat.selectedCombatTarget?.type === 'weakPoint'
+    ? combat.selectedCombatTarget.id
+    : null;
+  const selectedWeakPoint = selectedWeakPointId
+    ? combat.monster.weakPoints.find(point => point.id === selectedWeakPointId)
+    : null;
+  const selectedPreview = selectedWeakPointId
+    ? getPartyWeakPointPreview(combat, selectedWeakPointId)
     : null;
   const baneRevealsWeakPoints = livingPartyHasMonsterBane || (
     hasMonsterBane && combat.members.some(member => member.survivor.hp > 0 && member.hasMonsterBane)
@@ -93,6 +100,21 @@ export default function PartyCombatScreen({
     return `${profile.targetPartFamily} harvest odds improve. ` +
       `${profile.fragile ? 'Fragile: avoid overkill.' : 'Heavy force is less likely to ruin it.'}`;
   };
+  const counterIntentText = weakPoint => {
+    const intentTags = currentIntent?.tags || [];
+    const connected = intentTags.some(tag => weakPoint.tags?.includes(tag)) ||
+      weakPoint.effect?.tags?.some(tag => intentTags.includes(tag));
+    if (!baneRevealsWeakPoints) {
+      const tellState = getPartyCounterPreview(combat, weakPoint.id)?.tellState || 'neutral';
+      if (tellState === 'open') return `The ${weakPoint.name.toLowerCase()} is exposed.`;
+      if (tellState === 'guarded') return `The ${weakPoint.name.toLowerCase()} is protected.`;
+      if (tellState === 'dangerous') return `The ${weakPoint.name.toLowerCase()} is moving too quickly.`;
+      return 'Its relation to the attack is unclear.';
+    }
+    return connected
+      ? `Connected to ${currentIntent?.name || 'the current intent'}; breaking it can weaken this pattern.`
+      : 'Not directly connected to the current intent.';
+  };
 
   const finish = () => {
     const survivors = combat.members.map(member => ({
@@ -108,7 +130,9 @@ export default function PartyCombatScreen({
       woundHistory: member.woundHistory,
       combatStats: {
         cardsPlayed: member.cardsPlayedThisTurn,
-        attacksPlayed: member.attacksPlayedThisTurn
+        attacksPlayed: member.attacksPlayedThisTurn,
+        brokeWeakPoint: Boolean(member.brokeWeakPointThisHunt),
+        dealtFinalBlow: Boolean(member.dealtFinalBlowThisHunt)
       }
     }));
     if (combat.status === 'won') onVictory({
@@ -160,44 +184,47 @@ export default function PartyCombatScreen({
         </p>
       )}
 
-      <section className="survival-command-bar">
+      <section className="survival-command-bar targeting-bar">
         <div>
-          <strong>Attack Target</strong>
-          <span>{combat.selectedWeakPointId
-            ? combat.monster.weakPoints.find(point => point.id === combat.selectedWeakPointId)?.name
+          <strong>Target</strong>
+          <span>{selectedWeakPointId
+            ? selectedWeakPoint?.name
             : 'Monster Body'}</span>
         </div>
-        <div className="survival-action-buttons">
+        <div className="survival-action-buttons targeting-options">
           <button
             type="button"
-            className={!combat.selectedWeakPointId ? 'selected' : ''}
-            onClick={() => setCombat(current => selectPartyWeakPoint(null, current))}
+            className={!selectedWeakPointId ? 'selected' : ''}
+            onClick={() => setCombat(current => selectPartyCombatTarget({
+              type: 'monster',
+              id: current.monster.id || 'monster'
+            }, current))}
           >
-            Attack Monster
+            <strong>Monster Body</strong>
+            <small>{combat.monster.hp}/{combat.monster.maxHp} HP</small>
           </button>
           {(combat.monster.weakPoints || []).map(weakPoint => (
             <button
               type="button"
               key={weakPoint.id}
               disabled={weakPoint.broken}
-              className={combat.selectedWeakPointId === weakPoint.id ? 'selected' : ''}
+              className={selectedWeakPointId === weakPoint.id ? 'selected' : ''}
               title={weakPoint.description}
-              onClick={() => setCombat(current => selectPartyWeakPoint(weakPoint.id, current))}
+              onClick={() => setCombat(current => selectPartyCombatTarget({
+                type: 'weakPoint',
+                id: weakPoint.id
+              }, current))}
             >
-              {weakPoint.name} ({weakPoint.broken
-                ? 'broken'
-                : `${weakPoint.currentBreakDamage}/${weakPoint.breakValue}`})
+              <strong>{weakPoint.name}</strong>
+              <small>{weakPoint.broken
+                ? 'Broken'
+                : `${weakPoint.currentBreakDamage}/${weakPoint.breakValue} break`}</small>
+              <small>{weakPoint.broken
+                ? 'Disabled'
+                : `${tellLabel(getPartyWeakPointPreview(combat, weakPoint.id)?.tellState || 'neutral')} | ${weakPoint.riskLabel}`}</small>
             </button>
           ))}
         </div>
-        {(combat.monster.weakPoints || []).map(weakPoint => (
-          <small key={`${weakPoint.id}-status`}>
-            {weakPoint.name}: {weakPoint.broken
-              ? `Broken - ${weakPoint.harvestResult?.quality || 'messy'} harvest - ${weakPoint.onBreakEffect}`
-              : `${weakPoint.currentBreakDamage}/${weakPoint.breakValue} - ${weakPoint.riskLabel} - ` +
-                `${tellLabel(getPartyWeakPointPreview(combat, weakPoint.id)?.tellState || 'neutral')}`}
-          </small>
-        ))}
         {selectedPreview && (
           <p className="run-bonus-note">
             Preview using {selectedPreview.cardName}: about {selectedPreview.monsterDamage} monster damage,{' '}
@@ -205,12 +232,14 @@ export default function PartyCombatScreen({
             {tellLabel(selectedPreview.tellState)}. Risk: {
               selectedPreview.riskSuppressed
                 ? 'Suppressed by opening/card'
-                : combat.monster.weakPoints.find(point => point.id === combat.selectedWeakPointId)?.riskLabel
-            } ({riskText(combat.monster.weakPoints.find(point =>
-              point.id === combat.selectedWeakPointId
-            ))}). {harvestPreview(combat.monster.weakPoints.find(point =>
-              point.id === combat.selectedWeakPointId
-            ))}
+                : selectedWeakPoint?.riskLabel
+            } ({riskText(selectedWeakPoint)}). {harvestPreview(selectedWeakPoint)}
+            {' '}{baneRevealsWeakPoints ? counterIntentText(selectedWeakPoint) : ''}
+          </p>
+        )}
+        {!selectedPreview && (
+          <p className="run-bonus-note">
+            Monster Body: normal HP damage. Attacks and Counter use this shared target automatically.
           </p>
         )}
       </section>
@@ -294,6 +323,16 @@ export default function PartyCombatScreen({
                 );
               })}
             </div>
+            {!active.survivalActionsUsed.includes('counter') && selectedWeakPoint && (
+              <small>
+                Counter preview: {
+                  getPartyCounterPreview(combat, selectedWeakPoint.id)?.targetable
+                    ? `${getPartyCounterPreview(combat, selectedWeakPoint.id)?.monsterDamage || 0} monster / ` +
+                      `${getPartyCounterPreview(combat, selectedWeakPoint.id)?.breakDamage || 0} break`
+                    : 'invalid for this part; Counter will fall back to Monster Body'
+                }.
+              </small>
+            )}
             {active.survivalFeedback && <p role="status">{active.survivalFeedback}</p>}
           </section>
           <div className="combat-controls">

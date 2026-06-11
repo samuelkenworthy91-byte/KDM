@@ -1,3 +1,7 @@
+import {
+  explicitWeaponTypes
+} from './gearMetadata.js';
+
 function gearCard(sourceGearId, id, name, cost, description, effects, options = {}) {
   return {
     id,
@@ -63,8 +67,8 @@ const exactSets = {
     attack('boneHammer', 'skullRattle', 'Skull Rattle', 1, 'Deal 3 damage. Add 1 Panic to discard, then draw 1.', [{ type: 'damage', amount: 3 }, { type: 'addPanic', amount: 1 }, { type: 'draw', amount: 1 }], ['heavy', 'panic'])
   ],
   boneDarts: [
-    attack('boneDarts', 'quickDart', 'Quick Dart', 0, 'Deal 2 damage. Draw 1. Exhaust.', [{ type: 'damage', amount: 2 }, { type: 'draw', amount: 1 }], ['quick', 'exhaust']),
-    attack('boneDarts', 'pinTheBeast', 'Pin the Beast', 1, 'Deal 3 damage and Mark the monster.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }], ['marked', 'ranged', 'limbHunter']),
+    attack('boneDarts', 'quickDart', 'Quick Dart', 0, 'Deal 2 damage and apply 1 Bleed. Exhaust.', [{ type: 'damage', amount: 2 }, { type: 'bleedMonster', amount: 1 }], ['quick', 'bleed', 'exhaust']),
+    attack('boneDarts', 'pinTheBeast', 'Pin the Beast', 1, 'Deal 3 damage and Mark the monster.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }], ['quick', 'marked', 'ranged', 'limbHunter']),
     attack('boneDarts', 'throwAndMove', 'Throw and Move', 1, 'Deal 3 damage and gain 3 block.', [{ type: 'damage', amount: 3 }, { type: 'block', amount: 3 }], ['quick', 'block'])
   ],
   hideWraps: [
@@ -100,10 +104,43 @@ const exactSets = {
     skill('hornMaul', 'braceForImpact', 'Brace for Impact', 1, 'Gain 8 block.', [{ type: 'block', amount: 8 }], ['heavy', 'block']),
     attack('hornMaul', 'throwWeight', 'Throw Weight', 1, 'Discard another card. Deal 6 if discarded, otherwise deal 3.', [{ type: 'discardForDamage', amount: 6, fallbackAmount: 3 }], ['heavy', 'discard'])
   ],
+  lionFangKatar: [
+    attack('lionFangKatar', 'lionFangKatarJab', 'Fang Nick', 0, 'Deal 2 damage and apply 1 Bleed.', [{ type: 'damage', amount: 2 }, { type: 'bleedMonster', amount: 1 }], ['quick', 'bleed']),
+    attack('lionFangKatar', 'lionFangKatarRend', 'Marked Throat Cut', 1, 'Deal 4 damage, +3 if the monster is Marked.', [{ type: 'damage', amount: 4, bonusIfMonsterMarked: 3 }], ['quick', 'precise', 'marked']),
+    skill('lionFangKatar', 'lionFangKatarWithdraw', 'Knife-Hand Withdrawal', 0, 'Gain 3 block. Draw 1 if one attack has been played this turn. Exhaust.', [{ type: 'block', amount: 3 }, { type: 'drawIfSecondAttack', amount: 1 }], ['quick', 'block', 'exhaust'], true)
+  ],
+  crackedMolarBlade: [
+    attack('crackedMolarBlade', 'crackedMolarBladeCut', 'Pain-Driven Cleave', 2, 'Deal 9 damage, +4 while wounded.', [{ type: 'damage', amount: 9, bonusIfSurvivorWounded: 4 }], ['heavy', 'wound', 'brutal']),
+    skill('crackedMolarBlade', 'crackedMolarBladeGrit', 'Set the Molar', 1, 'Gain 6 block. If wounded, heal 1 HP.', [{ type: 'block', amount: 6 }, { type: 'healIfWounded', amount: 1 }], ['heavy', 'block', 'wound'])
+  ],
+  royalChallengeHorn: [
+    skill('royalChallengeHorn', 'royalChallengeHornCall', 'Royal Challenge', 0, 'Gain 2 survival, add 1 Panic, and Mark the monster. Exhaust.', [{ type: 'survival', amount: 2 }, { type: 'addPanic', amount: 1 }, { type: 'markMonster' }], ['support', 'challenge', 'survival', 'panic', 'marked', 'exhaust'], true),
+    skill('royalChallengeHorn', 'royalChallengeHornAnswer', 'Rally the Challenged', 1, 'Gain 4 block. Every living party member gains 1 block.', [{ type: 'block', amount: 4 }, { type: 'partyEffect', target: 'all', effectType: 'block', value: 1 }], ['support', 'party', 'challenge', 'block'])
+  ],
   paleFangKatar: [
     attack('paleFangKatar', 'whiteFangJab', 'White Fang Jab', 0, 'Deal 2 damage and Mark the monster.', [{ type: 'damage', amount: 2 }, { type: 'markMonster' }], ['quick', 'marked']),
     attack('paleFangKatar', 'twinFangCut', 'Twin Fang Cut', 1, 'Deal 3 damage twice, or 4 twice if the monster is Marked.', [{ type: 'multiHitDamage', amount: 3, hits: 2, markedAmount: 4 }], ['quick', 'multiHit', 'marked']),
     attack('paleFangKatar', 'pounceOpening', 'Pounce Opening', 1, 'Deal 5 damage. Draw 1 if Survival was spent this turn.', [{ type: 'damage', amount: 5 }, { type: 'drawIfSurvivalSpent', amount: 1 }], ['quick', 'survival'])
+  ],
+  paleManeBow: [
+    attack('paleManeBow', 'markFromAfar', 'Mark from Afar', 0, 'Deal 1 damage and Mark the selected target. Exhaust.', [{ type: 'damage', amount: 1 }, { type: 'markMonster' }], ['ranged', 'marked', 'limbHunter', 'exhaust']),
+    attack('paleManeBow', 'arrowAtTheCrouch', 'Arrow at the Crouch', 1, 'Deal 4 damage with strong break pressure against head and leg weak points.', [{ type: 'damage', amount: 4 }], ['ranged', 'precise', 'headHunter', 'limbHunter', 'breaker']),
+    skill('paleManeBow', 'keepTheDistance', 'Keep the Distance', 1, 'Gain 5 block. Your next weak-point attack is safer.', [{ type: 'block', amount: 5 }, { type: 'nextAttackBonus', amount: 1 }], ['block', 'ranged', 'safeWeakPoint'])
+  ],
+  whitePounceKatana: [
+    attack('whitePounceKatana', 'heldBreathDraw', 'Held-Breath Draw', 2, 'Deal 7 damage, +4 if this is your first attack this turn.', [{ type: 'damage', amount: 7, bonusIfFirstAttack: 4 }], ['precise', 'firstStrike']),
+    attack('whitePounceKatana', 'whiteLineCut', 'White-Line Cut', 1, 'Deal 4 damage. This precise cut is safer for fragile harvests.', [{ type: 'damage', amount: 4 }], ['precise', 'safeWeakPoint', 'harvestMark']),
+    attack('whitePounceKatana', 'noSecondStep', 'No Second Step', 3, 'Deal 13 damage and add 1 Panic.', [{ type: 'damage', amount: 13 }, { type: 'addPanic', amount: 1 }], ['precise', 'risk', 'pounce'])
+  ],
+  stalkingSpear: [
+    attack('stalkingSpear', 'pinTheLegs', 'Pin the Legs', 1, 'Deal 4 damage with extra break pressure against movement weak points.', [{ type: 'damage', amount: 4 }], ['reach', 'movement', 'limbHunter', 'breaker']),
+    skill('stalkingSpear', 'braceTheCharge', 'Brace the Charge', 1, 'Gain 7 block. Your next Counter deals +2.', [{ type: 'block', amount: 7 }, { type: 'nextCounterBonus', amount: 2 }], ['block', 'reach', 'counter']),
+    attack('stalkingSpear', 'reachUnderTheMane', 'Reach Under the Mane', 1, 'Deal 5 damage with reduced weak-point risk.', [{ type: 'damage', amount: 5 }], ['reach', 'safeWeakPoint', 'limbHunter'])
+  ],
+  lionhideBuckler: [
+    skill('lionhideBuckler', 'catchThePounce', 'Catch the Pounce', 1, 'Gain 8 block.', [{ type: 'block', amount: 8 }], ['block', 'pounce', 'counter']),
+    attack('lionhideBuckler', 'maneRimStrike', 'Mane-Rim Strike', 1, 'Deal damage equal to half your block, maximum 7.', [{ type: 'damageFromBlock', divisor: 2, maximum: 7 }], ['attack', 'block', 'counter']),
+    skill('lionhideBuckler', 'standUnderClaws', 'Stand Under Claws', 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], ['block', 'exhaust'], true)
   ],
   maneCloak: [
     skill('maneCloak', 'hideInTheMane', 'Hide in the Mane', 1, 'Gain 7 block.', [{ type: 'block', amount: 7 }], ['block']),
@@ -135,7 +172,7 @@ const exactSets = {
     skill('huntingHideWrap', 'scentOfHide', 'Scent of Hide', 0, 'Gain 1 survival. Exhaust.', [{ type: 'survival', amount: 1 }], ['survival', 'exhaust'], true)
   ],
   wailingHornBow: [
-    attack('wailingHornBow', 'hornStringShot', 'Horn-String Shot', 1, 'Deal 5 damage.', [{ type: 'damage', amount: 5 }], ['quick']),
+    attack('wailingHornBow', 'hornStringShot', 'Horn-String Shot', 1, 'Deal 4 damage and Mark the monster.', [{ type: 'damage', amount: 4 }, { type: 'markMonster' }], ['ranged', 'marked']),
     attack('wailingHornBow', 'screamingArrow', 'Screaming Arrow', 1, 'Deal 4 damage and add 1 Panic. Deal +3 if the monster is Marked.', [{ type: 'damage', amount: 4, bonusIfMonsterMarked: 3 }, { type: 'addPanic', amount: 1 }], ['panic', 'marked']),
     skill('wailingHornBow', 'keepDistance', 'Keep Distance', 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], ['block', 'exhaust'], true)
   ],
@@ -165,9 +202,9 @@ const exactSets = {
     skill('ashFeatherMantle', 'featheredMemory', 'Feathered Memory', 1, 'Draw 2, then discard another card if possible.', [{ type: 'draw', amount: 2 }, { type: 'discard', amount: 1 }], ['discard'])
   ],
   timeBoneBlade: [
-    attack('timeBoneBlade', 'secondBeforeCut', 'Second Before Cut', 1, 'Deal 4 damage. Draw 1 if this is the first card played this turn.', [{ type: 'damage', amount: 4 }, { type: 'drawIfFirstCard', amount: 1 }], ['quick']),
-    attack('timeBoneBlade', 'timeSplitSlash', 'Time-Split Slash', 2, 'Deal 5 damage twice.', [{ type: 'multiHitDamage', amount: 5, hits: 2 }], ['multiHit']),
-    skill('timeBoneBlade', 'borrowedMoment', 'Borrowed Moment', 0, 'Gain 1 energy. Exhaust.', [{ type: 'energy', amount: 1 }], ['exhaust'], true)
+    attack('timeBoneBlade', 'secondBeforeCut', 'Second Before Cut', 1, 'Deal 4 damage. Draw 1 if this is the first card played this turn.', [{ type: 'damage', amount: 4 }, { type: 'drawIfFirstCard', amount: 1 }], ['precise']),
+    attack('timeBoneBlade', 'timeSplitSlash', 'Time-Split Slash', 2, 'Deal 5 damage twice.', [{ type: 'multiHitDamage', amount: 5, hits: 2 }], ['precise', 'multiHit']),
+    skill('timeBoneBlade', 'borrowedMoment', 'Borrowed Moment', 0, 'Gain 1 energy. Exhaust.', [{ type: 'energy', amount: 1 }], ['precise', 'exhaust'], true)
   ],
   memoryGlassEye: [
     skill('memoryGlassEye', 'lookBack', 'Look Back', 0, 'Return the top card of discard to your hand, or draw 1. Exhaust.', [{ type: 'drawFromDiscardOrDeck', amount: 1 }], ['strange', 'exhaust'], true),
@@ -188,13 +225,11 @@ const exactSets = {
 };
 
 const profiles = {
-  lionFangKatar: ['Lion Fang Katar', 'markedCombo'],
   thunderMaul: ['Thunder Maul', 'survivalHeavy'],
   stormGutCharm: ['Storm Gut Charm', 'panicConversion'],
   swollenHideVest: ['Swollen Hide Vest', 'panicTank'],
   staticNeedle: ['Static Needle', 'markDraw'],
   godlingDrum: ['Godling Drum', 'riskyDraw'],
-  crackedMolarBlade: ['Cracked Molar Blade', 'woundedWeapon'],
   crimsonScaleShield: ['Crimson Scale Shield', 'shieldCounter'],
   riverToothBlade: ['River Tooth Blade', 'brokenGuard'],
   redLeatherCoat: ['Red Leather Coat', 'layeredDefense'],
@@ -247,9 +282,85 @@ const profiles = {
   kingClawGauntlet: ['King Claw Gauntlet', 'highSurvival'],
   goldenFangBlade: ['Golden Fang Blade', 'finisher'],
   regalHideArmor: ['Regal Hide Armor', 'baneArmor'],
-  judgmentEyeCharm: ['Judgment Eye Charm', 'judgement'],
-  royalChallengeHorn: ['Royal Challenge Horn', 'tauntRisk']
+  judgmentEyeCharm: ['Judgment Eye Charm', 'judgement']
 };
+
+const expandedWeaponSpecs = {
+  boneCleaver: ['Bone Cleaver', 'axe', 'Split the Guard', 'Cleaver Drop'],
+  gutCordWhip: ['Gut Cord Whip', 'whip', 'Catch the Limb', 'Cord Snap'],
+  boneKnuckleWraps: ['Bone Knuckle Wraps', 'fistAndTooth', 'Knuckle Chain', 'Close Guard'],
+  paleFangSpear: ['Pale Fang Spear', 'spear', 'Elder Fang Pin', 'Brace the Hunt'],
+  ashCurveBlade: ['Ash Curve Blade', 'katana', 'Cooling Draw', 'Ash-Line Cut'],
+  ashHookScythe: ['Ash Hook Scythe', 'scythe', 'Hook the Memory', 'Reap the Ash'],
+  crimsonRiverAxe: ['Crimson River Axe', 'axe', 'Scale Cleft', 'River Execution'],
+  frogdogBiteGloves: ['Frogdog Bite Gloves', 'fistAndTooth', 'Biting Pair', 'Bounce Counter'],
+  silkSnareWhip: ['Silk Snare Whip', 'whip', 'Cast the Snare', 'Tighten the Web'],
+  petalEdgeKatana: ['Petal Edge Katana', 'katana', 'Petal Draw', 'One Falling Line'],
+  bloomReaper: ['Bloom Reaper', 'scythe', 'Thorn Harvest', 'Final Bloom'],
+  floralSinewBow: ['Floral Sinew Bow', 'bow', 'Seed the Mark', 'Perfect Loose'],
+  smogReedScythe: ['Smog Reed Scythe', 'scythe', 'Soot Hook', 'Chorus Reap'],
+  chitinHookAxe: ['Chitin Hook Axe', 'axe', 'Peel the Plate', 'Shell-Cracking Drop'],
+  mirrorCuttingBlade: ['Mirror Cutting Blade', 'katana', 'Hidden Draw', 'Reflected Cut'],
+  sunLance: ['Sun Lance', 'spear', 'Pin with Light', 'Noon Brace'],
+  kingClawGauntletPair: ['King Claw Gauntlet Pair', 'fistAndTooth', 'Royal Raking Chain', 'Answer the Challenge'],
+  prideGrandBlade: ['Pride Grand Blade', 'grandWeapon', 'Royal Commitment', 'Final Decree']
+};
+
+function expandedWeaponCards(gearId, name, weaponType, firstName, secondName) {
+  switch (weaponType) {
+    case 'axe':
+      return [
+        attack(gearId, `${gearId}Break`, firstName, 1, 'Remove 5 monster block, then deal 3 damage.', [{ type: 'removeMonsterBlock', amount: 5 }, { type: 'damage', amount: 3 }], ['heavy', 'breaker']),
+        attack(gearId, `${gearId}Drop`, secondName, 2, 'Deal 9 damage, +3 while the monster has block.', [{ type: 'damage', amount: 9, bonusIfMonsterHasBlock: 3 }], ['heavy', 'breaker', 'brutal'])
+      ];
+    case 'whip':
+      return [
+        attack(gearId, `${gearId}Catch`, firstName, 1, 'Deal 3 damage, Mark the monster, and remove 2 block.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }, { type: 'removeMonsterBlock', amount: 2 }], ['reach', 'marked', 'limbHunter']),
+        skill(gearId, `${gearId}Snap`, secondName, 0, 'Gain 3 block and clarify the tell. Exhaust.', [{ type: 'block', amount: 3 }, { type: 'revealIntentHint' }], ['reach', 'marked', 'counter', 'exhaust'], true)
+      ];
+    case 'fistAndTooth':
+      return [
+        attack(gearId, `${gearId}Chain`, firstName, 1, 'Deal 2 damage three times.', [{ type: 'multiHitDamage', amount: 2, hits: 3 }], ['quick', 'multiHit', 'counter']),
+        skill(gearId, `${gearId}Guard`, secondName, 0, 'Gain 2 block. Your next Counter deals +2. Exhaust.', [{ type: 'block', amount: 2 }, { type: 'nextCounterBonus', amount: 2 }], ['quick', 'counter', 'block', 'exhaust'], true)
+      ];
+    case 'spear':
+      return [
+        attack(gearId, `${gearId}Pin`, firstName, 1, 'Deal 4 damage with strong break pressure against limb weak points.', [{ type: 'damage', amount: 4 }], ['reach', 'limbHunter', 'breaker']),
+        skill(gearId, `${gearId}Brace`, secondName, 1, 'Gain 7 block. Your next Counter deals +2.', [{ type: 'block', amount: 7 }, { type: 'nextCounterBonus', amount: 2 }], ['reach', 'block', 'counter'])
+      ];
+    case 'katana':
+      return [
+        attack(gearId, `${gearId}Draw`, firstName, 1, 'Deal 5 damage, +3 if this is your first attack this turn.', [{ type: 'damage', amount: 5, bonusIfFirstAttack: 3 }], ['precise', 'firstStrike']),
+        attack(gearId, `${gearId}Cut`, secondName, 2, 'Deal 8 damage and add 1 Panic.', [{ type: 'damage', amount: 8 }, { type: 'addPanic', amount: 1 }], ['precise', 'firstStrike', 'risk'])
+      ];
+    case 'scythe':
+      return [
+        attack(gearId, `${gearId}Hook`, firstName, 1, 'Deal 3 damage and apply 2 Bleed.', [{ type: 'damage', amount: 3 }, { type: 'bleedMonster', amount: 2 }], ['bleed', 'panic', 'heavy']),
+        attack(gearId, `${gearId}Reap`, secondName, 2, 'Deal 8 damage, +3 if the monster is Bleeding. Add 1 Panic.', [{ type: 'damage', amount: 8, bonusIfMonsterBleeding: 3 }, { type: 'addPanic', amount: 1 }], ['bleed', 'panic', 'heavy', 'finisher'])
+      ];
+    case 'bow':
+      return [
+        attack(gearId, `${gearId}Mark`, firstName, 0, 'Deal 1 damage and Mark the monster. Exhaust.', [{ type: 'damage', amount: 1 }, { type: 'markMonster' }], ['ranged', 'marked', 'limbHunter', 'exhaust']),
+        attack(gearId, `${gearId}Loose`, secondName, 1, 'Deal 5 damage, +2 if the monster is Marked.', [{ type: 'damage', amount: 5, bonusIfMonsterMarked: 2 }], ['ranged', 'marked', 'precise'])
+      ];
+    case 'grandWeapon':
+      return [
+        skill(gearId, `${gearId}Commit`, firstName, 0, 'Gain 1 energy and add 1 Panic. Exhaust.', [{ type: 'energy', amount: 1 }, { type: 'addPanic', amount: 1 }], ['heavy', 'risk', 'exhaust'], true),
+        attack(gearId, `${gearId}Decree`, secondName, 3, 'Deal 14 damage and gain 3 block.', [{ type: 'damage', amount: 14 }, { type: 'block', amount: 3 }], ['heavy', 'brutal'])
+      ];
+    default:
+      return [];
+  }
+}
+
+Object.entries(expandedWeaponSpecs).forEach(([gearId, spec]) => {
+  exactSets[gearId] = expandedWeaponCards(gearId, ...spec);
+});
+
+exactSets.paleFangSpear = [
+  attack('paleFangSpear', 'paleFangSpearPin', 'Elder Fang Pin', 2, 'Deal 6 damage, Mark the monster, and press hard against limb weak points.', [{ type: 'damage', amount: 6 }, { type: 'markMonster' }], ['reach', 'limbHunter', 'breaker', 'marked']),
+  skill('paleFangSpear', 'paleFangSpearBrace', 'Long-Hunt Brace', 1, 'Gain 6 block and draw 1.', [{ type: 'block', amount: 6 }, { type: 'draw', amount: 1 }], ['reach', 'block', 'safeWeakPoint'])
+];
 
 function profileCards(gearId, name, profile) {
   const slug = gearId;
@@ -259,14 +370,12 @@ function profileCards(gearId, name, profile) {
     skill(gearId, `${slug}${suffix}`, `${name}: ${label}`, 1, `Gain ${amount} block.`, [{ type: 'block', amount }, ...extraEffects], ['block', ...tags]);
 
   switch (profile) {
-    case 'markedCombo':
-      return [strike('Jab', 'Pale Jab', 3, { effect: { markOnHit: true }, description: 'Deal 3 damage and Mark the monster.' }, ['marked']), strike('Rend', 'Cross Rend', 5, { effect: { bonusIfMonsterMarked: 3 }, description: 'Deal 5 damage, +3 if Marked.' }, ['marked']), skill(gearId, `${slug}Withdraw`, `${name}: Withdraw`, 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], ['block', 'exhaust'], true)];
     case 'survivalHeavy':
-      return [strike('Crash', 'Thunder Crash', 9, { effect: { bonusIfSurvivalSpent: 3 }, description: 'Deal 9 damage, +3 if Survival was spent this turn.' }, ['heavy', 'survival']), guard('Ground', 'Ground the Charge', 6, [{ type: 'survival', amount: 1 }], ['survival']), strike('Aftershock', 'Aftershock', 5, { effect: { bonusIfBlockThisTurn: 3 }, description: 'Deal 5 damage, +3 if block was gained this turn.' }, ['heavy', 'block'])];
+      return [attack(gearId, `${slug}Crash`, `${name}: Thunder Crash`, 3, 'Deal 9 damage, +3 if Survival was spent this turn.', [{ type: 'damage', amount: 9, bonusIfSurvivalSpent: 3 }], ['heavy', 'survival', 'brutal']), skill(gearId, `${slug}Ground`, `${name}: Ground the Charge`, 1, 'Gain 6 block and 1 survival.', [{ type: 'block', amount: 6 }, { type: 'survival', amount: 1 }], ['heavy', 'block', 'survival']), strike('Aftershock', 'Aftershock', 5, { effect: { bonusIfBlockThisTurn: 3 }, description: 'Deal 5 damage, +3 if block was gained this turn.' }, ['heavy', 'block'])];
     case 'panicConversion':
       return [skill(gearId, `${slug}Ground`, `${name}: Ground the Fear`, 0, 'Remove 1 Panic from any pile and gain 1 survival.', [{ type: 'removePanicAny' }, { type: 'survival', amount: 1 }], ['panic', 'survival']), skill(gearId, `${slug}Pulse`, `${name}: Charged Pulse`, 1, 'Draw 1. Gain 1 survival if Panic is in discard.', [{ type: 'draw', amount: 1 }, { type: 'survivalIfPanicInDiscard', amount: 1 }], ['panic', 'survival'])];
     case 'panicTank':
-      return [guard('Swell', 'Swell Against Impact', 10, [{ type: 'addPanic', amount: 1 }], ['panic']), skill(gearId, `${slug}Release`, `${name}: Release Pressure`, 0, 'Remove 1 Panic and gain 3 block. Exhaust.', [{ type: 'removePanicAny' }, { type: 'block', amount: 3 }], ['panic', 'block', 'exhaust'], true)];
+      return [skill(gearId, `${slug}Swell`, `${name}: Swell Against Impact`, 1, 'Gain 10 block and add 1 Panic.', [{ type: 'block', amount: 10 }, { type: 'addPanic', amount: 1 }], ['block', 'panic']), skill(gearId, `${slug}Release`, `${name}: Release Pressure`, 0, 'Remove 1 Panic and gain 3 block. Exhaust.', [{ type: 'removePanicAny' }, { type: 'block', amount: 3 }], ['panic', 'block', 'exhaust'], true)];
     case 'markDraw':
       return [strike('Prick', 'Static Prick', 2, { effect: { markOnHit: true }, description: 'Deal 2 damage and Mark the monster.' }, ['marked', 'quick']), skill(gearId, `${slug}Wake`, `${name}: Wake the Nerves`, 0, 'Draw 1 and gain 1 survival. Exhaust.', [{ type: 'draw', amount: 1 }, { type: 'survival', amount: 1 }], ['survival', 'exhaust'], true)];
     case 'riskyDraw':
@@ -274,13 +383,13 @@ function profileCards(gearId, name, profile) {
     case 'woundedWeapon':
       return [strike('Cut', 'Pain Edge', 5, { effect: { bonusIfSurvivorWounded: 3 }, description: 'Deal 5 damage, +3 while wounded.' }, ['wound']), skill(gearId, `${slug}Grit`, `${name}: Grit Through It`, 0, 'If wounded, heal 1 HP. Otherwise gain 2 block. Exhaust.', [{ type: 'healIfWoundedOrBlock', heal: 1, block: 2 }], ['wound', 'exhaust'], true)];
     case 'shieldCounter':
-      return [guard('Set', 'Set the Scales', 8, [{ type: 'nextCounterBonus', amount: 2 }], ['survival']), strike('Bash', 'Red Scale Bash', 4, { effect: { bonusIfBlock: 3 }, description: 'Deal 4 damage, +3 while you have block.' }, ['block'])];
+      return [guard('Set', 'Set the Scales', 8, [{ type: 'nextCounterBonus', amount: 2 }], ['survival', 'counter']), strike('Bash', 'Red Scale Bash', 4, { effect: { bonusIfBlock: 3 }, description: 'Deal 4 damage, +3 while you have block.' }, ['block', 'counter'])];
     case 'brokenGuard':
-      return [attack(gearId, `${slug}Saw`, `${name}: Saw the Opening`, 1, 'Remove 4 monster block, then deal 3 damage.', [{ type: 'removeMonsterBlock', amount: 4 }, { type: 'damage', amount: 3 }], ['heavy']), strike('Bite', 'River Bite', 5, { effect: { bonusIfMonsterNoBlock: 3 }, description: 'Deal 5 damage, +3 if the monster has no block.' }, ['heavy'])];
+      return [attack(gearId, `${slug}Saw`, `${name}: Saw the Opening`, 1, 'Remove 3 monster block, deal 3 damage, and apply 1 Bleed.', [{ type: 'removeMonsterBlock', amount: 3 }, { type: 'damage', amount: 3 }, { type: 'bleedMonster', amount: 1 }], ['quick', 'bleed']), strike('Bite', 'River Bite', 4, { effect: { bonusIfMonsterNoBlock: 3 }, description: 'Deal 4 damage, +3 if the monster has no block.' }, ['quick', 'bleed'])];
     case 'layeredDefense':
-      return [guard('Layer', 'Layer the Coat', 6, [{ type: 'draw', amount: 1 }]), skill(gearId, `${slug}Brace`, `${name}: Brace for the Roll`, 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], ['block', 'exhaust'], true)];
+      return [skill(gearId, `${slug}Layer`, `${name}: Layer the Coat`, 1, 'Gain 6 block and draw 1.', [{ type: 'block', amount: 6 }, { type: 'draw', amount: 1 }], ['block']), skill(gearId, `${slug}Brace`, `${name}: Brace for the Roll`, 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], ['block', 'exhaust'], true)];
     case 'markControl':
-      return [attack(gearId, `${slug}Hook`, `${name}: Hook and Hold`, 1, 'Deal 3 damage, Mark the monster, and remove 2 block.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }, { type: 'removeMonsterBlock', amount: 2 }], ['marked']), guard('Pull', 'Pull Aside', 4, [], ['marked'])];
+      return [attack(gearId, `${slug}Hook`, `${name}: Hook and Hold`, 1, 'Deal 3 damage, Mark the monster, and remove 2 block.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }, { type: 'removeMonsterBlock', amount: 2 }], ['reach', 'marked']), guard('Pull', 'Pull Aside', 4, [], ['reach', 'marked'])];
     case 'revealPunish':
       return [skill(gearId, `${slug}Watch`, `${name}: Patient Watch`, 0, 'Clarify the tell and draw 1. Exhaust.', [{ type: 'revealIntentHint' }, { type: 'draw', amount: 1 }], ['reveal', 'exhaust'], true), strike('Punish', 'Punish the Guard', 4, { effect: { bonusIfMonsterHasBlock: 3 }, description: 'Deal 4 damage, +3 if the monster has block.' }, ['reveal'])];
     case 'bounceDefense':
@@ -294,11 +403,11 @@ function profileCards(gearId, name, profile) {
     case 'survivalStep':
       return [skill(gearId, `${slug}Spring`, `${name}: Spring Away`, 0, 'Gain 2 block and improve the next Counter by 2. Exhaust.', [{ type: 'block', amount: 2 }, { type: 'nextCounterBonus', amount: 2 }], ['survival', 'block', 'exhaust'], true), strike('Leap', 'Returning Leap', 4, { effect: { bonusIfSurvivalSpent: 2 }, description: 'Deal 4 damage, +2 if Survival was spent this turn.' }, ['survival'])];
     case 'rangedMark':
-      return [attack(gearId, `${slug}Thread`, `${name}: Threading Shot`, 1, 'Deal 3 damage and Mark the monster.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }], ['marked']), strike('Pin', 'Silken Pin', 4, { effect: { bonusIfMonsterMarked: 2 }, description: 'Deal 4 damage, +2 if Marked.' }, ['marked']), skill(gearId, `${slug}Retreat`, `${name}: Quiet Retreat`, 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], ['block', 'exhaust'], true)];
+      return [attack(gearId, `${slug}Thread`, `${name}: Threading Shot`, 1, 'Deal 3 damage and Mark the monster.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }], ['ranged', 'marked']), strike('Pin', 'Silken Pin', 4, { effect: { bonusIfMonsterMarked: 2 }, description: 'Deal 4 damage, +2 if Marked.' }, ['ranged', 'marked']), skill(gearId, `${slug}Retreat`, `${name}: Quiet Retreat`, 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], ['ranged', 'block', 'exhaust'], true)];
     case 'bleedWeapon':
-      return [attack(gearId, `${slug}Dose`, `${name}: Measured Dose`, 1, 'Deal 3 damage and apply 1 Bleed to the monster.', [{ type: 'damage', amount: 3 }, { type: 'bleedMonster', amount: 1 }], ['bleed']), strike('Drain', 'Venom Drain', 4, { effect: { bonusIfMonsterBleeding: 3 }, description: 'Deal 4 damage, +3 if the monster is Bleeding.' }, ['bleed'])];
+      return [attack(gearId, `${slug}Dose`, `${name}: Measured Dose`, 1, 'Deal 3 damage and apply 1 Bleed to the monster.', [{ type: 'damage', amount: 3 }, { type: 'bleedMonster', amount: 1 }], ['quick', 'bleed']), strike('Drain', 'Venom Drain', 4, { effect: { bonusIfMonsterBleeding: 3 }, description: 'Deal 4 damage, +3 if the monster is Bleeding.' }, ['quick', 'bleed'])];
     case 'bindDefense':
-      return [guard('Web', 'Catch the Blow', 7, [{ type: 'markMonster' }], ['marked']), skill(gearId, `${slug}Bind`, `${name}: Binding Threads`, 1, 'Remove 3 monster block and Mark it.', [{ type: 'removeMonsterBlock', amount: 3 }, { type: 'markMonster' }], ['marked'])];
+      return [skill(gearId, `${slug}Web`, `${name}: Catch the Blow`, 1, 'Gain 7 block and Mark the monster.', [{ type: 'block', amount: 7 }, { type: 'markMonster' }], ['block', 'marked']), skill(gearId, `${slug}Bind`, `${name}: Binding Threads`, 1, 'Remove 3 monster block and Mark it.', [{ type: 'removeMonsterBlock', amount: 3 }, { type: 'markMonster' }], ['marked'])];
     case 'markedDraw':
       return [skill(gearId, `${slug}ManyEyes`, `${name}: Many Eyes`, 0, 'Draw 1, or 2 if the monster is Marked. Exhaust.', [{ type: 'drawByMonsterMarked', normal: 1, marked: 2 }], ['marked', 'exhaust'], true), strike('Facet', 'Facet Strike', 3, { effect: { bonusIfMonsterMarked: 2 }, description: 'Deal 3 damage, +2 if Marked.' }, ['marked'])];
     case 'swarmRisk':
@@ -306,11 +415,11 @@ function profileCards(gearId, name, profile) {
     case 'focusStep':
       return [skill(gearId, `${slug}Skitter`, `${name}: Skitter Focus`, 0, 'Draw 1 and gain 2 block. Exhaust.', [{ type: 'draw', amount: 1 }, { type: 'block', amount: 2 }], ['block', 'exhaust'], true), strike('Counter', 'Skittering Counter', 3, { effect: { bonusIfSurvivalSpent: 3 }, description: 'Deal 3 damage, +3 if Survival was spent this turn.' }, ['survival'])];
     case 'singleAttack':
-      return [strike('Thrust', 'Measured Thrust', 5, { effect: { bonusIfFirstAttack: 3 }, description: 'Deal 5 damage, +3 if this is your first attack this turn.' }, ['quick']), guard('Poise', 'Duelist Poise', 5, [{ type: 'nextAttackBonus', amount: 2 }])];
+      return [strike('Thrust', 'Measured Thrust', 5, { effect: { bonusIfFirstAttack: 3 }, description: 'Deal 5 damage, +3 if this is your first attack this turn.' }, ['precise']), guard('Poise', 'Duelist Poise', 5, [{ type: 'nextAttackBonus', amount: 2 }], ['precise'])];
     case 'elegantDefense':
       return [skill(gearId, `${slug}Turn`, `${name}: Petal Turn`, 1, 'Gain 5 block. Draw 1 if block was already gained this turn.', [{ type: 'block', amount: 5 }, { type: 'drawIfBlockGained', amount: 1 }], ['block']), skill(gearId, `${slug}Bow`, `${name}: Formal Bow`, 0, 'Gain 1 survival. Exhaust.', [{ type: 'survival', amount: 1 }], ['survival', 'exhaust'], true)];
     case 'antiBlockMark':
-      return [attack(gearId, `${slug}Reach`, `${name}: Long Reach`, 1, 'Remove 4 monster block and Mark it.', [{ type: 'removeMonsterBlock', amount: 4 }, { type: 'markMonster' }], ['marked']), strike('Line', 'Perfect Line', 5, { effect: { ignoreBlockIfMonsterMarked: true }, description: 'Deal 5 damage; ignore block if Marked.' }, ['marked'])];
+      return [attack(gearId, `${slug}Reach`, `${name}: Long Reach`, 1, 'Remove 4 monster block and Mark it.', [{ type: 'removeMonsterBlock', amount: 4 }, { type: 'markMonster' }], ['reach', 'limbHunter', 'marked']), strike('Line', 'Perfect Line', 5, { effect: { ignoreBlockIfMonsterMarked: true }, description: 'Deal 5 damage; ignore block if Marked.' }, ['reach', 'limbHunter', 'marked'])];
     case 'rangedCombo':
       return [strike('Loose', 'First Loose', 3, { effect: { bonusIfFirstCard: 2 }, description: 'Deal 3 damage, +2 if first card this turn.' }, ['quick']), attack(gearId, `${slug}Follow`, `${name}: Following Arrow`, 1, 'Deal 3 damage and draw 1 if an attack was already played.', [{ type: 'damage', amount: 3 }, { type: 'drawIfAttackPlayed', amount: 1 }], ['quick'])];
     case 'patientGrowth':
@@ -322,7 +431,7 @@ function profileCards(gearId, name, profile) {
     case 'panicArmor':
       return [guard('Breathe', 'Breathe Through Soot', 6, [{ type: 'removePanicAny' }], ['panic']), skill(gearId, `${slug}Filter`, `${name}: Filter the Chorus`, 0, 'Draw 1 if Panic is in discard; otherwise gain 2 block. Exhaust.', [{ type: 'drawIfPanicElseBlock', draw: 1, block: 2 }], ['panic', 'block', 'exhaust'], true)];
     case 'alternating':
-      return [attack(gearId, `${slug}Tone`, `${name}: Striking Tone`, 1, 'Deal 4 damage, +2 if the previous card was a skill.', [{ type: 'damage', amount: 4, bonusIfPreviousCardSkill: 2 }], ['quick']), skill(gearId, `${slug}Rest`, `${name}: Harmonic Rest`, 0, 'Gain 3 block. Draw 1 if the previous card was an attack.', [{ type: 'block', amount: 3 }, { type: 'drawIfPreviousCardAttack', amount: 1 }], ['block'])];
+      return [attack(gearId, `${slug}Tone`, `${name}: Striking Tone`, 1, 'Deal 4 damage, +2 if the previous card was a skill.', [{ type: 'damage', amount: 4, bonusIfPreviousCardSkill: 2 }], ['precise']), skill(gearId, `${slug}Rest`, `${name}: Harmonic Rest`, 0, 'Gain 3 block. Draw 1 if the previous card was an attack.', [{ type: 'block', amount: 3 }, { type: 'drawIfPreviousCardAttack', amount: 1 }], ['block', 'precise'])];
     case 'discardDefense':
       return [skill(gearId, `${slug}Fold`, `${name}: Tar Fold`, 1, 'Discard another card. Gain 8 block if discarded, otherwise gain 4.', [{ type: 'discardForBlock', amount: 8, fallbackAmount: 4 }], ['block', 'discard']), strike('Feather', 'Hidden Feather', 3, { effect: { bonusIfCardDiscarded: 3 }, description: 'Deal 3 damage, +3 if a card was discarded this turn.' }, ['discard'])];
     case 'panicPower':
@@ -330,9 +439,9 @@ function profileCards(gearId, name, profile) {
     case 'slowArmor':
       return [guard('Close', 'Close the Plates', 10, [{ type: 'discard', amount: 1 }], ['heavy', 'discard']), skill(gearId, `${slug}Advance`, `${name}: Armoured Advance`, 1, 'Gain 5 block and +2 next attack damage.', [{ type: 'block', amount: 5 }, { type: 'nextAttackBonus', amount: 2 }], ['block', 'heavy'])];
     case 'chargeAfterBlock':
-      return [guard('Lower', 'Lower the Horn', 6, [{ type: 'nextAttackBonus', amount: 2 }], ['heavy']), strike('Charge', 'Horn Charge', 6, { effect: { bonusIfBlockThisTurn: 3 }, description: 'Deal 6 damage, +3 if block was gained this turn.' }, ['heavy', 'block'])];
+      return [guard('Lower', 'Lower the Horn', 6, [{ type: 'nextAttackBonus', amount: 2 }], ['heavy', 'breaker']), strike('Charge', 'Horn Charge', 6, { effect: { bonusIfBlockThisTurn: 3 }, description: 'Deal 6 damage, +3 if block was gained this turn.' }, ['heavy', 'block', 'breaker'])];
     case 'blockDamage':
-      return [guard('Harden', 'Harden Resin', 7), attack(gearId, `${slug}Return`, `${name}: Return the Weight`, 1, 'Deal damage equal to half your current block, maximum 8.', [{ type: 'damageFromBlock', divisor: 2, maximum: 8 }], ['block'])];
+      return [guard('Harden', 'Harden Resin', 7, [], ['counter']), attack(gearId, `${slug}Return`, `${name}: Return the Weight`, 1, 'Deal damage equal to half your current block, maximum 8.', [{ type: 'damageFromBlock', divisor: 2, maximum: 8 }], ['block', 'counter'])];
     case 'survivalDraw':
       return [skill(gearId, `${slug}Flash`, `${name}: Jewel Flash`, 0, 'Gain 1 survival and draw 1. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'draw', amount: 1 }], ['survival', 'exhaust'], true), skill(gearId, `${slug}Wing`, `${name}: Wing Pattern`, 1, 'Clarify the tell and gain 3 block.', [{ type: 'revealIntentHint' }, { type: 'block', amount: 3 }], ['reveal', 'block'])];
     case 'bombBurst':
@@ -342,7 +451,7 @@ function profileCards(gearId, name, profile) {
     case 'fireArmor':
       return [guard('Cool', 'Cool the Scales', 7), skill(gearId, `${slug}Heat`, `${name}: Hold the Heat`, 0, 'Gain 3 block. If wounded, heal 1. Exhaust.', [{ type: 'block', amount: 3 }, { type: 'healIfWounded', amount: 1 }], ['block', 'wound', 'exhaust'], true)];
     case 'blockScale':
-      return [strike('Edge', 'Crystal Edge', 4, { effect: { bonusIfBlock: 3 }, description: 'Deal 4 damage, +3 while you have block.' }, ['block']), guard('Facet', 'Guarding Facet', 5, [{ type: 'draw', amount: 1 }])];
+      return [strike('Edge', 'Crystal Edge', 4, { effect: { bonusIfBlock: 3 }, description: 'Deal 4 damage, +3 while you have block.' }, ['block', 'precise']), skill(gearId, `${slug}Facet`, `${name}: Guarding Facet`, 1, 'Gain 5 block and draw 1.', [{ type: 'block', amount: 5 }, { type: 'draw', amount: 1 }], ['block', 'precise'])];
     case 'bombPanic':
       return [attack(gearId, `${slug}Ignite`, `${name}: Furnace Burst`, 0, 'Deal 10 damage and add 2 Panic. Exhaust.', [{ type: 'damage', amount: 10 }, { type: 'addPanic', amount: 2 }], ['panic', 'exhaust']), skill(gearId, `${slug}Vent`, `${name}: Vent the Gland`, 1, 'Remove 4 monster block and gain 2 block.', [{ type: 'removeMonsterBlock', amount: 4 }, { type: 'block', amount: 2 }], ['block'])];
     case 'roarSurvival':
@@ -352,23 +461,23 @@ function profileCards(gearId, name, profile) {
     case 'crownRisk':
       return [skill(gearId, `${slug}Command`, `${name}: Burning Command`, 0, 'Gain 1 energy and add 1 Panic. Exhaust.', [{ type: 'energy', amount: 1 }, { type: 'addPanic', amount: 1 }], ['panic', 'exhaust'], true), strike('Edict', 'Ember Edict', 6, { effect: { bonusIfPanicInDiscard: 3 }, description: 'Deal 6 damage, +3 if Panic is in discard.' }, ['panic'])];
     case 'radiantBlock':
-      return [guard('Noon', 'Noon Guard', 9, [{ type: 'drawIfBlockGained', amount: 1 }], ['heavy']), attack(gearId, `${slug}Flash`, `${name}: Shield Flash`, 1, 'Deal 3 damage and Mark the monster.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }], ['marked'])];
+      return [guard('Noon', 'Noon Guard', 9, [{ type: 'drawIfBlockGained', amount: 1 }], ['heavy', 'counter']), attack(gearId, `${slug}Flash`, `${name}: Shield Flash`, 1, 'Deal 3 damage and Mark the monster.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }], ['marked', 'counter'])];
     case 'revealBlind':
       return [skill(gearId, `${slug}Open`, `${name}: Open the Cover`, 0, 'Clarify the tell and gain 1 survival. Exhaust.', [{ type: 'revealIntentHint' }, { type: 'survival', amount: 1 }], ['reveal', 'survival', 'exhaust'], true), skill(gearId, `${slug}Blind`, `${name}: Dazzling Glance`, 1, 'Gain 5 block and Mark the monster.', [{ type: 'block', amount: 5 }, { type: 'markMonster' }], ['block', 'marked'])];
     case 'survivalDamage':
-      return [strike('Arc', 'Solar Arc', 5, { effect: { bonusIfSurvivalSpent: 3 }, description: 'Deal 5 damage, +3 if Survival was spent.' }, ['survival']), skill(gearId, `${slug}Fuel`, `${name}: Feed the Ichor`, 0, 'Gain 1 survival and add 1 Panic. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'addPanic', amount: 1 }], ['survival', 'panic', 'exhaust'], true)];
+      return [strike('Arc', 'Solar Arc', 5, { effect: { bonusIfSurvivalSpent: 3 }, description: 'Deal 5 damage, +3 if Survival was spent.' }, ['survival', 'precise']), skill(gearId, `${slug}Fuel`, `${name}: Feed the Ichor`, 0, 'Gain 1 survival and add 1 Panic. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'addPanic', amount: 1 }], ['survival', 'panic', 'precise', 'exhaust'], true)];
     case 'dodgeDefense':
       return [skill(gearId, `${slug}Glint`, `${name}: Blinding Turn`, 0, 'Gain 3 block and improve the next Counter by 1. Exhaust.', [{ type: 'block', amount: 3 }, { type: 'nextCounterBonus', amount: 1 }], ['block', 'survival', 'exhaust'], true), guard('Fold', 'Fold the Light', 6, [{ type: 'drawIfSurvivalSpent', amount: 1 }], ['survival'])];
     case 'healingSupport':
       return [skill(gearId, `${slug}Warm`, `${name}: Steady Warmth`, 0, 'Heal 1 HP and gain 1 survival. Exhaust.', [{ type: 'heal', amount: 1 }, { type: 'survival', amount: 1 }], ['wound', 'survival', 'exhaust'], true), guard('Comfort', 'Pearl Comfort', 5, [{ type: 'removePanicAny' }], ['panic'])];
     case 'reflectBlock':
-      return [guard('Catch', 'Catch Noon', 7, [{ type: 'nextCounterBonus', amount: 2 }], ['survival']), attack(gearId, `${slug}Return`, `${name}: Return the Glare`, 1, 'Deal damage equal to half your block, maximum 7.', [{ type: 'damageFromBlock', divisor: 2, maximum: 7 }], ['block'])];
+      return [skill(gearId, `${slug}Catch`, `${name}: Catch Noon`, 1, 'Gain 7 block, add 1 Panic, and improve the next Counter by 2.', [{ type: 'block', amount: 7 }, { type: 'addPanic', amount: 1 }, { type: 'nextCounterBonus', amount: 2 }], ['strange', 'panic', 'block', 'counter']), attack(gearId, `${slug}Return`, `${name}: Return the Glare`, 1, 'Deal damage equal to half your block, maximum 7.', [{ type: 'damageFromBlock', divisor: 2, maximum: 7 }], ['strange', 'panic', 'block'])];
     case 'intimidation':
       return [skill(gearId, `${slug}Rise`, `${name}: Raise the Mane`, 0, 'Gain 1 survival and Mark the monster. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'markMonster' }], ['survival', 'marked', 'exhaust'], true), guard('Presence', 'Royal Presence', 6)];
     case 'highSurvival':
-      return [strike('Rake', 'King Rake', 6, { effect: { bonusIfHighSurvival: 3, survivalRequired: 2 }, description: 'Deal 6 damage, +3 with at least 2 survival.' }, ['survival', 'heavy']), skill(gearId, `${slug}Reserve`, `${name}: Hold Pride`, 1, 'Gain 1 survival and 3 block.', [{ type: 'survival', amount: 1 }, { type: 'block', amount: 3 }], ['survival', 'block'])];
+      return [attack(gearId, `${slug}Rake`, `${name}: King Rake`, 1, 'Deal 2 damage three times.', [{ type: 'multiHitDamage', amount: 2, hits: 3 }], ['quick', 'multiHit', 'counter', 'survival']), skill(gearId, `${slug}Reserve`, `${name}: Hold Pride`, 1, 'Gain 1 survival, 3 block, and improve the next Counter by 1.', [{ type: 'survival', amount: 1 }, { type: 'block', amount: 3 }, { type: 'nextCounterBonus', amount: 1 }], ['quick', 'counter', 'survival', 'block'])];
     case 'finisher':
-      return [strike('Measure', 'Measured Fang', 4, { effect: { bonusIfMonsterWounded: 3 }, description: 'Deal 4 damage, +3 if the monster is below half HP.' }, ['wound']), attack(gearId, `${slug}End`, `${name}: Final Sentence`, 2, 'Deal 9 damage. Draw 1 if this defeats the monster.', [{ type: 'damage', amount: 9 }, { type: 'drawIfMonsterDefeated', amount: 1 }], ['wound'])];
+      return [strike('Measure', 'Measured Fang', 4, { effect: { bonusIfMonsterWounded: 3 }, description: 'Deal 4 damage, +3 if the monster is below half HP.' }, ['precise', 'wound']), attack(gearId, `${slug}End`, `${name}: Final Sentence`, 2, 'Deal 9 damage. Draw 1 if this defeats the monster.', [{ type: 'damage', amount: 9 }, { type: 'drawIfMonsterDefeated', amount: 1 }], ['precise', 'wound'])];
     case 'baneArmor':
       return [skill(gearId, `${slug}Stand`, `${name}: Stand Judged`, 1, 'Gain 6 block, or 9 with matching Monster Bane.', [{ type: 'block', amount: 6, bonusIfMonsterBane: 3 }], ['block', 'monsterBane']), skill(gearId, `${slug}Answer`, `${name}: Answer the Beast`, 0, 'Gain 1 survival. With Monster Bane, draw 1. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'drawIfMonsterBane', amount: 1 }], ['survival', 'monsterBane', 'exhaust'], true)];
     case 'judgement':
@@ -392,6 +501,16 @@ Object.entries(profiles).forEach(([gearId, [name, profile]]) => {
   const set = profileCards(gearId, name, profile);
   gearCardPackages[gearId] = set.map(card => card.id);
   set.forEach(card => { gearCards[card.id] = card; });
+});
+
+Object.entries(gearCardPackages).forEach(([gearId, cardIds]) => {
+  const weaponType = explicitWeaponTypes[gearId];
+  if (!weaponType) return;
+  cardIds.forEach(cardId => {
+    const card = gearCards[cardId];
+    if (!card) return;
+    card.tags = [...new Set([...card.tags, weaponType])];
+  });
 });
 
 gearCards.swarmBite = gearCard(

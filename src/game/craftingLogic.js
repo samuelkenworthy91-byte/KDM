@@ -1,5 +1,9 @@
 import { resources } from '../data/resources.js';
 import { innovations } from '../data/innovations.js';
+import {
+  getHighestDefeatedQuarryLevel,
+  normalizeDefeatedQuarryLevels
+} from '../data/quarries.js';
 
 export function getMissingResources(cost = {}, stash = {}) {
   return Object.entries(cost)
@@ -43,7 +47,7 @@ export function getMissingUnlockRequirements(item, settlement) {
 
   switch (requirement.type) {
     case 'quarryLevel':
-      return (settlement.defeatedQuarryLevels?.[requirement.quarryId] || 0) >= requirement.level
+      return getHighestDefeatedQuarryLevel(settlement, requirement.quarryId) >= requirement.level
         ? []
         : [item.unlockText || `Defeat ${requirement.quarryId} Level ${requirement.level}.`];
     case 'completedHunts':
@@ -59,7 +63,8 @@ export function getMissingUnlockRequirements(item, settlement) {
         ? []
         : [`Craft ${requirement.count} gear pieces (${settlement.craftedGear?.length || 0}/${requirement.count}).`];
     case 'anyQuarryLevel':
-      return Object.values(settlement.defeatedQuarryLevels || {}).some(level => level >= requirement.level)
+      return Object.values(normalizeDefeatedQuarryLevels(settlement.defeatedQuarryLevels))
+        .some(levels => Math.max(0, ...levels) >= requirement.level)
         ? []
         : [`Defeat any quarry at Level ${requirement.level}.`];
     case 'any':

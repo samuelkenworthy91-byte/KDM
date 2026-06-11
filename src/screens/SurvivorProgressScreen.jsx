@@ -13,31 +13,33 @@ export default function SurvivorProgressScreen({
   offerBane,
   ownedArts,
   oralTradition,
+  quarryRevealed,
   onChoose
 }) {
   const baneId = `monsterBane_${quarryId}`;
   const ownedBaneId = getSurvivorMonsterBaneId({ fightingArts: ownedArts });
   const includeBane = offerBane && !ownedBaneId;
-  const themedRewards = getMonsterSurvivorRewardChoices(quarryId, level, { includeBane });
+  const themedRewards = getMonsterSurvivorRewardChoices(quarryId, level, {
+    includeBane,
+    survivorHasAnyBane: Boolean(ownedBaneId),
+    quarryRevealed
+  });
   const targetCount = level + 2;
-  const rewards = [
-    ...(includeBane ? [{
-      id: baneId,
-      name: fightingArts[baneId]?.name,
-      description: fightingArts[baneId]?.description,
-      label: 'Monster Bane',
-      rarity: level === 3 ? 'Rare' : 'Uncommon'
-    }] : []),
-    ...themedRewards.map(reward => ({
+  const rewards = themedRewards.map(reward => ({
       id: reward.id,
-      name: reward.name,
-      description: `${reward.description} ${reward.effectText}`,
-      label: reward.family === 'mimic'
+      name: reward.type === 'monsterBane'
+        ? fightingArts[baneId]?.name || reward.name
+        : reward.name,
+      description: reward.type === 'monsterBane'
+        ? fightingArts[baneId]?.description || `${reward.description} ${reward.effectText}`
+        : reward.description,
+      label: reward.type === 'monsterBane'
+        ? 'Monster Bane - Locked'
+        : reward.family === 'mimic'
         ? 'Mimic Technique'
         : reward.family === 'support' ? 'Party Support' : 'Counter Technique',
       rarity: reward.rarity.charAt(0).toUpperCase() + reward.rarity.slice(1)
-    }))
-  ];
+    }));
   if (rewards.length < targetCount) {
     rewards.push({
       id: 'survival',
@@ -62,7 +64,12 @@ export default function SurvivorProgressScreen({
       )}
       <div className="progress-choice-grid">
         {rewards.map(reward => (
-          <button type="button" key={reward.id} onClick={() => onChoose(reward.id)}>
+          <button
+            type="button"
+            key={reward.id}
+            data-reward-id={reward.id}
+            onClick={() => onChoose(reward.id)}
+          >
             <strong>{reward.name}</strong>
             <span>{reward.label} - {reward.rarity}</span>
             <span>{reward.description}</span>

@@ -126,7 +126,7 @@ export const innovations = {
     unlockSource: 'Pale Hunt Lion',
     unlockText: 'Defeat Pale Hunt Lion Level 2.',
     effects: ['Unlocks advanced Pale Hunt Lion gear.'],
-    unlocksRecipes: ['paleFangKatar', 'maneCloak', 'catEyeCharm', 'pouncingGreaves', 'whiskerNeedle', 'predatorMask', 'whiteClawTrap', 'huntingHideWrap']
+    unlocksRecipes: ['paleFangKatar', 'paleManeBow', 'whitePounceKatana', 'stalkingSpear', 'lionhideBuckler', 'maneCloak', 'catEyeCharm', 'pouncingGreaves', 'whiskerNeedle', 'predatorMask', 'whiteClawTrap', 'huntingHideWrap']
   },
   antelopeLarder: {
     id: 'antelopeLarder',

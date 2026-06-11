@@ -1,5 +1,10 @@
 import { cards } from './cards.js';
 import { gearCardPackages } from './gearCards.js';
+import {
+  explicitGearKeywords,
+  getGearMetadata,
+  weaponStyleDefinitions
+} from './gearMetadata.js';
 
 const LOCATION_QUARRIES = {
   lionTrophyHall: 'paleHuntLion',
@@ -19,6 +24,7 @@ const LOCATION_QUARRIES = {
 
 function recipe(id, name, buildingId, cost, description, cardPackage, passiveText, slot = 'gear', tags = []) {
   const quarryId = LOCATION_QUARRIES[buildingId] || null;
+  const resolvedCardPackage = gearCardPackages[id] || cardPackage;
   return {
     id,
     name,
@@ -29,10 +35,11 @@ function recipe(id, name, buildingId, cost, description, cardPackage, passiveTex
     unlockRequirement: { type: 'building', buildingId },
     cost,
     description,
-    cardPackage,
+    cardPackage: resolvedCardPackage,
     passiveText,
     passiveEffects: [{ type: 'described', text: passiveText }],
     slot,
+    role: slot,
     tags: [...new Set([slot, ...(quarryId ? [quarryId] : []), ...tags])],
     implemented: true
   };
@@ -50,7 +57,7 @@ export const equipment = {
   strangeEyeAmulet: recipe('strangeEyeAmulet', 'Strange Eye Amulet', 'organGrinder', { strangeEye: 1, organ: 1 }, 'An amulet that catches patterns hidden in panic.', ['strangeGlimpse', 'seeThePattern'], 'Adds deck filtering and dangerous insight.', 'trinket'),
   bloodPaint: recipe('bloodPaint', 'Blood Paint', 'organGrinder', { organ: 1, bone: 1 }, 'Ritual paint for committing to the first blow.', ['bloodRush', 'clawStrike'], '+1 strength in the first combat.', 'consumable'),
 
-  lionFangKatar: recipe('lionFangKatar', 'Lion Fang Katar', 'lionTrophyHall', { paleLionClaw: 1, paleLionSinew: 1, bone: 1 }, 'A fast punching blade modeled after the lion claw.', ['clawStrike', 'savageFollowUp', 'ripOpen'], 'Fast marked attack identity.', 'weapon'),
+  lionFangKatar: recipe('lionFangKatar', 'Lion Fang Knife', 'lionTrophyHall', { paleLionClaw: 1, paleLionSinew: 1, bone: 1 }, 'A narrow predator knife made from a single lion claw.', ['clawStrike', 'savageFollowUp', 'ripOpen'], 'Marked knife combo identity.', 'weapon'),
   maneCloak: recipe('maneCloak', 'Mane Cloak', 'lionTrophyHall', { paleLionMane: 1, paleLionHide: 1 }, 'A crackling cloak made from a mature lion mane.', ['duckAndRoll', 'rawhideDodge'], 'Start combat with +1 survival and +3 block.', 'armor'),
   catEyeCharm: recipe('catEyeCharm', 'Cat Eye Charm', 'lionTrophyHall', { paleLionEye: 1, strangeEye: 1 }, 'A charm that reveals the opening in every fight.', ['strangeGlimpse', 'readTheBeast'], 'Draw 1 extra card on the first turn.', 'trinket'),
 
@@ -66,6 +73,10 @@ export const equipment = {
 
 const monsterRecipeRows = [
   ['paleFangKatar', 'Pale Fang Katar', 'lionTrophyHall', { paleLionClaw: 1, bone: 1, sinew: 1 }, 'A paired claw blade for rapid cuts.', ['clawStrike', 'savageFollowUp', 'ripOpen'], 'Fast attacks build into a brutal follow-up.', 'weapon'],
+  ['paleManeBow', 'Pale Mane Bow', 'lionTrophyHall', { paleLionMane: 1, paleLionSinew: 1, bone: 1 }, 'A quiet bow for marking prey before it closes.', ['boneDart', 'pinningShot'], 'Ranged marking and weak-point pressure.', 'weapon'],
+  ['whitePounceKatana', 'White Pounce Katana', 'lionTrophyHall', { elderPaleFang: 1, paleLionMane: 1, bone: 1 }, 'A long pale edge held motionless until the opening strike.', ['measuredStrike', 'ripOpen'], 'Precise first-strike risk package.', 'weapon'],
+  ['stalkingSpear', 'Stalking Spear', 'lionTrophyHall', { paleLionClaw: 1, paleLionSinew: 1, bone: 1 }, 'A reach weapon for pinning legs and bracing a charge.', ['pinningShot', 'braceMaul'], 'Reach, movement break, and defensive pressure.', 'weapon'],
+  ['lionhideBuckler', 'Lionhide Buckler', 'lionTrophyHall', { paleLionHide: 1, paleLionMane: 1 }, 'A compact hide shield reinforced for claws and pounces.', ['brace', 'guardBreak'], 'Defensive counter and block conversion.', 'weapon'],
   ['maneCloak', 'Mane Cloak', 'lionTrophyHall', { paleLionMane: 1, hide: 1 }, 'A cloak that turns with incoming blows.', ['duckAndRoll'], 'Start combat with +2 block.', 'armor'],
   ['catEyeCharm', 'Cat Eye Charm', 'lionTrophyHall', { paleLionEye: 1, strangeEye: 1 }, 'A charm for hunters who still lack a singular bane.', ['readTheBeast', 'strangeGlimpse'], 'Improves Monster Bane reward chance while its wearer has no Monster Bane.', 'trinket'],
   ['pouncingGreaves', 'Pouncing Greaves', 'lionTrophyHall', { paleLionSinew: 1, hide: 1 }, 'Spring-bound greaves that turn defense into momentum.', ['quickToss'], 'The first Counter each combat deals +1 damage.', 'armor'],
@@ -93,10 +104,10 @@ const monsterRecipeRows = [
   ['swollenHideVest', 'Swollen Hide Vest', 'stormShrine', { bloatedHide: 2, sinew: 1 }, 'Impact-resistant hide with air pockets.', ['brace', 'rawhideDodge'], 'Start combat with +3 block.', 'armor'],
   ['staticNeedle', 'Static Needle', 'stormShrine', { thunderGland: 1, scrap: 1 }, 'A fine conductor for waking exhausted muscles.', ['quickToss'], 'Once per hunt, gain 1 survival after an event.', 'tool'],
   ['godlingDrum', 'Godling Drum', 'stormShrine', { denseOrgan: 1, bloatedHide: 1 }, 'A deep drum that shakes loose hesitation.', ['braceMaul', 'settle'], 'The first Panic card drawn each combat may be discarded.', 'strange'],
-  ['crackedMolarBlade', 'Cracked Molar Blade', 'stormShrine', { crackedMolar: 1, stormBone: 1 }, 'A tooth blade split by internal lightning.', ['skullCrack', 'savageFollowUp'], 'Deals more reliable damage after breaking block.', 'weapon'],
+  ['crackedMolarBlade', 'Cracked Molar Blade', 'stormShrine', { crackedMolar: 1, stormBone: 1 }, 'A tooth blade split by internal lightning.', ['skullCrack', 'savageFollowUp'], 'A heavy cleave that converts wounds into power.', 'weapon'],
 
   ['crimsonScaleShield', 'Crimson Scale Shield', 'redTannery', { crimsonScale: 2, hide: 1 }, 'Layered river scales that lock under pressure.', ['brace', 'rawhideDodge'], 'Start combat with +4 block.', 'armor'],
-  ['riverToothBlade', 'River Tooth Blade', 'redTannery', { riverTooth: 1, bone: 1, sinew: 1 }, 'A serrated blade for patient cuts.', ['hack', 'ripOpen'], 'Cutting attacks favor wounded prey.', 'weapon'],
+  ['riverToothBlade', 'River Tooth Blade', 'redTannery', { riverTooth: 1, bone: 1, sinew: 1 }, 'A serrated knife for quick cuts through opened guard.', ['hack', 'ripOpen'], 'Quick cuts strip guard and bleed exposed prey.', 'weapon'],
   ['redLeatherCoat', 'Red Leather Coat', 'redTannery', { redLeather: 1, hide: 1 }, 'Dense leather cured in mineral mud.', ['duckAndRoll', 'brace'], '+1 max HP while equipped.', 'armor'],
   ['drowningHook', 'Drowning Hook', 'redTannery', { riverTooth: 1, scrap: 1, sinew: 1 }, 'A hooked tool for dragging a target off balance.', ['guardBreak', 'quickToss'], 'The first hit removes 2 monster block.', 'tool'],
   ['bloodMudPaint', 'Blood-Mud Paint', 'redTannery', { bloodMudOrgan: 1, organ: 1 }, 'Cold paint that hides a hunter scent.', ['slipAway'], 'The monster begins combat with reduced block.', 'tool'],
@@ -152,11 +163,11 @@ const monsterRecipeRows = [
   ['noonMirror', 'Noon Mirror', 'shellSanctum', { blindingScale: 1, radiantEye: 1, scrap: 1 }, 'A hand mirror that catches a fraction of noon.', ['strangeGlimpse', 'guardBreak'], 'The monster begins combat with reduced block.', 'strange'],
 
   ['prideManeCloak', 'Pride Mane Cloak', 'prideHall', { prideMane: 1, hide: 1 }, 'A royal mantle that makes fear visible.', ['duckAndRoll', 'lanternFocus'], 'Start combat with +1 survival and +2 block.', 'armor'],
-  ['kingClawGauntlet', 'King Claw Gauntlet', 'prideHall', { kingClaw: 1, sinew: 1 }, 'A massive claw fixed to a braced gauntlet.', ['clawStrike', 'savageFollowUp'], 'Fast attacks build strength.', 'weapon'],
+  ['kingClawGauntlet', 'King Claw Gauntlet', 'prideHall', { kingClaw: 1, sinew: 1 }, 'A massive claw fixed to a braced gauntlet.', ['clawStrike', 'savageFollowUp'], 'Repeated rakes and close counters reward held courage.', 'weapon'],
   ['goldenFangBlade', 'Golden Fang Blade', 'prideHall', { goldenFang: 1, bone: 1 }, 'A weighted fang edge for decisive cuts.', ['ripOpen', 'guardBreak'], 'Attacks punish guarded prey.', 'weapon'],
   ['regalHideArmor', 'Regal Hide Armor', 'prideHall', { regalHide: 2, hide: 1 }, 'Scarred hide fitted into imposing armor.', ['brace', 'rawhideDodge'], 'Start combat with +5 block.', 'armor'],
   ['judgmentEyeCharm', 'Judgment Eye Charm', 'prideHall', { judgmentEye: 1, strangeEye: 1 }, 'An eye that seems to compare every choice.', ['seeThePattern', 'readTheBeast'], 'Draw 1 extra card on the first turn.', 'trinket'],
-  ['royalChallengeHorn', 'Royal Challenge Horn', 'prideHall', { prideMane: 1, goldenFang: 1, organ: 1 }, 'A horn whose note demands an answer.', ['goringSwing', 'bloodRush'], 'Start combat with +1 energy and reduced monster block.', 'strange']
+  ['royalChallengeHorn', 'Royal Challenge Horn', 'prideHall', { prideMane: 1, goldenFang: 1, organ: 1 }, 'A horn whose note demands an answer.', ['goringSwing', 'bloodRush'], 'Challenges the quarry and rallies every living survivor.', 'instrument']
 ];
 
 const expandedWeaponRows = [
@@ -202,103 +213,30 @@ monsterRecipeRows.forEach(row => {
 });
 
 Object.values(equipment).forEach(item => {
-  if (gearCardPackages[item.id]) item.cardPackage = gearCardPackages[item.id];
-  item.deckIdentity = item.cardPackage
-    .flatMap(cardId => cards[cardId]?.tags || [])
-    .filter(tag => ['marked', 'panic', 'block', 'survival', 'heavy', 'reveal', 'discard', 'wound', 'multiHit'].includes(tag))
-    .filter((tag, index, tags) => tags.indexOf(tag) === index)
-    .slice(0, 3)
-    .join(', ');
-});
-
-const explicitWeaponTypes = {
-  boneBlade: 'sword',
-  riverToothBlade: 'dagger',
-  timeBoneBlade: 'sword',
-  crystalBoneBlade: 'sword',
-  harmonyBoneBlade: 'sword',
-  solarIchorBlade: 'sword',
-  goldenFangBlade: 'sword',
-  duelistThornRapier: 'sword',
-  lionFangKatar: 'katar',
-  paleFangKatar: 'katar',
-  venomSacNeedle: 'dagger',
-  boneDarts: 'dagger',
-  hornMaul: 'grandWeapon',
-  thunderMaul: 'grandWeapon',
-  crackedMolarBlade: 'grandWeapon',
-  wetBoneClub: 'club',
-  royalChallengeHorn: 'club',
-  memoryGlassEye: 'strangeWeapon',
-  noonMirror: 'strangeWeapon',
-  stormGutCharm: 'strangeWeapon'
-};
-
-function inferWeaponType(item) {
-  if (explicitWeaponTypes[item.id]) return explicitWeaponTypes[item.id];
-  const text = `${item.id} ${item.name}`.toLowerCase();
-  if (text.includes('katana') || text.includes('curve blade') || text.includes('mirror cutting')) return 'katana';
-  if (text.includes('scythe') || text.includes('reaper')) return 'scythe';
-  if (text.includes('whip')) return 'whip';
-  if (text.includes('shield')) return 'shield';
-  if (text.includes('bow')) return 'bow';
-  if (text.includes('spear') || text.includes('lance')) return 'spear';
-  if (text.includes('axe') || text.includes('cleaver')) return 'axe';
-  if (text.includes('hammer')) return 'hammer';
-  if (text.includes('katar')) return 'katar';
-  if (text.includes('gauntlet') || text.includes('knuckle') || text.includes('glove')) return 'fistAndTooth';
-  if (text.includes('grand') || text.includes('maul')) return 'grandWeapon';
-  if (text.includes('club') || text.includes('horn')) return 'club';
-  if (text.includes('dagger') || text.includes('needle') || text.includes('dart')) return 'dagger';
-  if (text.includes('blade') || text.includes('rapier')) return 'sword';
-  if (item.slot === 'strange') return 'strangeWeapon';
-  return null;
-}
-
-const keywordMap = {
-  sword: ['Precise', 'Duelist'],
-  axe: ['Brutal', 'Guardbreaker'],
-  dagger: ['Quick', 'Bleeding'],
-  spear: ['Reach', 'Defensive'],
-  bow: ['Ranged', 'Marking'],
-  club: ['Brutal', 'Defensive'],
-  hammer: ['Heavy', 'Guardbreaker'],
-  grandWeapon: ['Heavy', 'Brutal'],
-  katar: ['Quick', 'Marking', 'Predator'],
-  fistAndTooth: ['Quick', 'Counter'],
-  shield: ['Defensive', 'Counter'],
-  whip: ['Reach', 'Marking'],
-  scythe: ['Bleeding', 'Panic'],
-  katana: ['Precise', 'Duelist'],
-  strangeWeapon: ['Strange', 'Panic']
-};
-
-Object.values(equipment).forEach(item => {
-  item.weaponType = inferWeaponType(item);
-  item.slot = item.slot === 'armor' ? 'body'
-    : item.slot === 'trinket' || item.slot === 'strange' ? 'charm'
-      : item.slot === 'consumable' ? 'tool'
-        : item.slot;
-  if (item.weaponType === 'shield') item.slot = 'weapon';
-  item.hands = item.weaponType
-    ? (['bow', 'grandWeapon', 'scythe'].includes(item.weaponType) ? 2 : 1)
-    : 0;
-  item.speedStyle = item.weaponType
-    ? (['dagger', 'katar', 'fistAndTooth', 'whip'].includes(item.weaponType) ? 'quick'
-      : ['hammer', 'grandWeapon', 'axe', 'scythe'].includes(item.weaponType) ? 'heavy'
-        : ['bow', 'spear', 'katana'].includes(item.weaponType) ? 'precise'
-          : item.weaponType === 'shield' ? 'defensive'
-            : item.weaponType === 'strangeWeapon' ? 'strange'
-              : 'balanced')
-    : 'defensive';
+  const metadata = getGearMetadata(item);
+  item.weaponType = metadata.weaponType;
+  item.slot = metadata.slot;
+  item.hands = metadata.hands;
+  item.speedStyle = metadata.speedStyle;
+  item.styleTags = metadata.styleTags;
   item.keywords = [...new Set([
-    ...(keywordMap[item.weaponType] || ['Survival']),
+    ...metadata.keywords,
     (item.tags || []).includes('paleHuntLion') ? 'Predator' : null,
     (item.tags || []).includes('silkMatriarch') ? 'Web' : null,
     (item.tags || []).includes('drakeEmperor') ? 'Fire' : null,
     (item.tags || []).includes('sunSovereign') ? 'Radiant' : null,
     (item.tags || []).includes('prideKing') ? 'Regal' : null
   ].filter(Boolean))];
+  const resolvedTags = item.cardPackage
+    .flatMap(cardId => cards[cardId]?.tags || [])
+    .filter((tag, index, tags) => tags.indexOf(tag) === index);
+  item.deckIdentity = metadata.deckIdentity || resolvedTags
+    .filter(tag => [
+      'marked', 'panic', 'block', 'survival', 'reveal', 'discard', 'wound',
+      'multiHit', 'support', 'party', 'bleed', 'counter', 'exhaust'
+    ].includes(tag))
+    .slice(0, 3)
+    .join(', ') || explicitGearKeywords[item.id]?.join(', ') || 'survival support';
   item.proficiencyXpGranted = Boolean(item.weaponType);
 });
 
@@ -325,6 +263,130 @@ export function validateEquipmentCardPackages() {
 
 export function getMissingCardIdsFromEquipment() {
   return validateEquipmentCardPackages().missingCardIds;
+}
+
+export function validateGearVariety() {
+  const warnings = [];
+  const monsterLocations = [...new Set(equipmentList.map(item => item.locationId).filter(locationId =>
+    LOCATION_QUARRIES[locationId]
+  ))];
+  monsterLocations.forEach(locationId => {
+    const items = equipmentList.filter(item => item.locationId === locationId);
+    const typeCounts = items.reduce((counts, item) => {
+      if (item.weaponType) counts[item.weaponType] = (counts[item.weaponType] || 0) + 1;
+      return counts;
+    }, {});
+    Object.entries(typeCounts).forEach(([weaponType, count]) => {
+      if (count > 2) warnings.push(`${locationId}: ${count} items use ${weaponType}`);
+    });
+    const roles = new Set(items.map(item => item.role || item.slot));
+    if (roles.size < 4) warnings.push(`${locationId}: fewer than 4 distinct item roles`);
+    const packages = new Map();
+    const effectPackages = new Map();
+    items.forEach(item => {
+      const key = JSON.stringify(item.cardPackage || []);
+      const owners = packages.get(key) || [];
+      packages.set(key, [...owners, item.id]);
+      const effectKey = JSON.stringify(item.cardPackage.map(cardId =>
+        (cards[cardId]?.effects || []).map(effect => {
+          const { cardId: temporaryCardId, ...comparable } = effect;
+          return comparable;
+        })
+      ));
+      const effectOwners = effectPackages.get(effectKey) || [];
+      effectPackages.set(effectKey, [...effectOwners, item.id]);
+      if (!item.weaponType && !item.keywords?.length) {
+        warnings.push(`${item.id}: lacks weapon type and keywords`);
+      }
+      if (!item.deckIdentity) warnings.push(`${item.id}: lacks deck identity`);
+      (item.cardPackage || []).forEach(cardId => {
+        const card = cards[cardId];
+        if (!card) {
+          warnings.push(`${item.id}: missing card ${cardId}`);
+          return;
+        }
+        if (card.sourceType === 'gear' && card.sourceGearId !== item.id) {
+          warnings.push(`${item.id}: ${cardId} belongs to ${card.sourceGearId || 'no gear'}`);
+        }
+      });
+      if (!item.weaponType && item.proficiencyXpGranted) {
+        warnings.push(`${item.id}: nonweapon grants weapon proficiency`);
+      }
+      if (item.weaponType) {
+        const style = weaponStyleDefinitions[item.weaponType];
+        const cardTags = new Set(item.cardPackage.flatMap(cardId => cards[cardId]?.tags || []));
+        const gearCards = item.cardPackage.map(cardId => cards[cardId]).filter(Boolean);
+        const effects = gearCards.flatMap(card => card.effects || []);
+        (style?.requiredTags || []).forEach(tag => {
+          if (!cardTags.has(tag)) warnings.push(`${item.id}: ${item.weaponType} package lacks ${tag}`);
+        });
+        const hasEffect = type => effects.some(effect => effect.type === type);
+        const hasConditional = property => effects.some(effect => Number(effect[property]) > 0);
+        const semanticMatch = {
+          axe: hasEffect('removeMonsterBlock') || hasEffect('removeAllMonsterBlock'),
+          dagger: hasEffect('bleedMonster'),
+          bow: hasEffect('markMonster'),
+          grandWeapon: gearCards.some(card => card.type === 'attack' && card.cost >= 2),
+          katar: hasEffect('multiHitDamage'),
+          fistAndTooth: hasEffect('multiHitDamage') && hasEffect('nextCounterBonus'),
+          shield: hasEffect('block') && (
+            hasEffect('nextCounterBonus') || hasEffect('damageFromBlock') ||
+            gearCards.some(card => card.type === 'attack')
+          ),
+          whip: hasEffect('markMonster'),
+          scythe: hasEffect('bleedMonster') && hasEffect('addPanic'),
+          katana: hasConditional('bonusIfFirstAttack'),
+          strangeWeapon: hasEffect('addPanic')
+        }[item.weaponType];
+        if (semanticMatch === false) {
+          warnings.push(`${item.id}: cards do not implement ${item.weaponType} mechanics`);
+        }
+        if (item.slot !== 'weapon') warnings.push(`${item.id}: weapon is labelled as ${item.slot}`);
+        if (item.hands !== style?.hands) warnings.push(`${item.id}: incorrect hand count`);
+      }
+    });
+    packages.forEach(owners => {
+      if (owners.length > 1) warnings.push(`${locationId}: identical card package on ${owners.join(', ')}`);
+    });
+    effectPackages.forEach(owners => {
+      if (owners.length > 1) warnings.push(`${locationId}: mechanically identical package on ${owners.join(', ')}`);
+    });
+  });
+  warnings.forEach(message => console.warn(`[Gear variety] ${message}`));
+  return warnings;
+}
+
+export function validateGearCardStyles() {
+  const warnings = [];
+  const directEffectWords = {
+    damage: 'deal',
+    block: 'block',
+    markMonster: 'mark',
+    bleedMonster: 'bleed',
+    draw: 'draw',
+    survival: 'survival',
+    addPanic: 'panic',
+    removeMonsterBlock: 'block',
+    removeAllMonsterBlock: 'block'
+  };
+
+  equipmentList.forEach(item => {
+    item.cardPackage.forEach(cardId => {
+      const card = cards[cardId];
+      if (!card) return;
+      const description = card.description.toLowerCase();
+      card.effects.forEach(effect => {
+        const expectedWord = directEffectWords[effect.type];
+        if (expectedWord && !description.includes(expectedWord)) {
+          warnings.push(`${item.id}/${cardId}: description omits ${effect.type}`);
+        }
+      });
+    });
+  });
+
+  warnings.push(...validateGearVariety());
+  [...new Set(warnings)].forEach(message => console.warn(`[Gear style] ${message}`));
+  return [...new Set(warnings)];
 }
 
 const validation = validateEquipmentCardPackages();

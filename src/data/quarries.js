@@ -137,6 +137,71 @@ export const quarries = Object.fromEntries(roster.map(entry => {
 
 export const quarryList = Object.values(quarries);
 export const quarryRegistry = quarryList;
+export const quarryTierOrder = ['early', 'mid', 'late', 'apex'];
+
+export function normalizeDefeatedQuarryLevels(defeated = {}) {
+  return Object.fromEntries(Object.entries(defeated).flatMap(([quarryId, value]) => {
+    const levels = Array.isArray(value)
+      ? value
+      : Number(value) > 0
+        ? Array.from({ length: Math.min(3, Number(value)) }, (_, index) => index + 1)
+        : [];
+    const normalized = [...new Set(levels
+      .map(Number)
+      .filter(level => Number.isInteger(level) && level >= 1 && level <= 3))]
+      .sort((left, right) => left - right);
+    return normalized.length ? [[quarryId, normalized]] : [];
+  }));
+}
+
+export function getDefeatedQuarryLevels(settlement, quarryId) {
+  return normalizeDefeatedQuarryLevels(settlement?.defeatedQuarryLevels)[quarryId] || [];
+}
+
+export function getHighestDefeatedQuarryLevel(settlement, quarryId) {
+  return Math.max(0, ...getDefeatedQuarryLevels(settlement, quarryId));
+}
+
+export function hasDefeatedQuarryLevel(settlement, quarryId, level) {
+  return getDefeatedQuarryLevels(settlement, quarryId).includes(Number(level));
+}
+
+export function recordDefeatedQuarryLevel(defeated, quarryId, level) {
+  const normalized = normalizeDefeatedQuarryLevels(defeated);
+  return {
+    ...normalized,
+    [quarryId]: [...new Set([...(normalized[quarryId] || []), Number(level)])]
+      .filter(item => Number.isInteger(item) && item >= 1 && item <= 3)
+      .sort((left, right) => left - right)
+  };
+}
+
+export function getQuarryTierProgress(settlement, tier) {
+  const tierQuarries = quarryList.filter(quarry =>
+    quarry.role === 'quarry' && quarry.huntable && quarry.tier === tier
+  );
+  const unlocked = tierQuarries.filter(quarry => isQuarryUnlocked(quarry, settlement)).length;
+  return {
+    tier,
+    unlocked,
+    total: tierQuarries.length,
+    ratio: tierQuarries.length ? unlocked / tierQuarries.length : 1
+  };
+}
+
+export function calculateAvailableQuarryTiers(settlement) {
+  const available = ['early'];
+  for (let index = 0; index < quarryTierOrder.length - 1; index += 1) {
+    const tier = quarryTierOrder[index];
+    if (!available.includes(tier)) break;
+    if (getQuarryTierProgress(settlement, tier).ratio >= 0.5) {
+      available.push(quarryTierOrder[index + 1]);
+    } else {
+      break;
+    }
+  }
+  return available;
+}
 
 export function getQuarryBehaviourLabel(quarry) {
   if (!quarry?.huntable) return 'Not yet huntable';
@@ -159,7 +224,10 @@ export function isQuarryUnlocked(quarry, settlement) {
 
 export function getAvailableQuarryLevel(quarryId, settlement) {
   const quarry = quarries[quarryId];
-  return Math.min(quarry?.maxLevel || 3, (settlement.defeatedQuarryLevels?.[quarryId] || 0) + 1);
+  return Math.min(
+    quarry?.maxLevel || 3,
+    getHighestDefeatedQuarryLevel(settlement, quarryId) + 1
+  );
 }
 
 export function rollQuarryLoot(quarryId, level) {
@@ -265,11 +333,20 @@ export function getCreatureSpecificLootChoices(quarryId, level, harvestResults =
   return drawWeightedUnique(weightedPool, offerCount);
 }
 
-export function getDiscoveryChoices(settlement) {
+export function getDiscoveryChoices(settlement, defeatedQuarryId = null) {
+  const availableTiers = calculateAvailableQuarryTiers(settlement);
+  const currentTier = quarries[defeatedQuarryId]?.tier;
   return quarryList.filter(quarry =>
     quarry.role === 'quarry' &&
     quarry.huntable &&
-    !settlement.discoveredQuarries.includes(quarry.id) &&
+    availableTiers.includes(quarry.tier) &&
+    !isQuarryUnlocked(quarry, settlement) &&
     (quarry.implemented || quarry.fallbackBehaviourId)
-  );
+  ).sort((left, right) => {
+    const leftPriority = left.tier === currentTier ? 0
+      : availableTiers.length - availableTiers.indexOf(left.tier);
+    const rightPriority = right.tier === currentTier ? 0
+      : availableTiers.length - availableTiers.indexOf(right.tier);
+    return leftPriority - rightPriority || left.tierRank - right.tierRank;
+  }).slice(0, 3);
 }

@@ -130,7 +130,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     monsterRewardTraits,
     monsterRewardTriggers: {},
     weaponProficiency: createWeaponProficiency(runBonus.survivor?.weaponProficiency),
-    activeWeaponTypes: [...new Set(runDeck.map(card => card.weaponType).filter(Boolean))],
+    activeProficiencyType: runBonus.survivor?.activeProficiencyType || 'fistAndTooth',
     weaponCardsPlayed: {},
     weaponMasteryUsed: {},
     weaponTurnTriggers: {},
@@ -159,6 +159,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     previousCardType: null,
     intentHintLevel: 0,
     nextCounterBonus: 0,
+    pendingCounterConfig: null,
     nextAttackMarks: false,
     selectedWeakPointId: null,
     weakPointFeedback: '',
@@ -195,8 +196,11 @@ export function playCard(cardIndex, state) {
   let intentHintLevel = state.intentHintLevel || 0;
   let emittedPartyEffects = [...(state.emittedPartyEffects || [])];
   const isAttack = card.type === 'attack';
-  const weaponType = card.weaponType;
-  const proficiencyLevel = weaponType ? state.weaponProficiency?.[weaponType]?.level || 0 : 0;
+  const weaponType = card.weaponType ||
+    (isAttack && state.activeProficiencyType === 'fistAndTooth' ? 'fistAndTooth' : null);
+  const proficiencyLevel = weaponType && weaponType === state.activeProficiencyType
+    ? state.weaponProficiency?.[weaponType]?.level || 0
+    : 0;
   const weaponCardsPlayed = { ...(state.weaponCardsPlayed || {}) };
   const weaponMasteryUsed = { ...(state.weaponMasteryUsed || {}) };
   const weaponTurnTriggers = { ...(state.weaponTurnTriggers || {}) };
@@ -526,8 +530,13 @@ export function playCard(cardIndex, state) {
           (!state.firstBlockPlayed && firstBlockEffect &&
           state.disorders?.includes('recklessJoy') ? 2 : 0);
         survivor = { ...survivor, block: survivor.block + Math.max(0, effect.amount - penalty) };
+        const intentTags = currentIntent?.tags || [];
+        const tellBonus = intentTags.some(tag => ['multiHit', 'trample'].includes(tag))
+          ? effect.bonusIfMultiHitTell || 0
+          : 0;
         const gained = Math.max(0, effect.amount - penalty) +
-          (state.hasMonsterBane ? effect.bonusIfMonsterBane || 0 : 0);
+          (state.hasMonsterBane ? effect.bonusIfMonsterBane || 0 : 0) +
+          tellBonus;
         survivor = { ...survivor, block: survivor.block - Math.max(0, effect.amount - penalty) + gained };
         blockGainedThisTurn += gained;
         firstBlockEffect = false;
@@ -553,6 +562,17 @@ export function playCard(cardIndex, state) {
             (survivor.survival || 0) + effect.amount
           )
         };
+        break;
+      case 'survivalIfSecondAttack':
+        if ((state.attacksPlayedThisTurn || 0) === 1) {
+          survivor = {
+            ...survivor,
+            survival: Math.min(
+              survivor.maxSurvival,
+              (survivor.survival || 0) + effect.amount
+            )
+          };
+        }
         break;
       case 'heal':
         survivor.hp = Math.min(survivor.maxHp, survivor.hp + effect.amount);
@@ -603,6 +623,12 @@ export function playCard(cardIndex, state) {
         break;
       case 'drawIfMonsterDefeated':
         if (monster.hp <= 0) drawAmount(effect.amount);
+        break;
+      case 'drawIfWeakPointBroken':
+        if (weakPointBroke) drawAmount(effect.amount);
+        break;
+      case 'drawIfNoAttackPlayed':
+        if ((state.attacksPlayedThisTurn || 0) === 0) drawAmount(effect.amount);
         break;
       case 'drawIfPanicElseBlock':
         if (panicInDiscard()) drawAmount(effect.draw);
@@ -683,6 +709,12 @@ export function playCard(cardIndex, state) {
         nextAttackMarks = true;
         break;
       case 'nextCounterBonus':
+        break;
+      case 'nextMonsterDamageReduction':
+        state.nextMonsterDamageReduction = Math.max(
+          state.nextMonsterDamageReduction || 0,
+          effect.amount || 0
+        );
         break;
       case 'revealIntentHint':
         intentHintLevel = Math.max(intentHintLevel, 1);
@@ -830,6 +862,14 @@ export function playCard(cardIndex, state) {
     nextCounterBonus: (state.nextCounterBonus || 0) +
       card.effects.filter(effect => effect.type === 'nextCounterBonus')
         .reduce((total, effect) => total + effect.amount, 0),
+    pendingCounterConfig: card.counterCanTargetWeakPoint
+      ? {
+          counterCanTargetWeakPoint: true,
+          counterPreferredWeakPointTags: card.counterPreferredWeakPointTags || [],
+          counterBreakDamageModifier: card.counterBreakDamageModifier || 0,
+          counterRiskModifier: card.counterRiskModifier || 0
+        }
+      : state.pendingCounterConfig,
     monsterHitsThisTurn,
     cardsPlayedThisTurn: (state.cardsPlayedThisTurn || 0) + 1,
     attacksPlayedThisTurn: (state.attacksPlayedThisTurn || 0) + (isAttack ? 1 : 0),
@@ -850,7 +890,207 @@ export function playCard(cardIndex, state) {
   };
 }
 
-export function useSurvivalAction(actionId, state) {
+function getCounterWeapon(state, weakPoint) {
+  const weaponType = state.activeProficiencyType || 'fistAndTooth';
+  if (!weakPoint) {
+    return { weaponType, suitability: { modifier: 0, flatBonus: 0, label: 'Neutral' } };
+  }
+  return {
+    weaponType,
+    suitability: getWeaponSuitability(weakPoint, weaponType, ['counter'])
+  };
+}
+
+function getCounterBaseDamage(state) {
+  const baneBonus = state.monsterBaneDamageBonus || 0;
+  const traitBonus = state.traits?.includes('wolfSmile') ? 1 : 0;
+  const gearBonus = (state.counterDamageBonus || 0) + (state.nextCounterBonus || 0);
+  const fistLevel = state.weaponProficiency?.fistAndTooth?.level || 0;
+  const fistActive = state.activeProficiencyType === 'fistAndTooth';
+  const fistBonus = fistActive && fistLevel >= 2 ? 1 : 0;
+  const woundedFistBonus = fistActive &&
+    fistLevel >= 1 && state.survivor.hp < state.survivor.maxHp ? 2 : 0;
+  return 3 + baneBonus + traitBonus + gearBonus + fistBonus + woundedFistBonus;
+}
+
+export function getCounterWeakPointPreview(state, weakPointId) {
+  const weakPoint = state.monster.weakPoints?.find(point => point.id === weakPointId && !point.broken);
+  if (!weakPoint) return null;
+  const currentIntent = state.monster.intents?.[state.intentIndex || 0];
+  const tellState = getWeakPointTellState(weakPoint, currentIntent, state.monster.quarryId);
+  const { weaponType, suitability } = getCounterWeapon(state, weakPoint);
+  const tags = weakPoint.tags || [];
+  const proficiencyLevel = weaponType ? state.weaponProficiency?.[weaponType]?.level || 0 : 0;
+  let breakBonus = 0;
+  let riskModifier = state.pendingCounterConfig?.counterRiskModifier || 0;
+  breakBonus += state.pendingCounterConfig?.counterBreakDamageModifier || 0;
+  if (state.pendingCounterConfig?.counterPreferredWeakPointTags?.some(tag => tags.includes(tag))) {
+    breakBonus += 1;
+  }
+
+  if (proficiencyLevel >= 1 && weaponType === 'shield' &&
+    tags.some(tag => ['claws', 'body'].includes(tag))) breakBonus += 2;
+  if (proficiencyLevel >= 1 && ['katar', 'dagger'].includes(weaponType) &&
+    tags.some(tag => ['head', 'eye', 'organ', 'heart'].includes(tag))) {
+    breakBonus += 2;
+    riskModifier += 1;
+  }
+  if (proficiencyLevel >= 1 && weaponType === 'katana' && !(state.damageTakenLastTurn > 0)) {
+    breakBonus += 3;
+  }
+
+  const baseDamage = getCounterBaseDamage(state);
+  const monsterDamage = Math.max(0, Math.floor(baseDamage * weakPoint.monsterDamageMultiplier));
+  const breakDamage = Math.max(0, Math.round(
+    baseDamage *
+    weakPoint.breakDamageMultiplier *
+    (1 + suitability.modifier) *
+    getTellBreakModifier(tellState) *
+    0.75
+  ) + suitability.flatBonus + breakBonus);
+  const fragile = Boolean(weakPoint.harvestProfile?.fragile || tags.includes('rare'));
+  const guarded = tellState === 'guarded' && !weakPoint.marked && !state.monster.marked;
+  const unsuitableFragile = fragile && suitability.label !== 'Good';
+
+  return {
+    weakPoint,
+    weaponType,
+    weaponMatch: suitability.label,
+    suitability,
+    tellState,
+    monsterDamage,
+    breakDamage,
+    riskModifier,
+    targetable: !guarded && !unsuitableFragile,
+    blockedReason: guarded
+      ? 'Guarded counters require the weak point to be Marked.'
+      : unsuitableFragile
+        ? 'This fragile weak point requires a suitable weapon.'
+        : ''
+  };
+}
+
+function applyCounterWeakPoint(state, survivor, monster, drawPile, hand, discardPile, weakPointId) {
+  const preview = getCounterWeakPointPreview({ ...state, survivor, monster }, weakPointId);
+  if (!preview?.targetable) return null;
+  const point = preview.weakPoint;
+  const hpBefore = monster.hp;
+  monster = applyDamage(monster, preview.monsterDamage);
+  const monsterDamage = Math.max(0, hpBefore - monster.hp);
+  const previousBreakDamage = point.currentBreakDamage || 0;
+  const rawBreakDamage = previousBreakDamage + preview.breakDamage;
+  const currentBreakDamage = Math.min(point.breakValue, rawBreakDamage);
+  const brokeNow = currentBreakDamage >= point.breakValue;
+  let harvestResult = null;
+
+  if (brokeNow) {
+    harvestResult = rollHarvestQuality({
+      weakPoint: { ...point, marked: point.marked || monster.marked },
+      weaponType: preview.weaponType,
+      cardTags: ['counter'],
+      suitability: preview.suitability,
+      proficiencyLevel: preview.weaponType
+        ? state.weaponProficiency?.[preview.weaponType]?.level || 0
+        : 0,
+      hasMonsterBane: state.hasMonsterBane,
+      overkill: Math.max(0, rawBreakDamage - point.breakValue),
+      monsterLevel: monster.level || 1
+    });
+  }
+
+  monster.weakPoints = monster.weakPoints.map(weakPoint => weakPoint.id === point.id
+    ? {
+        ...weakPoint,
+        currentBreakDamage,
+        broken: brokeNow,
+        ...(harvestResult ? { harvestResult } : {})
+      }
+    : weakPoint);
+
+  const logEntries = [
+    `${survivor.name} countered ${point.name}.`,
+    `The counter dealt ${monsterDamage} monster damage and ${preview.breakDamage} break damage.`
+  ];
+  let forceNextMonsterTarget = false;
+  const weaponMasteryUsed = { ...(state.weaponMasteryUsed || {}) };
+  const spearProtection = preview.weaponType === 'spear' &&
+    (state.weaponProficiency?.spear?.level || 0) >= 1 &&
+    point.tags.some(tag => ['legs', 'limb'].includes(tag)) &&
+    !weaponMasteryUsed.spearCounterRisk;
+  const riskSuppressed = ['open', 'exposed'].includes(preview.tellState) || spearProtection;
+
+  if (spearProtection && !brokeNow) weaponMasteryUsed.spearCounterRisk = true;
+  if (preview.weaponType === 'whip' &&
+    (state.weaponProficiency?.whip?.level || 0) >= 1 &&
+    point.tags.some(tag => ['tail', 'tongue', 'limb', 'legs', 'claws'].includes(tag))) {
+    monster.weakPoints = monster.weakPoints.map(weakPoint =>
+      weakPoint.id === point.id ? { ...weakPoint, marked: true } : weakPoint
+    );
+    logEntries.push(`${point.name} became Marked by the whip counter.`);
+  }
+
+  if (brokeNow) {
+    logEntries.push(
+      `${point.name} broke during the counter. ${point.onBreakEffect} ` +
+      `Harvest quality: ${harvestResult?.quality || 'messy'}.`
+    );
+    if (harvestResult?.quality === 'ruined') {
+      logEntries.push(`The counter ruined the delicate part. Harvest quality: Ruined.`);
+    }
+  } else if (point.riskOnFailedBreak && !riskSuppressed) {
+    const risk = point.riskOnFailedBreak;
+    const dangerousModifier = ['guarded', 'dangerous'].includes(preview.tellState) ? 1 : 0;
+    const fistRisk = state.activeProficiencyType === 'fistAndTooth' &&
+      (state.weaponProficiency?.fistAndTooth?.level || 0) >= 1 ? 1 : 0;
+    const riskAmount = (risk.amount || 1) + dangerousModifier + preview.riskModifier;
+    let riskText = '';
+    if (risk.type === 'panic' || risk.type === 'panicAndTarget') {
+      discardPile = [...discardPile, ...Array(riskAmount).fill(cards.panic)];
+      riskText = `${survivor.name} gains ${riskAmount} Panic`;
+    }
+    if (risk.type === 'panicAndTarget') {
+      forceNextMonsterTarget = true;
+      riskText += ' and becomes the monster next target';
+    } else if (risk.type === 'marked') {
+      survivor.marked = Math.max(1, (survivor.marked || 0) + riskAmount);
+      riskText = `${survivor.name} becomes Marked`;
+    } else if (risk.type === 'bleed') {
+      survivor.bleed = (survivor.bleed || 0) + riskAmount;
+      riskText = `${survivor.name} gains ${riskAmount} Bleed`;
+    } else if (risk.type === 'monsterHeal') {
+      monster.hp = Math.min(monster.maxHp, monster.hp + riskAmount);
+      riskText = `${monster.name} heals ${riskAmount}`;
+    } else if (risk.type === 'monsterBlock') {
+      monster.block += riskAmount;
+      riskText = `${monster.name} gains ${riskAmount} block`;
+    } else if (risk.type === 'monsterEnrage') {
+      monster.enrage = (monster.enrage || 0) + riskAmount;
+      riskText = `${monster.name} gains ${riskAmount} Enrage`;
+    } else if (risk.type === 'loseBlock') {
+      survivor.block = Math.max(0, survivor.block - riskAmount);
+      riskText = `${survivor.name} loses ${riskAmount} block`;
+    }
+    if (fistRisk) {
+      discardPile = [...discardPile, cards.panic];
+      riskText += `${riskText ? ' and ' : ''}${survivor.name} gains 1 Panic`;
+    }
+    logEntries.push(`${point.name} did not break. ${riskText || 'The opening closes'}.`);
+  }
+
+  return {
+    survivor,
+    monster,
+    drawPile,
+    hand,
+    discardPile,
+    feedback: `Countered ${point.name}: ${monsterDamage} monster, ${preview.breakDamage} break`,
+    logEntries,
+    forceNextMonsterTarget,
+    weaponMasteryUsed
+  };
+}
+
+export function useSurvivalAction(actionId, state, options = {}) {
   if (state.status !== 'playing') return state;
   const costs = { dodge: 1, counter: 1, focus: 1, endure: 2 };
   const cost = costs[actionId];
@@ -866,7 +1106,7 @@ export function useSurvivalAction(actionId, state) {
   let feedback = '';
 
   if (actionId === 'dodge') {
-    const katanaBonus = state.activeWeaponTypes?.includes('katana') &&
+    const katanaBonus = state.activeProficiencyType === 'katana' &&
       (state.weaponProficiency?.katana?.level || 0) >= 2 ? 2 : 0;
     const learnedBonus = !state.monsterRewardTriggers?.firstDodgeBlock
       ? state.monsterRewardTraits?.filter(rule => rule.type === 'firstDodgeBlock')
@@ -876,15 +1116,43 @@ export function useSurvivalAction(actionId, state) {
     survivor.block += 5 + katanaBonus + learnedBonus + cowardiceBonus;
     feedback = `Dodge: +${5 + katanaBonus + learnedBonus + cowardiceBonus} block`;
   } else if (actionId === 'counter') {
-    const baneBonus = state.monsterBaneDamageBonus || 0;
-    const traitBonus = state.traits?.includes('wolfSmile') ? 1 : 0;
-    const gearBonus = (state.counterDamageBonus || 0) + (state.nextCounterBonus || 0);
-    const fistBonus = state.activeWeaponTypes?.includes('fistAndTooth') &&
-      (state.weaponProficiency?.fistAndTooth?.level || 0) >= 2 ? 1 : 0;
-    const counterDamage = 3 + baneBonus + traitBonus + gearBonus + fistBonus;
-    monster = applyDamage(monster, counterDamage);
-    feedback = `Counter: dealt ${counterDamage} damage`;
-    if ((state.weaponProficiency?.fistAndTooth?.level || 0) >= 3 &&
+    const counterTargetId = options.weakPointId ||
+      state.selectedWeakPointId;
+    const weakPointResult = counterTargetId
+      ? applyCounterWeakPoint(
+          state, survivor, monster, drawPile, hand, discardPile, counterTargetId
+        )
+      : null;
+    if (weakPointResult) {
+      survivor = weakPointResult.survivor;
+      monster = weakPointResult.monster;
+      drawPile = weakPointResult.drawPile;
+      hand = weakPointResult.hand;
+      discardPile = weakPointResult.discardPile;
+      feedback = weakPointResult.feedback;
+      state = {
+        ...state,
+        combatLogEntries: [
+          ...(state.combatLogEntries || []),
+          ...weakPointResult.logEntries
+        ],
+        forceNextMonsterTarget: weakPointResult.forceNextMonsterTarget,
+        weaponMasteryUsed: weakPointResult.weaponMasteryUsed
+      };
+    } else {
+      const counterDamage = getCounterBaseDamage(state);
+      monster = applyDamage(monster, counterDamage);
+      feedback = `Counter Body: dealt ${counterDamage} damage`;
+      state = {
+        ...state,
+        combatLogEntries: [
+          ...(state.combatLogEntries || []),
+          `${survivor.name} countered ${monster.name}'s body for ${counterDamage} damage.`
+        ]
+      };
+    }
+    if (state.activeProficiencyType === 'fistAndTooth' &&
+      (state.weaponProficiency?.fistAndTooth?.level || 0) >= 3 &&
       !state.weaponMasteryUsed?.fistAndTooth) {
       const drawn = drawCards(drawPile, hand, discardPile, 1);
       drawPile = drawn.deck;
@@ -925,7 +1193,9 @@ export function useSurvivalAction(actionId, state) {
     blockGainedThisTurn: (state.blockGainedThisTurn || 0) + blockGained,
     survivalSpentThisTurn: (state.survivalSpentThisTurn || 0) + cost,
     nextCounterBonus: actionId === 'counter' ? 0 : state.nextCounterBonus,
+    pendingCounterConfig: actionId === 'counter' ? null : state.pendingCounterConfig,
     weaponMasteryUsed: actionId === 'counter' &&
+      state.activeProficiencyType === 'fistAndTooth' &&
       (state.weaponProficiency?.fistAndTooth?.level || 0) >= 3
       ? { ...state.weaponMasteryUsed, fistAndTooth: true }
       : state.weaponMasteryUsed,
@@ -1073,7 +1343,7 @@ export function applyMonsterIntent(monster, state) {
     survivor.bleed = Math.max(0, survivor.bleed - 1);
   }
   const shieldGuardSurvived = survivor.block > 0 &&
-    state.activeWeaponTypes?.includes('shield') &&
+    state.activeProficiencyType === 'shield' &&
     (state.weaponProficiency?.shield?.level || 0) >= 2 &&
     !state.weaponMasteryUsed?.shield;
   if (shieldGuardSurvived) {

@@ -61,6 +61,7 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
     ...getCardsFromIds(personalIds, survivor?.name ? `${survivor.name}'s progress` : 'Survivor progress'),
     ...getCardsFromIds(negativeIds, survivor?.name ? `${survivor.name}'s permanent burdens` : 'Permanent burdens', 'curse')
   ].filter(card => !forgotten.has(card.id));
+  const activeProficiencyType = survivor?.activeProficiencyType || 'fistAndTooth';
 
   equippedGear.forEach(itemOrId => {
     const item = typeof itemOrId === 'string'
@@ -77,7 +78,10 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
     }
   });
 
-  return [...deck, ...getCardsFromIds(temporaryCards, 'Hunt event', 'event')];
+  const activeDeck = deck.filter(card =>
+    card.sourceType !== 'proficiency' || card.weaponType === activeProficiencyType
+  );
+  return [...activeDeck, ...getCardsFromIds(temporaryCards, 'Hunt event', 'event')];
 }
 
 export function shuffleCards(cards) {

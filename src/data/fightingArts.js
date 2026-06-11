@@ -223,34 +223,40 @@ export const fightingArts = {
   monsterBane_paleHuntLion: {
     id: 'monsterBane_paleHuntLion',
     name: 'Monster Bane: Pale Hunt Lion',
-    description: 'Reveal exact Pale Hunt Lion intents. With Monster Archive, deal +1 damage to it.',
+    description: 'Reveal exact Pale Hunt Lion intents, weak-point openings, failed-break risks, and harvest hints. With Monster Archive, deal +1 damage to it.',
     trigger: 'Against Pale Hunt Lion.',
     effect: { type: 'monsterBane', quarryId: 'paleHuntLion' },
     tags: ['monsterBane'],
     locked: true,
     unforgettable: true,
+    quarrySpecific: true,
+    replaceable: false,
     implemented: true
   },
   monsterBane_wailingAntelope: {
     id: 'monsterBane_wailingAntelope',
     name: 'Monster Bane: Wailing Antelope',
-    description: 'Reveal exact Wailing Antelope intents. With Monster Archive, deal +1 damage to it.',
+    description: 'Reveal exact Wailing Antelope intents, weak-point openings, failed-break risks, and harvest hints. With Monster Archive, deal +1 damage to it.',
     trigger: 'Against Wailing Antelope.',
     effect: { type: 'monsterBane', quarryId: 'wailingAntelope' },
     tags: ['monsterBane'],
     locked: true,
     unforgettable: true,
+    quarrySpecific: true,
+    replaceable: false,
     implemented: true
   },
   monsterBane_ashPhoenix: {
     id: 'monsterBane_ashPhoenix',
     name: 'Monster Bane: Ash Phoenix',
-    description: 'Reveal exact Ash Phoenix intents. With Monster Archive, deal +1 damage to it.',
+    description: 'Reveal exact Ash Phoenix intents, weak-point openings, failed-break risks, and harvest hints. With Monster Archive, deal +1 damage to it.',
     trigger: 'Against Ash Phoenix.',
     effect: { type: 'monsterBane', quarryId: 'ashPhoenix' },
     tags: ['monsterBane'],
     locked: true,
     unforgettable: true,
+    quarrySpecific: true,
+    replaceable: false,
     implemented: true
   }
 };
@@ -261,12 +267,14 @@ quarryList.forEach(quarry => {
     fightingArts[id] = {
       id,
       name: `Monster Bane: ${quarry.displayName}`,
-      description: `Reveal exact ${quarry.displayName} intents. With Monster Archive, deal +1 damage to it.`,
+      description: `Reveal exact ${quarry.displayName} intents, weak-point openings, failed-break risks, and harvest hints. With Monster Archive, deal +1 damage to it.`,
       trigger: `Against ${quarry.displayName}.`,
       effect: { type: 'monsterBane', quarryId: quarry.id },
       tags: ['monsterBane'],
       locked: true,
       unforgettable: true,
+      quarrySpecific: true,
+      replaceable: false,
       implemented: true
     };
   }

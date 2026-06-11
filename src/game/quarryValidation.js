@@ -1,8 +1,16 @@
 import { getCreatureBehaviour } from '../data/creatureBehaviours.js';
+import { cards } from '../data/cards.js';
 import { getMonsterBaneId, fightingArts } from '../data/fightingArts.js';
 import { quarryList } from '../data/quarries.js';
 import { resources } from '../data/resources.js';
 import { equipmentList } from '../data/equipment.js';
+import { validateGearCardStyles } from '../data/equipment.js';
+import {
+  validateMonsterBaneRewards,
+  validateRewardVariety
+} from '../data/monsterSurvivorRewards.js';
+import { validateTargetingBar } from './partyCombatLogic.js';
+import { validateWeaponProficiencyMapping } from '../data/weaponProficiency.js';
 
 export function validateQuarryContent() {
   const warnings = [];
@@ -66,5 +74,10 @@ export function validateQuarryContent() {
   });
 
   warnings.forEach(message => console.warn(`[Quarry content] ${message}`));
+  validateMonsterBaneRewards();
+  validateRewardVariety();
+  validateGearCardStyles();
+  validateWeaponProficiencyMapping({ equipment: equipmentList, cards });
+  validateTargetingBar();
   return warnings;
 }

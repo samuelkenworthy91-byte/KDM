@@ -1,4 +1,10 @@
-import { applyMonsterIntent, createCombatState, playCard, useSurvivalAction } from './combatLogic.js';
+import {
+  applyMonsterIntent,
+  createCombatState,
+  getCounterWeakPointPreview,
+  playCard,
+  useSurvivalAction
+} from './combatLogic.js';
 import { cards } from '../data/cards.js';
 import { drawCards } from './deckLogic.js';
 import { applyWoundToMember, treatWound } from '../data/woundTables.js';
@@ -52,6 +58,7 @@ function prepareTurn(member) {
     previousCardType: null,
     intentHintLevel: 0,
     nextCounterBonus: 0,
+    pendingCounterConfig: null,
     weaponTurnTriggers: {},
     damageTakenLastTurn: member.damageTakenThisTurn || 0,
     damageTakenThisTurn: 0
@@ -189,7 +196,12 @@ function resolveMonsterTurn(state) {
     status: monster.hp <= 0 ? 'won' : 'playing',
     lastTargetId: members[targetIndex].survivor.id,
     round: state.round + 1,
-    selectedWeakPointId: null,
+    selectedCombatTarget: state.selectedCombatTarget?.type === 'weakPoint' &&
+      monster.weakPoints?.some(point =>
+        point.id === state.selectedCombatTarget.id && !point.broken
+      )
+      ? state.selectedCombatTarget
+      : { type: 'monster', id: monster.id || 'monster' },
     forcedMonsterTargetId: null
   };
 }
@@ -211,7 +223,7 @@ export function createPartyCombatState(monster, partyBonuses, pendingPartyEffect
     pendingPartyEffects,
     status: 'playing',
     lastTargetId: null,
-    selectedWeakPointId: null,
+    selectedCombatTarget: { type: 'monster', id: monster.id || 'monster' },
     forcedMonsterTargetId: null,
     combatLog: [`${monster.name} reveals a tell. The party acts first.`]
   };
@@ -221,20 +233,34 @@ export function createPartyCombatState(monster, partyBonuses, pendingPartyEffect
 export function playPartyCard(cardIndex, state) {
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
   const partyHasMonsterBane = state.members.some(member =>
-    member.survivor.hp > 0 && member.hasMonsterBane
+    member.survivor.hp > 0 && (
+      member.hasMonsterBane ||
+      member.fightingArts?.includes(`monsterBane_${state.monster.quarryId}`)
+    )
   );
+  const selectedWeakPointId = state.selectedCombatTarget?.type === 'weakPoint'
+    ? state.selectedCombatTarget.id
+    : null;
+  const beforeWeakPoints = new Map(
+    (state.monster.weakPoints || []).map(point => [point.id, point.broken])
+  );
+  const monsterHpBefore = state.monster.hp;
   const active = playCard(cardIndex, {
     ...state.members[state.activePartyIndex],
     monster: state.monster,
     intentIndex: state.intentIndex,
-    selectedWeakPointId: state.selectedWeakPointId,
+    selectedWeakPointId,
     hasMonsterBane: partyHasMonsterBane
   });
   const emitted = active.emittedPartyEffects || [];
   const cleanedActive = {
     ...active,
     emittedPartyEffects: [],
-    hasMonsterBane: state.members[state.activePartyIndex].hasMonsterBane
+    hasMonsterBane: state.members[state.activePartyIndex].hasMonsterBane,
+    brokeWeakPointThisHunt: state.members[state.activePartyIndex].brokeWeakPointThisHunt ||
+      (active.monster.weakPoints || []).some(point => point.broken && !beforeWeakPoints.get(point.id)),
+    dealtFinalBlowThisHunt: state.members[state.activePartyIndex].dealtFinalBlowThisHunt ||
+      (monsterHpBefore > 0 && active.monster.hp <= 0)
   };
   const members = syncMonster(
     state.members.map((member, index) => index === state.activePartyIndex ? cleanedActive : member),
@@ -250,16 +276,46 @@ export function playPartyCard(cardIndex, state) {
       ? active.survivor.id
       : state.forcedMonsterTargetId,
     combatLog: [...(state.combatLog || []), ...(active.combatLogEntries || [])],
-    status: active.monster.hp <= 0 ? 'won' : 'playing'
+    status: active.monster.hp <= 0 ? 'won' : 'playing',
+    selectedCombatTarget: selectedWeakPointId &&
+      active.monster.weakPoints?.some(point => point.id === selectedWeakPointId && !point.broken)
+      ? state.selectedCombatTarget
+      : { type: 'monster', id: active.monster.id || 'monster' }
   };
 }
 
-export function selectPartyWeakPoint(weakPointId, state) {
+export function selectPartyCombatTarget(target, state) {
   if (state.status !== 'playing') return state;
+  if (!target || target.type === 'monster') {
+    return {
+      ...state,
+      selectedCombatTarget: { type: 'monster', id: state.monster.id || 'monster' }
+    };
+  }
+  if (target.type !== 'weakPoint') return state;
   const valid = state.monster.weakPoints?.some(
-    weakPoint => weakPoint.id === weakPointId && !weakPoint.broken
+    weakPoint => weakPoint.id === target.id && !weakPoint.broken
   );
-  return { ...state, selectedWeakPointId: valid ? weakPointId : null };
+  return valid ? { ...state, selectedCombatTarget: target } : state;
+}
+
+export function selectPartyWeakPoint(weakPointId, state) {
+  return selectPartyCombatTarget(
+    weakPointId
+      ? { type: 'weakPoint', id: weakPointId }
+      : { type: 'monster', id: state.monster.id || 'monster' },
+    state
+  );
+}
+
+export function getPartyCounterPreview(state, weakPointId) {
+  const active = state.members[state.activePartyIndex];
+  if (!active) return null;
+  return getCounterWeakPointPreview({
+    ...active,
+    monster: state.monster,
+    intentIndex: state.intentIndex
+  }, weakPointId);
 }
 
 export function getPartyWeakPointPreview(state, weakPointId) {
@@ -341,19 +397,51 @@ export function treatPartyWound(memberIndex, location, treatmentType, state) {
 
 export function usePartySurvivalAction(actionId, state) {
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
+  const partyHasMonsterBane = state.members.some(member =>
+    member.survivor.hp > 0 && (
+      member.hasMonsterBane ||
+      member.fightingArts?.includes(`monsterBane_${state.monster.quarryId}`)
+    )
+  );
+  const selectedWeakPointId = state.selectedCombatTarget?.type === 'weakPoint'
+    ? state.selectedCombatTarget.id
+    : null;
+  const beforeWeakPoints = new Map(
+    (state.monster.weakPoints || []).map(point => [point.id, point.broken])
+  );
+  const monsterHpBefore = state.monster.hp;
   const active = useSurvivalAction(actionId, {
     ...state.members[state.activePartyIndex],
-    monster: state.monster
+    monster: state.monster,
+    intentIndex: state.intentIndex,
+    selectedWeakPointId,
+    hasMonsterBane: partyHasMonsterBane,
+    combatLogEntries: []
   });
+  const trackedActive = {
+    ...active,
+    brokeWeakPointThisHunt: state.members[state.activePartyIndex].brokeWeakPointThisHunt ||
+      (active.monster.weakPoints || []).some(point => point.broken && !beforeWeakPoints.get(point.id)),
+    dealtFinalBlowThisHunt: state.members[state.activePartyIndex].dealtFinalBlowThisHunt ||
+      (monsterHpBefore > 0 && active.monster.hp <= 0)
+  };
   const members = syncMonster(
-    state.members.map((member, index) => index === state.activePartyIndex ? active : member),
+    state.members.map((member, index) => index === state.activePartyIndex ? trackedActive : member),
     active.monster
   );
   return {
     ...state,
     members,
     monster: active.monster,
-    status: active.monster.hp <= 0 ? 'won' : 'playing'
+    forcedMonsterTargetId: active.forceNextMonsterTarget
+      ? active.survivor.id
+      : state.forcedMonsterTargetId,
+    combatLog: [...(state.combatLog || []), ...(active.combatLogEntries || [])],
+    status: active.monster.hp <= 0 ? 'won' : 'playing',
+    selectedCombatTarget: selectedWeakPointId &&
+      active.monster.weakPoints?.some(point => point.id === selectedWeakPointId && !point.broken)
+      ? state.selectedCombatTarget
+      : { type: 'monster', id: active.monster.id || 'monster' }
   };
 }
 
@@ -396,9 +484,32 @@ export function endPartyTurn(state) {
       activePartyIndex: nextIndex,
       activeCombatant: members[nextIndex].survivor.id,
       combatTurnOrder: buildTurnOrder(members),
-      selectedWeakPointId: null
+      selectedCombatTarget: state.selectedCombatTarget
     };
   }
 
   return resolveMonsterTurn({ ...state, members, activeCombatant: 'monster', activePartyIndex: -1 });
+}
+
+export function validateTargetingBar(state = null, {
+  attackTargetModalOpen = false,
+  survivalCounterBypassedSelection = false,
+  weakPointUsedSeparatePicker = false
+} = {}) {
+  const warnings = [];
+  if (state) {
+    const target = state.selectedCombatTarget;
+    const valid = target?.type === 'monster' || (
+      target?.type === 'weakPoint' &&
+      state.monster?.weakPoints?.some(point => point.id === target.id && !point.broken)
+    );
+    if (!valid) warnings.push('selectedCombatTarget is invalid');
+    if ('counterTargetWeakPointId' in state) warnings.push('Survival Counter still uses old target state');
+    if ('selectedWeakPointId' in state) warnings.push('Weak-point targeting still uses old separate state');
+  }
+  if (attackTargetModalOpen) warnings.push('An attack card opened the old targeting modal');
+  if (survivalCounterBypassedSelection) warnings.push('Survival Counter bypassed selectedCombatTarget');
+  if (weakPointUsedSeparatePicker) warnings.push('Weak-point targeting used old separate logic');
+  warnings.forEach(message => console.warn(`[Targeting bar] ${message}`));
+  return warnings;
 }

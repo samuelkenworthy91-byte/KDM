@@ -2,14 +2,14 @@ import React from 'react';
 import { resources } from '../data/resources.js';
 import { getQuarryBehaviourLabel, getQuarryBehaviourNote } from '../data/quarries.js';
 
-export default function MonsterDiscoveryScreen({ quarries, onChoose, onSkip }) {
+export default function MonsterDiscoveryScreen({ quarries, storyText, onChoose, onSkip }) {
   const visible = quarries.filter(quarry => quarry.role === 'quarry');
 
   return (
     <section className="survivor-progress-screen">
       <p className="eyebrow">Monster Discovery</p>
       <h2>Choose A New Quarry Rumour</h2>
-      <p>The returning hunter brings enough knowledge to pursue one new creature.</p>
+      <p>{storyText || 'The returning hunter brings enough knowledge to pursue one new creature.'}</p>
       <div className="progress-choice-grid">
         {visible.map(quarry => (
           <button type="button" key={quarry.id} onClick={() => onChoose(quarry.id)}>

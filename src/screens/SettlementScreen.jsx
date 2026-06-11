@@ -16,7 +16,10 @@ import {
 import { disorders } from '../data/disorders.js';
 import { scars } from '../data/scars.js';
 import {
+  calculateAvailableQuarryTiers,
   getAvailableQuarryLevel,
+  getHighestDefeatedQuarryLevel,
+  getQuarryTierProgress,
   getQuarryBehaviourLabel,
   getQuarryBehaviourNote,
   isQuarryUnlocked,
@@ -25,6 +28,7 @@ import {
 } from '../data/quarries.js';
 import { resources } from '../data/resources.js';
 import {
+  getActiveProficiencyPassive,
   weaponProficiencyDefinitions,
   weaponTypes
 } from '../data/weaponProficiency.js';
@@ -110,6 +114,24 @@ function ConditionList({ label, ids, catalog }) {
   );
 }
 
+function DeckCardDetails({ cardId, source, suffix = '' }) {
+  const card = cards[cardId];
+  return (
+    <span>
+      <strong>{card?.name || cardId}</strong>{suffix}
+      <br />
+      <small>
+        Cost: {Number.isFinite(card?.cost) ? card.cost : '-'} | Type: {card?.type || 'Unknown'} |{' '}
+        Source: {source}
+      </small>
+      <br />
+      <span>{card?.description || 'No card description available.'}</span>
+      <br />
+      <small>Tags: {card?.tags?.join(', ') || 'None'}</small>
+    </span>
+  );
+}
+
 function SurvivorCard({
   survivor,
   active,
@@ -153,6 +175,15 @@ function SurvivorCard({
       eligible: false
     }));
   });
+  const activeProficiencyType = survivor.activeProficiencyType || 'fistAndTooth';
+  const activeProficiency = survivor.weaponProficiency?.[activeProficiencyType] || {
+    xp: 0,
+    level: 0,
+    mastered: false
+  };
+  const monsterBanes = (survivor.fightingArts || [])
+    .filter(id => id.startsWith('monsterBane_'))
+    .map(id => ({ id, art: fightingArts[id], quarryId: id.replace('monsterBane_', '') }));
   const confirmForget = (cardName, action) => {
     if (window.confirm(`Forget ${cardName}? This permanently removes it from this survivor’s personal deck.`)) {
       action();
@@ -198,30 +229,35 @@ function SurvivorCard({
           : 'None'}</p>
         <div className="personal-card-list">
           <strong>Weapon Proficiency</strong>
-          {weaponTypes.map(type => {
+          <p>
+            <strong>Active Proficiency: {weaponProficiencyDefinitions[activeProficiencyType]?.name}</strong>
+            <br />
+            {activeProficiency.xp}/8 XP, Level {activeProficiency.level}
+            {activeProficiency.mastered ? ' (Mastered)' : ''}
+            <br />
+            <span className="muted-text">
+              {getActiveProficiencyPassive(survivor.weaponProficiency, activeProficiencyType)}
+            </span>
+          </p>
+          <p className="muted-text">Inactive proficiencies are retained but do not grant cards or passives.</p>
+          {weaponTypes.filter(type => type !== activeProficiencyType).map(type => {
             const progress = survivor.weaponProficiency?.[type] || { xp: 0, level: 0, mastered: false };
             const definition = weaponProficiencyDefinitions[type];
             return (
               <p key={type}>
                 <strong>{definition.name}:</strong> {progress.xp}/8 XP, Level {progress.level}
                 {progress.mastered ? ' (Mastered)' : ''}
-                <br />
-                <span className="muted-text">
-                  {progress.level >= 2 ? definition.level2
-                    : progress.level >= 1 ? definition.level1
-                      : `Unlocks at 2 XP: ${definition.level1}`}
-                  {progress.mastered ? ` Mastery: ${definition.mastery}` : ''}
-                </span>
               </p>
             );
           })}
         </div>
         <div className="personal-card-list">
-          <strong>Future Deck Profile</strong>
+          <strong>Hunt Deck Preview</strong>
           <p className="muted-text">
             Gear cards come from equipped gear. Remove the gear to remove these cards.
             Removing bound gear destroys it.
           </p>
+          <h4>Personal Deck</h4>
           {uniqueProfileEntries.length ? uniqueProfileEntries.map(entry => {
             const cardId = entry.cardId;
             const personalCard = cards[cardId];
@@ -241,14 +277,13 @@ function SurvivorCard({
 
             return (
               <div className="personal-card-row" key={cardId}>
-                <span>
-                  <strong>{personalCard?.name || cardId}</strong>
-                  {' '}({entry.source})
-                  {isForgotten ? ' - Forgotten' : ''}
-                  {cardId === 'foundingStone'
-                    ? ' - Powerful and single-use; forgetting removes it from future starting decks.'
-                    : ''}
-                </span>
+                <DeckCardDetails
+                  cardId={cardId}
+                  source={entry.source}
+                  suffix={`${isForgotten ? ' - Forgotten' : ''}${
+                    cardId === 'foundingStone' ? ' - Single-use starter' : ''
+                  }`}
+                />
                 {!isPanic && (
                   <button
                     type="button"
@@ -314,12 +349,41 @@ function SurvivorCard({
               </div>
             );
           }) : <p className="muted-text">No future cards.</p>}
-          {gearEntries.map((entry, index) => (
+          <h4>Gear Cards</h4>
+          {gearEntries.length ? gearEntries.map((entry, index) => (
             <div className="personal-card-row" key={`${entry.source}-${entry.cardId}-${index}`}>
-              <span><strong>{cards[entry.cardId]?.name || entry.cardId}</strong> ({entry.source})</span>
+              <DeckCardDetails cardId={entry.cardId} source={entry.source} />
               <button type="button" disabled title="Remove or destroy the bound gear instead">Gear card</button>
             </div>
-          ))}
+          )) : <p className="muted-text">No bound gear cards.</p>}
+          <h4>Active Proficiency Cards</h4>
+          <p className="muted-text">
+            {weaponProficiencyDefinitions[activeProficiencyType]?.name} is active. No proficiency
+            cards are granted at the current level; only its passive applies.
+          </p>
+          <h4>Trauma / Panic / Disorder Cards</h4>
+          <p className="muted-text">
+            {[
+              ...(survivor.permanentNegativeCards || []),
+              ...(survivor.personalDeckAdditions || []).filter(addition =>
+                getPersonalCardId(addition) === 'panic'
+              )
+            ].length
+              ? 'These cards are listed in the Personal Deck above with their burden source.'
+              : 'No trauma or Panic cards.'}
+            {(survivor.disorders || []).length
+              ? ` Disorders: ${survivor.disorders.map(id => disorders[id]?.name || id).join(', ')}.`
+              : ''}
+          </p>
+          <h4>Locked / Unforgettable Cards</h4>
+          {monsterBanes.length ? monsterBanes.map(({ id, art, quarryId }) => (
+            <article className="item-card" key={id}>
+              <strong>{art?.name || id}</strong>
+              <p>Quarry: {quarries[quarryId]?.name || quarryId}</p>
+              <p>{art?.description || art?.effectText || 'Reveals exact quarry intent and weak-point knowledge.'}</p>
+              <p className="effect-text">Locked. Cannot be forgotten or replaced.</p>
+            </article>
+          )) : <p className="muted-text">No locked Monster Bane.</p>}
           {!!survivor.forgottenCardsLog?.length && (
             <details>
               <summary>Forgotten Card Log</summary>
@@ -480,6 +544,7 @@ export default function SettlementScreen({
   const [startingTrait, setStartingTrait] = useState('');
   const [intimacyMaleId, setIntimacyMaleId] = useState('');
   const [intimacyFemaleId, setIntimacyFemaleId] = useState('');
+  const [timelineNomineeId, setTimelineNomineeId] = useState('');
   const visibleInnovations = innovationList.filter(item => canBuildUnlocked(item, settlement));
   const buildableInnovations = visibleInnovations.filter(item => !settlement.builtInnovations.includes(item.id));
   const builtInnovations = innovationList.filter(item => settlement.builtInnovations.includes(item.id));
@@ -652,6 +717,7 @@ export default function SettlementScreen({
           <section className="rumours-section">
             <h3>Lantern Year Timeline</h3>
             <p>Current Lantern Year: {settlement.lanternYear}</p>
+            <p>Campaign pressure: {settlement.campaignPressure || 0}</p>
             <p>
               Last event: {settlement.lastTimelineEvent
                 ? `${settlement.lastTimelineEvent.name} - ${settlement.lastTimelineEvent.description}`
@@ -663,23 +729,64 @@ export default function SettlementScreen({
             {settlement.pendingTimelineEvent && (
               <article className="item-card">
                 <p className="eyebrow">Decision Required</p>
-                <h4>{settlement.pendingTimelineEvent.name}</h4>
+                <h4>Lantern Year {settlement.pendingTimelineEvent.lanternYear}: {settlement.pendingTimelineEvent.title}</h4>
                 <p>{settlement.pendingTimelineEvent.description}</p>
-                {settlement.pendingTimelineEvent.id === 'sharedHunger' &&
-                  !settlement.innovationDeckState.builtInnovationIds.includes('cooking') && (
-                    <p className="missing">Cooking has not been discovered.</p>
-                  )}
-                <div className="button-row">
-                  {settlement.pendingTimelineEvent.choices.map(choice => (
+                {(settlement.pendingTimelineEvent.storyParagraphs || []).map((paragraph, index) => (
+                  <p key={`${settlement.pendingTimelineEvent.id}-story-${index}`}>
+                    {paragraph}
+                  </p>
+                ))}
+                {settlement.pendingTimelineEvent.choices.map(choice => (
+                  <div className="event-choice-card" key={choice.id}>
+                    <h4>{choice.label}</h4>
+                    <p>{choice.storyText}</p>
+                    <p className="muted-text">{choice.preview}</p>
+                    {choice.requiresNomination && (
+                      <label>
+                        Nominate survivor
+                        <select
+                          value={timelineNomineeId}
+                          onChange={event => setTimelineNomineeId(event.target.value)}
+                        >
+                          <option value="">Choose a living survivor</option>
+                          {livingSurvivors.map(survivor => (
+                            <option value={survivor.id} key={`${choice.id}-${survivor.id}`}>
+                              {survivor.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                     <button
                       type="button"
-                      key={choice.id}
-                      onClick={() => onTimelineChoice(choice.id)}
+                      disabled={choice.requiresNomination && !timelineNomineeId}
+                      onClick={() => {
+                        onTimelineChoice(
+                          choice.id,
+                          choice.requiresNomination ? [timelineNomineeId] : []
+                        );
+                        setTimelineNomineeId('');
+                      }}
                     >
-                      {choice.text}
+                      Choose: {choice.label}
                     </button>
+                  </div>
+                ))}
+              </article>
+            )}
+            {!settlement.pendingTimelineEvent && settlement.lastTimelineResult && (
+              <article className="item-card">
+                <p className="eyebrow">Timeline Result</p>
+                <h4>{settlement.lastTimelineResult.title}: {settlement.lastTimelineResult.choiceLabel}</h4>
+                <p>{settlement.lastTimelineResult.storyText}</p>
+                {!!settlement.lastTimelineResult.nominatedSurvivorNames?.length && (
+                  <p>Nominated: {settlement.lastTimelineResult.nominatedSurvivorNames.join(', ')}</p>
+                )}
+                <ul>
+                  {settlement.lastTimelineResult.appliedEffects.map((effect, index) => (
+                    <li key={`${effect}-${index}`}>{effect}</li>
                   ))}
-                </div>
+                </ul>
               </article>
             )}
             <details>
@@ -687,6 +794,7 @@ export default function SettlementScreen({
               {settlement.timelineHistory.slice().reverse().map(entry => (
                 <p key={`${entry.lanternYear}-${entry.id}`}>
                   Year {entry.lanternYear}: <strong>{entry.name}</strong> - {entry.description}
+                  {entry.choiceText ? ` Choice: ${entry.choiceText}.` : ''}
                 </p>
               ))}
             </details>
@@ -1064,6 +1172,19 @@ export default function SettlementScreen({
 
       {tab === 'quarries' && (
         <div className="settlement-panel">
+          <h3>Tier Progression</h3>
+          {['early', 'mid', 'late', 'apex'].map(tier => {
+            const progress = getQuarryTierProgress(settlement, tier);
+            const available = calculateAvailableQuarryTiers(settlement).includes(tier);
+            return (
+              <p key={tier}>
+                <strong>{tier.charAt(0).toUpperCase() + tier.slice(1)} Tier:</strong>{' '}
+                {available
+                  ? `${progress.unlocked} / ${progress.total} unlocked. Next tier becomes available at 50%.`
+                  : 'Locked until 50% of the previous tier is unlocked.'}
+              </p>
+            );
+          })}
           <h3>Unlocked Huntable</h3>
           <div className="quarry-list">
             {unlockedHuntableQuarries.map(quarry => {
@@ -1082,7 +1203,7 @@ export default function SettlementScreen({
                     <strong>{quarry.name}</strong>
                     <span>{unlocked ? quarry.description : quarry.unlockRequirement ? `Rumour: ${quarry.name} requires earlier quarry progress.` : 'Locked'}</span>
                   </button>
-                  <p>Highest defeated level: {settlement.defeatedQuarryLevels[quarry.id] || 0}</p>
+                  <p>Highest defeated level: {getHighestDefeatedQuarryLevel(settlement, quarry.id)}</p>
                   <p>Levels unlocked: 1-{getAvailableQuarryLevel(quarry.id, settlement)}</p>
                   <p>Resources: {quarry.uniqueResources.map(resourceId => resources[resourceId]?.name || resourceId).join(', ')}</p>
                   <p>Buildings: {quarry.buildingUnlocks.join(', ') || 'None'}</p>

@@ -112,6 +112,10 @@ export const innovationCards = {
   taboo: card('taboo', 'Taboo', 'law', 'One poisonous story is forbidden.', ['Remove one curse per Lantern Year.'], { tags: ['law'] }),
   shrineOfNames: card('shrineOfNames', 'Shrine of Names', 'legacy', 'The living carry strength beneath recorded names.', ['Grant a survivor +1 max HP.'], { tags: ['legacy'] }),
   huntSongs: card('huntSongs', 'Hunt Songs', 'culture', 'Victories are sung into the rhythm of departure.', ['Gain +1 starting survival against known quarries.'], { tags: ['culture'] }),
+  blackLanternRite: card('blackLanternRite', 'Black Lantern Rite', 'ritual', 'A lightless flame is used to study fear without dispelling it.', ['Timeline choices may follow the black lantern path.', 'Campaign pressure can rise around strange knowledge.'], { tags: ['timeline', 'strange', 'ritual'] }),
+  graveOfferings: card('graveOfferings', 'Grave Offerings', 'legacy', 'Useful tools are surrendered so their lessons remain with the living.', ['Grave history carries stronger survivor lessons.'], { tags: ['timeline', 'death', 'legacy'] }),
+  wrongArchitecture: card('wrongArchitecture', 'Wrong Architecture', 'strange craft', 'Rooms are built to fit shapes that have not arrived.', ['Strange timeline events become more likely.'], { tags: ['timeline', 'strange', 'building'] }),
+  buriedMap: card('buriedMap', 'Buried Map', 'forbidden knowledge', 'A route is copied from marks found beneath the settlement.', ['Late campaign paths can be revealed without naming the threat behind them.'], { tags: ['timeline', 'strange', 'knowledge'] }),
 
   boneSmith: card('boneSmith', 'Bone Smith', 'quarry craft', 'Bone becomes a dependable weapon material.', ['Unlocks Bone Smith building and recipes.'], { unlocksBuildings: ['boneSmith'] }),
   skinnery: card('skinnery', 'Skinnery', 'quarry craft', 'Monster hide becomes durable protection.', ['Unlocks Skinnery building and recipes.'], { unlocksBuildings: ['skinnery'] }),

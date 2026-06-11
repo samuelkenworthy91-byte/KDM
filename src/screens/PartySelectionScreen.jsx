@@ -29,7 +29,8 @@ export default function PartySelectionScreen({
           const gear = (survivor.boundGear || []).map(item => equipment[item.equipmentId]).filter(Boolean);
           const baneId = getSurvivorMonsterBaneId(survivor);
           const deckSize = buildRunDeck({ survivor, equippedGear: gear }).length;
-          const disabled = !selected && selectedIds.length >= settlement.maxHuntPartySize;
+          const unavailable = (survivor.unavailableHunts || 0) > 0;
+          const disabled = unavailable || (!selected && selectedIds.length >= settlement.maxHuntPartySize);
           return (
             <button
               type="button"
@@ -50,6 +51,7 @@ export default function PartySelectionScreen({
               {(survivor.hp < survivor.maxHp || survivor.injuries?.length) && (
                 <span className="missing">This survivor is wounded.</span>
               )}
+              {unavailable && <span className="missing">Unavailable for the next hunt.</span>}
               {!gear.length && <span className="missing">This survivor has no gear.</span>}
               {gear.length > 0 && <span>This survivor already has bound gear.</span>}
               {baneId && <span>{fightingArts[baneId]?.name || baneId}</span>}

@@ -1,8 +1,9 @@
 import React from 'react';
-import { quarries } from '../data/quarries.js';
+import { normalizeDefeatedQuarryLevels, quarries } from '../data/quarries.js';
 
 function getProgressSummary(settlement) {
-  const entries = Object.entries(settlement.defeatedQuarryLevels || {});
+  const entries = Object.entries(normalizeDefeatedQuarryLevels(settlement.defeatedQuarryLevels))
+    .map(([quarryId, levels]) => [quarryId, Math.max(0, ...levels)]);
   if (!entries.length) return 'No quarry victories';
 
   const [quarryId, level] = entries.sort((a, b) => b[1] - a[1])[0];

@@ -1,6 +1,9 @@
 import React from 'react';
 import {
+  calculateAvailableQuarryTiers,
   getAvailableQuarryLevel,
+  getHighestDefeatedQuarryLevel,
+  getQuarryTierProgress,
   getQuarryBehaviourLabel,
   getQuarryBehaviourNote,
   quarries,
@@ -19,7 +22,9 @@ export default function QuarrySelectionScreen({
   scaledHp
 }) {
   const available = quarryList.filter(quarry =>
-    quarry.huntable && settlement.discoveredQuarries.includes(quarry.id)
+    quarry.role === 'quarry' &&
+    quarry.huntable &&
+    settlement.discoveredQuarries.includes(quarry.id)
   );
   const quarry = quarries[selectedQuarry];
   const rewardProfile = quarry?.levelRewardProfile?.[selectedLevel];
@@ -30,6 +35,20 @@ export default function QuarrySelectionScreen({
     <section className="settlement-hub">
       <p className="eyebrow">Quarry Selection</p>
       <h2>Choose The Hunt</h2>
+      <div className="item-card">
+        <strong>Quarry Tier Progress</strong>
+        {['early', 'mid', 'late', 'apex'].map(tier => {
+          const progress = getQuarryTierProgress(settlement, tier);
+          const availableTier = calculateAvailableQuarryTiers(settlement).includes(tier);
+          return (
+            <p key={tier}>
+              {tier.charAt(0).toUpperCase() + tier.slice(1)}: {availableTier
+                ? `${progress.unlocked}/${progress.total} unlocked`
+                : 'Locked until the previous tier reaches 50%'}
+            </p>
+          );
+        })}
+      </div>
       <div className="quarry-list">
         {available.map(quarry => (
           <button
@@ -40,6 +59,7 @@ export default function QuarrySelectionScreen({
           >
             <strong>{quarry.name}</strong>
             <span>Monster Tier: {quarry.tier.charAt(0).toUpperCase() + quarry.tier.slice(1)}</span>
+            <span>Highest defeated level: {getHighestDefeatedQuarryLevel(settlement, quarry.id)}</span>
             <span>{quarry.description}</span>
             <span>{getQuarryBehaviourLabel(quarry)}</span>
             {getQuarryBehaviourNote(quarry) && <span>{getQuarryBehaviourNote(quarry)}</span>}

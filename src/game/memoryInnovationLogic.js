@@ -14,7 +14,8 @@ export function getMissingMemoryUnlockRequirements(item, settlement) {
     case 'deadSurvivors':
       return (settlement.deadSurvivors || 0) >= requirement.count ? [] : [item.unlockText];
     case 'anyQuarryLevel':
-      return Object.values(settlement.defeatedQuarryLevels || {}).some(level => level >= requirement.level)
+      return Object.values(normalizeDefeatedQuarryLevels(settlement.defeatedQuarryLevels))
+        .some(levels => Math.max(0, ...levels) >= requirement.level)
         ? [] : [item.unlockText];
     case 'population':
       return (settlement.population || 0) >= requirement.count ? [] : [item.unlockText];
@@ -22,7 +23,8 @@ export function getMissingMemoryUnlockRequirements(item, settlement) {
       return settlement.conditionHistory?.injuryGained ||
         settlement.survivors.some(survivor => survivor.injuries?.length) ? [] : [item.unlockText];
     case 'differentQuarries':
-      return Object.values(settlement.defeatedQuarryLevels || {}).filter(level => level > 0).length >= requirement.count
+      return Object.values(normalizeDefeatedQuarryLevels(settlement.defeatedQuarryLevels))
+        .filter(levels => levels.length > 0).length >= requirement.count
         ? [] : [item.unlockText];
     case 'disorderOrPanic':
       return settlement.conditionHistory?.disorderGained || settlement.survivors.some(survivor =>
@@ -51,3 +53,4 @@ export function isMemoryInnovationUnlocked(item, settlement) {
 export function isMemoryActionUsed(settlement, actionId) {
   return settlement.memoryActionsUsedThisYear?.[actionId] === settlement.lanternYear;
 }
+import { normalizeDefeatedQuarryLevels } from '../data/quarries.js';

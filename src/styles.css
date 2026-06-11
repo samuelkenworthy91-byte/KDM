@@ -765,6 +765,22 @@ select {
   margin-top: 0.65rem;
 }
 
+.targeting-options button {
+  display: grid;
+  min-width: 135px;
+  gap: 0.15rem;
+  text-align: left;
+}
+
+.targeting-options button small {
+  color: #b9b1a5;
+}
+
+.targeting-options button.selected {
+  border-color: #e8bd69;
+  box-shadow: inset 0 0 0 1px #e8bd69;
+}
+
 .survival-command-bar p {
   margin-bottom: 0;
   color: #c9b58f;

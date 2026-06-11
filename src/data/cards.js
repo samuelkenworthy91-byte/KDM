@@ -102,10 +102,54 @@ export const cards = {
     'Gain 6 block.',
     [{ type: 'block', amount: 6 }],
     { tags: ['personal'], sourceType: 'personal' }
+  ),
+  blackLanternFocus: card(
+    'blackLanternFocus',
+    'Black Lantern Focus',
+    0,
+    'Gain 1 survival. Clarify the monster tell. Add 1 Panic. Exhaust.',
+    [
+      { type: 'survival', amount: 1 },
+      { type: 'revealIntentHint' },
+      { type: 'addPanic', amount: 1 }
+    ],
+    { tags: ['timeline', 'strange', 'panic'], sourceType: 'timeline', exhaust: true }
+  ),
+  watchTheDark: card(
+    'watchTheDark',
+    'Watch the Dark',
+    0,
+    'Gain 3 block and clarify the monster tell. Exhaust.',
+    [{ type: 'block', amount: 3 }, { type: 'revealIntentHint' }],
+    { tags: ['timeline', 'block'], sourceType: 'timeline', exhaust: true }
   )
 };
 
 Object.assign(cards, gearCards, monsterRewardCards);
+
+Object.keys(cards).forEach(cardId => {
+  const current = cards[cardId];
+  const text = `${cardId} ${current.sourceGearId || ''} ${current.name || ''} ${(current.tags || []).join(' ')}`.toLowerCase();
+  const createsCounter = current.effects?.some(effect => effect.type === 'nextCounterBonus');
+  if (!createsCounter &&
+    !['counter', 'riposte', 'reaction', 'punish', 'parry'].some(tag => text.includes(tag))) return;
+  let preferredTags = [];
+  let breakModifier = 0;
+  let riskModifier = 0;
+  if (text.includes('shield')) preferredTags = ['body', 'shell', 'claws'];
+  else if (text.includes('perfect step')) preferredTags = ['legs', 'limb'];
+  else if (text.includes('royal challenge')) {
+    preferredTags = ['head', 'body'];
+    riskModifier = 1;
+  } else if (text.includes('thorn')) preferredTags = ['limb', 'body'];
+  cards[cardId] = {
+    ...current,
+    counterCanTargetWeakPoint: true,
+    counterPreferredWeakPointTags: preferredTags,
+    counterBreakDamageModifier: breakModifier,
+    counterRiskModifier: riskModifier
+  };
+});
 
 export const starterCardIds = [
   'foundingStone',
