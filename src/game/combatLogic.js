@@ -1,6 +1,7 @@
 import { cards } from '../data/cards.js';
 import { monsters } from '../data/monsters.js';
 import { findMonsterSurvivorReward } from '../data/monsterSurvivorRewards.js';
+import { fightingArts } from '../data/fightingArts.js';
 import { createWeaponProficiency } from '../data/weaponProficiency.js';
 import { buildRunDeck, drawCards, shuffleCards } from './deckLogic.js';
 import { createHitLocations } from '../data/woundTables.js';
@@ -13,6 +14,10 @@ import {
 
 const HAND_SIZE = 5;
 const ENERGY_PER_TURN = 3;
+
+function getArtPassiveEffects(artIds = []) {
+  return artIds.flatMap(id => fightingArts[id]?.passiveEffects || []);
+}
 
 function applyDamage(target, amount) {
   const absorbed = Math.min(target.block, amount);
@@ -43,6 +48,7 @@ function getCombatStatus(survivor, monster) {
 export function createCombatState(monsterOverride = monsters.whiteLion, runBonus = {}) {
   const extraMaxHp = runBonus.extraMaxHp || 0;
   const arts = runBonus.survivor?.fightingArts || [];
+  const artPassives = getArtPassiveEffects(arts);
   const injuries = runBonus.survivor?.injuries || [];
   const scars = runBonus.survivor?.scars || [];
   const disorders = runBonus.survivor?.disorders || [];
@@ -69,6 +75,9 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
       (runBonus.startingBlock || 0) +
       (arts.includes('tumble') ? 3 : 0) +
       (arts.includes('scarTissue') ? 2 : 0) +
+      artPassives
+        .filter(effect => effect.type === 'frontPositionBlock' && (runBonus.partyPosition || 0) === 0)
+        .reduce((total, effect) => total + (effect.value || 0), 0) +
       (scars.includes('hornBruise') && quarryId === 'wailingAntelope' ? 2 : 0) +
       (disorders.includes('paranoia') && !runBonus.hasMonsterBane ? 3 : 0),
     energy: Math.max(0, ENERGY_PER_TURN - (runBonus.firstTurnEnergyPenalty || 0)),
@@ -77,6 +86,11 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     survival: Math.min(
       Math.max(1, runBonus.survivor?.maxSurvival || 3),
       (runBonus.survivor?.survival || 0) + conditionSurvival
+        + artPassives
+          .filter(effect =>
+            effect.type === 'bodyScarSurvival' && scars.some(id => ['lionScar', 'thunderScar'].includes(id))
+          )
+          .reduce((total, effect) => total + (effect.value || 0), 0)
     ),
     hitLocations: createHitLocations(runBonus.survivor?.hitLocations),
     treatmentNotes: [...(runBonus.survivor?.treatmentNotes || [])]
@@ -120,6 +134,8 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     runDeck,
     intentIndex: 0,
     fightingArts: arts,
+    artPassives,
+    artTriggers: {},
     injuries,
     scars,
     disorders,
@@ -217,6 +233,8 @@ export function playCard(cardIndex, state) {
   let proficiencyRemovePanic = false;
   let proficiencyReveal = false;
   const monsterRewardTriggers = { ...(state.monsterRewardTriggers || {}) };
+  const artTriggers = { ...(state.artTriggers || {}) };
+  const artPassives = state.artPassives || getArtPassiveEffects(state.fightingArts);
   const selectedWeakPoint = isAttack
     ? monster.weakPoints?.find(
       weakPoint => weakPoint.id === state.selectedWeakPointId && !weakPoint.broken
@@ -379,6 +397,8 @@ export function playCard(cardIndex, state) {
       amount += effect.bonusIfHighSurvival || 0;
     }
     if (state.previousCardType === 'skill') amount += effect.bonusIfPreviousCardSkill || 0;
+    if (state.disorders?.length) amount += effect.bonusIfDisorder || 0;
+    if (state.damageTakenLastTurn > 0) amount += effect.bonusIfTargetedLastTurn || 0;
     if (state.cardDiscardedThisTurn) amount += effect.bonusIfCardDiscarded || 0;
     amount += Math.min(
       effect.maximumBonus || Infinity,
@@ -408,9 +428,29 @@ export function playCard(cardIndex, state) {
         ['hammer', 'club', 'axe', 'grandWeapon', 'scythe'].includes(weaponType) ? 1 : 0) +
       (effect.type === 'multiHitDamage' ? proficiencyPerHitBonus : 0)
     );
+    let artDamageBonus = 0;
+    artPassives.forEach(passive => {
+      if (passive.type === 'firstAttackIfWounded' && !state.firstAttackPlayed &&
+        survivor.hp < survivor.maxHp) artDamageBonus += passive.value || 0;
+      if (passive.type === 'firstAttackIfPanicDiscard' && !state.firstAttackPlayed &&
+        panicInDiscard()) artDamageBonus += passive.value || 0;
+      if (passive.type === 'firstAttackIfDisorder' && !state.firstAttackPlayed &&
+        state.disorders?.length) artDamageBonus += passive.value || 0;
+      if (passive.type === 'secondAttackBonus' && (state.attacksPlayedThisTurn || 0) === 1) {
+        artDamageBonus += passive.value || 0;
+      }
+      if (passive.type === 'lowMonsterHpAttackBonus' &&
+        monster.hp <= monster.maxHp * passive.threshold) artDamageBonus += passive.value || 0;
+      if (passive.type === 'firstMarkedAttackBonus' && !artTriggers.firstMarkedAttackBonus &&
+        monster.marked) {
+        artDamageBonus += passive.value || 0;
+        artTriggers.firstMarkedAttackBonus = true;
+      }
+    });
+    const totalAmount = amount + artDamageBonus;
     const monsterDamage = selectedWeakPoint
-      ? Math.max(0, Math.floor(amount * selectedWeakPoint.monsterDamageMultiplier))
-      : amount;
+      ? Math.max(0, Math.floor(totalAmount * selectedWeakPoint.monsterDamageMultiplier))
+      : totalAmount;
     const hpBefore = monster.hp;
     monster = effect.ignoreBlockIfMonsterMarked && monster.marked
       ? applyDirectDamage(monster, monsterDamage)
@@ -419,6 +459,25 @@ export function playCard(cardIndex, state) {
     if (selectedWeakPoint && amount > 0) {
       weakPointAttempted = true;
       let flatBreakBonus = selectedWeakPoint.marked || monster.marked ? 1 : 0;
+      artPassives.forEach(passive => {
+        const matchingTag = passive.tags?.some(tag => targetTags.includes(tag));
+        const matchingWeapon = !passive.weapons || passive.weapons.includes(weaponType);
+        if (passive.type === 'taggedWeakPointBreakBonus' && matchingTag && matchingWeapon) {
+          flatBreakBonus += passive.value || 0;
+        }
+        if (passive.type === 'markedWeakPointWeaponBreak' && selectedWeakPoint.marked &&
+          matchingWeapon) flatBreakBonus += passive.value || 0;
+        if (passive.type === 'firstPreciseBreakBonus' && cardTags.includes('precise') &&
+          !artTriggers.firstPreciseBreakBonus) {
+          flatBreakBonus += passive.value || 0;
+          artTriggers.firstPreciseBreakBonus = true;
+        }
+        if (passive.type === 'firstOpenWeakPointBreakBonus' &&
+          ['open', 'exposed'].includes(tellState) && !artTriggers.firstOpenWeakPointBreakBonus) {
+          flatBreakBonus += passive.value || 0;
+          artTriggers.firstOpenWeakPointBreakBonus = true;
+        }
+      });
       if (proficiencyLevel >= 3 && weaponType === 'bow') flatBreakBonus += 1;
       if (cardTags.includes('breaker')) flatBreakBonus += 1;
       if (proficiencyLevel >= 3 && ['dagger', 'katar'].includes(weaponType) &&
@@ -434,7 +493,7 @@ export function playCard(cardIndex, state) {
         }
       }
       const breakDamage = Math.max(0, Math.round(
-        (amount + flatBreakBonus) *
+        (totalAmount + flatBreakBonus) *
         selectedWeakPoint.breakDamageMultiplier *
         (1 + suitability.modifier) *
         getTellBreakModifier(tellState)
@@ -534,7 +593,12 @@ export function playCard(cardIndex, state) {
         const tellBonus = intentTags.some(tag => ['multiHit', 'trample'].includes(tag))
           ? effect.bonusIfMultiHitTell || 0
           : 0;
-        const gained = Math.max(0, effect.amount - penalty) +
+        const artBlockBonus = !state.firstBlockPlayed && firstBlockEffect
+          ? artPassives
+            .filter(passive => passive.type === 'firstBlockBonus')
+            .reduce((total, passive) => total + (passive.value || 0), 0)
+          : 0;
+        const gained = Math.max(0, effect.amount + artBlockBonus - penalty) +
           (state.hasMonsterBane ? effect.bonusIfMonsterBane || 0 : 0) +
           tellBonus;
         survivor = { ...survivor, block: survivor.block - Math.max(0, effect.amount - penalty) + gained };
@@ -627,6 +691,12 @@ export function playCard(cardIndex, state) {
       case 'drawIfWeakPointBroken':
         if (weakPointBroke) drawAmount(effect.amount);
         break;
+      case 'drawIfOpenWeakPoint':
+        if (selectedWeakPoint && ['open', 'exposed'].includes(tellState)) drawAmount(effect.amount);
+        break;
+      case 'drawIfScar':
+        drawAmount(state.scars?.length ? effect.amount : effect.fallbackAmount);
+        break;
       case 'drawIfNoAttackPlayed':
         if ((state.attacksPlayedThisTurn || 0) === 0) drawAmount(effect.amount);
         break;
@@ -707,6 +777,28 @@ export function playCard(cardIndex, state) {
         break;
       case 'nextAttackMarks':
         nextAttackMarks = true;
+        break;
+      case 'markIfFirstAttack':
+        if (!state.firstAttackPlayed) monster.marked = true;
+        break;
+      case 'markWeakPoint':
+        if (selectedWeakPoint) {
+          monster.weakPoints = monster.weakPoints.map(weakPoint =>
+            weakPoint.id === selectedWeakPoint.id ? { ...weakPoint, marked: true } : weakPoint
+          );
+        }
+        break;
+      case 'blockIfDisorder':
+        if (state.disorders?.includes(effect.disorderId)) {
+          survivor.block += effect.amount;
+          blockGainedThisTurn += effect.amount;
+        }
+        break;
+      case 'breakBonusIfOpenWeakPoint':
+      case 'taggedBreakBonus':
+      case 'harvestBonusIfWeakPointBroken':
+      case 'pendingWeaponXp':
+      case 'partyEffectIfOneHp':
         break;
       case 'nextCounterBonus':
         break;
@@ -879,6 +971,7 @@ export function playCard(cardIndex, state) {
     weaponCardsPlayed,
     weaponMasteryUsed,
     weaponTurnTriggers,
+    artTriggers,
     monsterRewardTriggers,
     nextMonsterDamageReduction,
     intentHintLevel,
@@ -1370,6 +1463,19 @@ export function applyMonsterIntent(monster, state) {
     survivor.hp = 1;
     scarlessUsed = true;
   }
+  let artTriggers = { ...(state.artTriggers || {}) };
+  if (
+    survivor.hp <= 0 &&
+    !artTriggers.preventDeathWithWound &&
+    (state.artPassives || []).some(effect => effect.type === 'preventDeathWithWound')
+  ) {
+    survivor.hp = 1;
+    artTriggers.preventDeathWithWound = true;
+    survivor.treatmentNotes = [
+      ...(survivor.treatmentNotes || []),
+      'Impossible Refusal prevented death; a serious wound must be resolved after combat.'
+    ];
+  }
 
   return {
     ...state,
@@ -1379,6 +1485,7 @@ export function applyMonsterIntent(monster, state) {
     discardPile,
     lanternPanicIgnored,
     scarlessUsed,
+    artTriggers,
     pendingEnergyPenalty,
     monsterTurnCount,
     damageTakenThisTurn: Math.max(0, hpBeforeIntent - survivor.hp),
@@ -1398,9 +1505,34 @@ export function endTurn(state) {
     return state;
   }
 
+  let survivorBeforeIntent = { ...state.survivor };
+  const artTriggers = { ...(state.artTriggers || {}) };
+  const artPassives = state.artPassives || getArtPassiveEffects(state.fightingArts);
+  if ((state.attacksPlayedThisTurn || 0) === 0) {
+    const survival = artPassives
+      .filter(effect => effect.type === 'survivalIfNoAttack')
+      .reduce((total, effect) => total + (effect.value || 0), 0);
+    survivorBeforeIntent.survival = Math.min(
+      survivorBeforeIntent.maxSurvival,
+      survivorBeforeIntent.survival + survival
+    );
+  }
+  if (survivorBeforeIntent.block >= 8 && !artTriggers.survivalAtTurnEndBlock) {
+    const survival = artPassives
+      .filter(effect => effect.type === 'survivalAtTurnEndBlock' &&
+        survivorBeforeIntent.block >= effect.threshold)
+      .reduce((total, effect) => total + (effect.value || 0), 0);
+    survivorBeforeIntent.survival = Math.min(
+      survivorBeforeIntent.maxSurvival,
+      survivorBeforeIntent.survival + survival
+    );
+    if (survival) artTriggers.survivalAtTurnEndBlock = true;
+  }
   const discardedHand = [...state.discardPile, ...state.hand];
   const afterIntent = applyMonsterIntent(state.monster, {
     ...state,
+    survivor: survivorBeforeIntent,
+    artTriggers,
     hand: [],
     discardPile: discardedHand
   });

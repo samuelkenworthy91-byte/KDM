@@ -1,5 +1,6 @@
 import { gearCards } from './gearCards.js';
 import { monsterRewardCards } from './monsterSurvivorRewards.js';
+import { fightingArtCards } from './fightingArtCards.js';
 
 function card(id, name, cost, description, effects, options = {}) {
   return {
@@ -125,7 +126,7 @@ export const cards = {
   )
 };
 
-Object.assign(cards, gearCards, monsterRewardCards);
+Object.assign(cards, gearCards, monsterRewardCards, fightingArtCards);
 
 Object.keys(cards).forEach(cardId => {
   const current = cards[cardId];

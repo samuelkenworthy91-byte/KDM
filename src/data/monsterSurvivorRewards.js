@@ -121,6 +121,38 @@ const quarryRewardSpecs = {
   ]
 };
 
+Object.entries(quarryRewardSpecs).forEach(([quarryId, specs], index) => {
+  const quarryName = quarryNames[quarryId] || quarryId;
+  specs.unshift(
+    [
+      'patientObservation',
+      `${quarryName} Observation`,
+      1,
+      'counter',
+      0,
+      'Gain 3 block and draw 1. Exhaust.',
+      [
+        { type: 'block', amount: 3, quarryLesson: quarryId },
+        { type: 'draw', amount: 1 }
+      ],
+      ['block', 'counter', 'tell', 'exhaust']
+    ],
+    [
+      'measuredLesson',
+      `${quarryName} Lesson`,
+      1,
+      index % 3 === 0 ? 'support' : 'mimic',
+      1,
+      'Deal 3 damage and Mark the monster.',
+      [
+        { type: 'damage', amount: 3, quarryLesson: quarryId },
+        { type: 'markMonster' }
+      ],
+      ['attack', 'marked', index % 3 === 0 ? 'support' : 'mimic']
+    ]
+  );
+});
+
 const rarityForLevel = level => level === 3 ? 'rare' : level === 2 ? 'uncommon' : 'common';
 
 function makeCardReward(quarryId, spec) {

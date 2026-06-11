@@ -9,6 +9,7 @@ import {
   isValidWeaponType
 } from '../data/weaponProficiency.js';
 import { createHitLocations } from '../data/woundTables.js';
+import { syncFightingArtCards } from './survivorProgression.js';
 
 const LEGACY_SAVE_KEY = 'settlement';
 const ACTIVE_SLOT_KEY = 'lanternDeckbuilder.activeSlot';
@@ -103,6 +104,7 @@ export function createSurvivor(name = 'Nameless Survivor', gender = 'other', opt
     traits: [],
     fightingArts: [],
     personalDeckAdditions: [],
+    recentRewardOfferIds: [],
     permanentNegativeCards: [],
     forgottenCardIds: [],
     injuries: [],
@@ -225,7 +227,7 @@ export function normalizeSettlement(data = {}) {
       const activeProficiencyType = equippedWeaponTypes.includes(survivor.activeProficiencyType)
         ? survivor.activeProficiencyType
         : equippedWeaponTypes[0] || 'fistAndTooth';
-      return {
+      const normalizedSurvivor = {
         hp: 30,
         survival: 0,
         maxSurvival: 3,
@@ -276,6 +278,9 @@ export function normalizeSettlement(data = {}) {
           ...(Array.isArray(survivor.personalDeckAdditions) ? survivor.personalDeckAdditions : []),
           ...(Array.isArray(survivor.deckAdditions) ? survivor.deckAdditions : [])
         ].map(addition => normalizePersonalAddition(addition)).filter(Boolean),
+        recentRewardOfferIds: Array.isArray(survivor.recentRewardOfferIds)
+          ? survivor.recentRewardOfferIds.filter(id => typeof id === 'string').slice(-15)
+          : [],
         maxSurvival: Math.max(1, Number(survivor.maxSurvival) || 3),
         survival: Math.min(
           Math.max(0, Number(survivor.survival) || 0),
@@ -286,6 +291,7 @@ export function normalizeSettlement(data = {}) {
         activeProficiencyType,
         boundGear
       };
+      return syncFightingArtCards(normalizedSurvivor);
     })
     : [];
   const livingSurvivors = survivors.filter(survivor => survivor.alive !== false);

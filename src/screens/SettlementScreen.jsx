@@ -3,7 +3,6 @@ import { cards, starterCardIds, trainingCardIds } from '../data/cards.js';
 import { childTraits, normalizeChildTraitId } from '../data/childTraits.js';
 import { equipmentList } from '../data/equipment.js';
 import { fightingArts } from '../data/fightingArts.js';
-import { monsterSurvivorRewards } from '../data/monsterSurvivorRewards.js';
 import { getDrawableInnovationIds, innovationCards } from '../data/innovationCards.js';
 import { injuries } from '../data/injuries.js';
 import { getNextTimelineMilestone } from '../data/lanternTimeline.js';
@@ -15,6 +14,7 @@ import {
 } from '../data/memoryInnovations.js';
 import { disorders } from '../data/disorders.js';
 import { scars } from '../data/scars.js';
+import { getSurvivorModifiers } from '../data/survivorModifiers.js';
 import {
   calculateAvailableQuarryTiers,
   getAvailableQuarryLevel,
@@ -46,13 +46,6 @@ import {
 } from '../game/memoryInnovationLogic.js';
 
 const tabs = ['overview', 'survivors', 'armory', 'innovations', 'population', 'graveyard', 'quarries'];
-const monsterRewardTraitCatalog = Object.fromEntries(
-  Object.values(monsterSurvivorRewards)
-    .flatMap(entry => Object.values(entry.levelRewards).flat())
-    .filter(reward => reward.type === 'trait')
-    .map(reward => [reward.id, reward])
-);
-
 function CostList({ cost, stash }) {
   const entries = formatCostWithMissing(cost, stash);
   if (!entries.length) return <p className="muted-text">Cost: None</p>;
@@ -114,6 +107,24 @@ function ConditionList({ label, ids, catalog }) {
   );
 }
 
+function ModifierSection({ label, ids, type }) {
+  const modifiers = getSurvivorModifiers(ids || [], type);
+  return (
+    <details className="survivor-modifier-section">
+      <summary>{label} ({modifiers.length})</summary>
+      {modifiers.length ? modifiers.map(modifier => (
+        <div className="survivor-modifier-entry" key={`${type}-${modifier.id}`}>
+          <strong>{modifier.name}</strong>
+          <small>{modifier.type} | {modifier.rarity} | {modifier.tags.join(', ')}</small>
+          <span>{modifier.shortDescription}</span>
+          <span className="effect-text">{modifier.mechanicalEffectText}</span>
+          {modifier.source && <small>Source: {modifier.source}</small>}
+        </div>
+      )) : <p className="muted-text">None</p>}
+    </details>
+  );
+}
+
 function DeckCardDetails({ cardId, source, suffix = '' }) {
   const card = cards[cardId];
   return (
@@ -156,6 +167,8 @@ function SurvivorCard({
     ...(survivor.personalDeckAdditions || []).map(addition => ({
       cardId: getPersonalCardId(addition),
       source: addition.sourceType || 'Personal',
+      reason: addition.reason,
+      locked: Boolean(addition.locked),
       eligible: true
     })),
     ...(survivor.permanentNegativeCards || []).map(addition => ({
@@ -184,6 +197,10 @@ function SurvivorCard({
   const monsterBanes = (survivor.fightingArts || [])
     .filter(id => id.startsWith('monsterBane_'))
     .map(id => ({ id, art: fightingArts[id], quarryId: id.replace('monsterBane_', '') }));
+  const regularArts = (survivor.fightingArts || []).filter(id => !id.startsWith('monsterBane_'));
+  const buildTags = [...new Set(regularArts.flatMap(id => fightingArts[id]?.tags || []))]
+    .filter(tag => !['rare', 'party'].includes(tag))
+    .slice(0, 4);
   const confirmForget = (cardName, action) => {
     if (window.confirm(`Forget ${cardName}? This permanently removes it from this survivor’s personal deck.`)) {
       action();
@@ -198,6 +215,7 @@ function SurvivorCard({
         {survivor.survival || 0}/{survivor.maxSurvival || 3}
       </p>
       <p><strong>Completed runs:</strong> {survivor.completedRuns || 0}</p>
+      <p><strong>Build tags:</strong> {buildTags.join(', ') || 'Unformed'}</p>
       <p><strong>Equipped gear:</strong> {survivor.boundGear?.length || 0} pieces</p>
       <ConditionList label="Injuries" ids={survivor.injuries} catalog={injuries} />
       <ConditionList label="Scars" ids={survivor.scars} catalog={scars} />
@@ -218,15 +236,17 @@ function SurvivorCard({
       )}
       <details className="survivor-details">
         <summary>Survivor details</summary>
-        <ConditionList
-          label="Traits"
-          ids={survivor.traits}
-          catalog={{ ...startingTraits, ...childTraits, ...monsterRewardTraitCatalog }}
-        />
+        <ModifierSection label="Traits" ids={survivor.traits} type="trait" />
         {survivor.appearance && <p><strong>Appearance:</strong> {survivor.appearance}</p>}
-        <p><strong>Fighting arts:</strong> {survivor.fightingArts?.length
-          ? survivor.fightingArts.map(id => fightingArts[id]?.name || id).join(', ')
-          : 'None'}</p>
+        <ModifierSection label="Fighting Arts" ids={regularArts} type="fightingArt" />
+        <ModifierSection label="Disorders" ids={survivor.disorders} type="disorder" />
+        <ModifierSection label="Injuries" ids={survivor.injuries} type="injury" />
+        <ModifierSection label="Scars" ids={survivor.scars} type="scar" />
+        <ModifierSection
+          label="Monster Bane"
+          ids={monsterBanes.map(entry => entry.id)}
+          type="monsterBane"
+        />
         <div className="personal-card-list">
           <strong>Weapon Proficiency</strong>
           <p>
@@ -252,7 +272,7 @@ function SurvivorCard({
           })}
         </div>
         <div className="personal-card-list">
-          <strong>Hunt Deck Preview</strong>
+          <strong>Personal Cards</strong>
           <p className="muted-text">
             Gear cards come from equipped gear. Remove the gear to remove these cards.
             Removing bound gear destroys it.
@@ -262,17 +282,20 @@ function SurvivorCard({
             const cardId = entry.cardId;
             const personalCard = cards[cardId];
             const isPanic = cardId === 'panic' || personalCard?.type === 'curse';
+            const isLocked = entry.locked || personalCard?.locked || personalCard?.unforgettable;
             const isForgotten = forgotten.has(cardId);
             const genericDisabled = !memoryBuilt('riteOfForgetting') ||
               forgetUsed ||
               settlement.settlementMemory < 1 ||
               isPanic ||
+              isLocked ||
               isForgotten;
             let disabledReason = '';
             if (!memoryBuilt('riteOfForgetting')) disabledReason = 'Requires Rite of Forgetting';
             else if (forgetUsed) disabledReason = 'Already used this Lantern Year';
             else if (settlement.settlementMemory < 1) disabledReason = 'Not enough settlementMemory';
             else if (isPanic) disabledReason = 'Requires Quiet Night or Taboo';
+            else if (isLocked) disabledReason = 'Locked and unforgettable';
             else if (isForgotten) disabledReason = 'Already forgotten';
 
             return (
@@ -282,8 +305,9 @@ function SurvivorCard({
                   source={entry.source}
                   suffix={`${isForgotten ? ' - Forgotten' : ''}${
                     cardId === 'foundingStone' ? ' - Single-use starter' : ''
-                  }`}
+                  }${isLocked ? ' - Locked' : ' - Forgettable'}`}
                 />
+                {entry.reason && <small>Learned from: {entry.reason}</small>}
                 {!isPanic && (
                   <button
                     type="button"
@@ -397,6 +421,13 @@ function SurvivorCard({
             </details>
           )}
         </div>
+        <details>
+          <summary>Reward History ({survivor.recentRewardOfferIds?.length || 0})</summary>
+          <p className="muted-text">
+            Recent offers are avoided for the next several successful hunts when alternatives exist.
+          </p>
+          <p>{survivor.recentRewardOfferIds?.slice().reverse().join(', ') || 'No reward offers recorded.'}</p>
+        </details>
         <p><strong>Bound gear:</strong> {survivor.boundGear?.length
           ? survivor.boundGear.map(gear => equipmentList.find(item => item.id === gear.equipmentId)?.name || gear.equipmentId).join(', ')
           : 'None'}</p>

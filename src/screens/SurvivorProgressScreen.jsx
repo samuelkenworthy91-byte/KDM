@@ -1,13 +1,13 @@
 import React from 'react';
 import {
-  fightingArts,
   getSurvivorMonsterBaneId
 } from '../data/fightingArts.js';
-import { getMonsterSurvivorRewardChoices } from '../data/monsterSurvivorRewards.js';
+import { generateSurvivorRewardChoices } from '../data/survivorRewards.js';
 import { quarries } from '../data/quarries.js';
 
 export default function SurvivorProgressScreen({
   survivorName,
+  survivor,
   quarryId,
   level,
   offerBane,
@@ -16,39 +16,16 @@ export default function SurvivorProgressScreen({
   quarryRevealed,
   onChoose
 }) {
-  const baneId = `monsterBane_${quarryId}`;
   const ownedBaneId = getSurvivorMonsterBaneId({ fightingArts: ownedArts });
   const includeBane = offerBane && !ownedBaneId;
-  const themedRewards = getMonsterSurvivorRewardChoices(quarryId, level, {
+  const rewards = React.useMemo(() => generateSurvivorRewardChoices({
+    survivor: survivor || { fightingArts: ownedArts },
+    quarryId,
+    level,
     includeBane,
-    survivorHasAnyBane: Boolean(ownedBaneId),
-    quarryRevealed
-  });
-  const targetCount = level + 2;
-  const rewards = themedRewards.map(reward => ({
-      id: reward.id,
-      name: reward.type === 'monsterBane'
-        ? fightingArts[baneId]?.name || reward.name
-        : reward.name,
-      description: reward.type === 'monsterBane'
-        ? fightingArts[baneId]?.description || `${reward.description} ${reward.effectText}`
-        : reward.description,
-      label: reward.type === 'monsterBane'
-        ? 'Monster Bane - Locked'
-        : reward.family === 'mimic'
-        ? 'Mimic Technique'
-        : reward.family === 'support' ? 'Party Support' : 'Counter Technique',
-      rarity: reward.rarity.charAt(0).toUpperCase() + reward.rarity.slice(1)
-    }));
-  if (rewards.length < targetCount) {
-    rewards.push({
-      id: 'survival',
-      name: 'Hard-Won Composure',
-      description: 'Gain +1 survival.',
-      label: 'Stat Reward',
-      rarity: 'Common'
-    });
-  }
+    quarryRevealed,
+    context: survivor?.lastHuntRewardContext || {}
+  }), [survivor?.id, quarryId, level, includeBane, quarryRevealed]);
 
   return (
     <section className="survivor-progress-screen">
@@ -58,7 +35,7 @@ export default function SurvivorProgressScreen({
       <p>Choose one lesson from {rewards.length} rewards.</p>
       {ownedBaneId && (
         <p className="muted-text">
-          This survivor already has {fightingArts[ownedBaneId]?.name || ownedBaneId}.
+          This survivor already has permanent Monster Bane knowledge.
           {' '}Monster Bane is permanent and cannot be changed.
         </p>
       )}
@@ -68,11 +45,14 @@ export default function SurvivorProgressScreen({
             type="button"
             key={reward.id}
             data-reward-id={reward.id}
-            onClick={() => onChoose(reward.id)}
+            onClick={() => onChoose(reward.id, rewards.map(item => item.id))}
           >
             <strong>{reward.name}</strong>
-            <span>{reward.label} - {reward.rarity}</span>
+            <span>{reward.type} - {reward.rarity}</span>
             <span>{reward.description}</span>
+            {reward.mechanicalEffectText && (
+              <span className="effect-text">{reward.mechanicalEffectText}</span>
+            )}
           </button>
         ))}
       </div>

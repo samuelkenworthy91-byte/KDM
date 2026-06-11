@@ -40,6 +40,7 @@ import {
   findMonsterSurvivorReward,
   shouldOfferMonsterBane
 } from './data/monsterSurvivorRewards.js';
+import { findSurvivorReward } from './data/survivorRewards.js';
 import { addWeaponProficiencyXp, getProficientWeaponSummary } from './data/weaponProficiency.js';
 import { genericResourceIds, resources as resourceData } from './data/resources.js';
 import { getQuarryDiscoveryEvent } from './data/quarryDiscoveryEvents.js';
@@ -73,6 +74,7 @@ import {
   saveSettlement,
   setActiveSlot
 } from './game/saveLogic.js';
+import { addPersonalCard, learnFightingArt } from './game/survivorProgression.js';
 import CombatScreen from './screens/CombatScreen.jsx';
 import PartyCombatScreen from './screens/PartyCombatScreen.jsx';
 import CreateSettlementScreen from './screens/CreateSettlementScreen.jsx';
@@ -808,6 +810,19 @@ export default function App() {
             [activeProficiencyType]
           ),
           activeProficiencyType,
+          lastHuntRewardContext: {
+            quarryId: selectedQuarry,
+            quarryLevel: selectedLevel,
+            weaponTypeUsed: activeProficiencyType,
+            woundsSuffered: runConditionGains.injuries.length > 0,
+            scarsGained: runConditionGains.scars.length > 0,
+            supportActionsUsed: (survivorAfterFight.boundGear || []).some(gear =>
+              equipment[gear.equipmentId]?.supportGear
+            ),
+            endedLowHp: survivorAfterFight.hp <= Math.ceil(survivorAfterFight.maxHp / 3),
+            brokeWeakPoint: Boolean(survivorAfterFight.combatStats?.brokeWeakPoint),
+            dealtFinalBlow: Boolean(survivorAfterFight.combatStats?.dealtFinalBlow)
+          },
           kills: survivorAfterFight.kills || 0,
           completedRuns: (survivor.completedRuns || 0) + 1
         }
@@ -910,6 +925,19 @@ export default function App() {
               [activeProficiencyType]
             ),
             activeProficiencyType,
+            lastHuntRewardContext: {
+              quarryId: selectedQuarry,
+              quarryLevel: selectedLevel,
+              weaponTypeUsed: activeProficiencyType,
+              woundsSuffered: Boolean(returning.woundHistory?.length),
+              scarsGained: Boolean(returning.scars?.length),
+              supportActionsUsed: (returning.boundGear || []).some(gear =>
+                equipment[gear.equipmentId]?.supportGear
+              ),
+              endedLowHp: returning.hp <= Math.ceil(returning.maxHp / 3),
+              brokeWeakPoint: Boolean(returning.combatStats?.brokeWeakPoint),
+              dealtFinalBlow: Boolean(returning.combatStats?.dealtFinalBlow)
+            },
             completedRuns: (survivor.completedRuns || 0) + 1
           };
         }),
@@ -1759,66 +1787,75 @@ export default function App() {
     completeCurrentNode();
   };
 
-  const handleProgressChoice = rewardId => {
+  const handleProgressChoice = (rewardId, offeredIds = []) => {
     const monsterReward = findMonsterSurvivorReward(rewardId);
+    const reward = findSurvivorReward(rewardId);
     const rewardSurvivorId = survivorRewardQueue[0] || runSummary.survivorId;
     updateSettlement(current => ({
       ...current,
       survivors: current.survivors.map(survivor => {
         if (survivor.id !== rewardSurvivorId) return survivor;
+        const withHistory = {
+          ...survivor,
+          recentRewardOfferIds: [
+            ...(survivor.recentRewardOfferIds || []),
+            ...offeredIds
+          ].slice(-15)
+        };
         if (rewardId === 'survival') {
           return {
-            ...survivor,
+            ...withHistory,
             survival: Math.min(survivor.maxSurvival || 3, (survivor.survival || 0) + 1)
           };
         }
-        if (monsterReward?.type === 'card') {
+        if (rewardId === 'strengthLesson') {
+          return { ...withHistory, strength: (survivor.strength || 0) + 1 };
+        }
+        if (rewardId === 'hardenedBody') {
           return {
-            ...survivor,
-            personalDeckAdditions: [
-              ...survivor.personalDeckAdditions,
-              {
-                cardId: rewardId,
-                sourceType: 'personal',
-                reason: `${quarries[selectedQuarry].name} Level ${selectedLevel}`
-              }
-            ]
+            ...withHistory,
+            maxHp: (survivor.maxHp || 30) + 1,
+            hp: Math.min((survivor.maxHp || 30) + 1, (survivor.hp || 0) + 1)
           };
+        }
+        if (rewardId === 'weaponPractice') {
+          return {
+            ...withHistory,
+            weaponProficiency: addWeaponProficiencyXp(
+              survivor.weaponProficiency,
+              [survivor.activeProficiencyType || 'fistAndTooth']
+            )
+          };
+        }
+        if (monsterReward?.type === 'card') {
+          return addPersonalCard(withHistory, rewardId, {
+            sourceType: 'monsterReward',
+            reason: `${quarries[selectedQuarry].name} Level ${selectedLevel}`
+          });
         }
         if (monsterReward?.type === 'trait') {
           return {
-            ...survivor,
+            ...withHistory,
             traits: [...new Set([...(survivor.traits || []), rewardId])]
           };
         }
         if (cards[rewardId]?.sourceType === 'personal') {
-          return {
-            ...survivor,
-            personalDeckAdditions: [
-              ...survivor.personalDeckAdditions,
-              { cardId: rewardId, sourceType: 'personal', reason: 'Survivor victory' }
-            ]
-          };
+          return addPersonalCard(withHistory, rewardId, {
+            sourceType: 'personal',
+            reason: 'Survivor victory'
+          });
         }
-        if (!fightingArts[rewardId]?.implemented) return survivor;
+        if (!fightingArts[rewardId]?.implemented) return withHistory;
         if (isMonsterBaneId(rewardId) && getSurvivorMonsterBaneId(survivor)) {
           return {
-            ...survivor,
+            ...withHistory,
             survival: Math.min(
               survivor.maxSurvival || 3,
               (survivor.survival || 0) + 1
             )
           };
         }
-        const next = {
-          ...survivor,
-          fightingArts: [...new Set([...(survivor.fightingArts || []), rewardId])]
-        };
-        if (rewardId === 'hardened') {
-          next.maxHp += 1;
-          next.hp += 1;
-        }
-        return next;
+        return learnFightingArt(withHistory, rewardId, reward?.source || 'Survivor reward');
       })
     }));
     const remainingRewardQueue = survivorRewardQueue.slice(1);
@@ -2665,6 +2702,7 @@ export default function App() {
           <SurvivorProgressScreen
             key={rewardSurvivorId}
             survivorName={rewardSurvivor?.name || runSummary?.survivorName}
+            survivor={rewardSurvivor}
             quarryId={selectedQuarry}
             level={selectedLevel}
             offerBane={typeof progressOfferBane === 'object'

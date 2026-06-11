@@ -261,6 +261,81 @@ export const fightingArts = {
   }
 };
 
+const art = (
+  id,
+  name,
+  mechanicalEffectText,
+  tags,
+  passiveEffects = [],
+  options = {}
+) => ({
+  id,
+  name,
+  type: options.type || 'fightingArt',
+  description: options.shortDescription || mechanicalEffectText,
+  shortDescription: options.shortDescription || mechanicalEffectText,
+  fullDescription: options.fullDescription || mechanicalEffectText,
+  mechanicalEffectText,
+  trigger: options.trigger || 'Passive.',
+  effect: passiveEffects[0] || { type: 'describedPassive' },
+  passiveEffects,
+  grantsCards: options.grantsCards || [],
+  tags,
+  rarity: options.rarity || 'common',
+  source: options.source || 'Survivor reward',
+  requirements: options.requirements || null,
+  implemented: true
+});
+
+Object.assign(fightingArts, Object.fromEntries([
+  art('shoulderBehindShield', 'Shoulder Behind Shield', 'The first time this survivor is targeted each combat, gain +3 block.', ['block', 'defensive', 'party'], [{ type: 'firstTargetedBlock', value: 3 }]),
+  art('braceAndBreathe', 'Brace and Breathe', 'If this survivor ends a turn with 8 or more block, gain 1 survival once per combat.', ['block', 'survival'], [{ type: 'survivalAtTurnEndBlock', threshold: 8, value: 1 }], { grantsCards: ['holdTheLine'] }),
+  art('lastLanternGuard', 'Last Lantern Guard', 'If another party member is dead or wounded, start combat with +1 survival.', ['party', 'survival', 'trauma'], [{ type: 'survivalIfPartyWounded', value: 1 }]),
+  art('bloodInTheHands', 'Blood in the Hands', 'While wounded, this survivor’s first attack each combat deals +3.', ['wound', 'attack'], [{ type: 'firstAttackIfWounded', value: 3 }], { grantsCards: ['boneSetterStance'] }),
+  art('secondCutHabit', 'Second Cut Habit', 'The second attack this survivor plays each turn deals +2.', ['attack', 'combo'], [{ type: 'secondAttackBonus', value: 2 }]),
+  art('finishItClean', 'Finish It Clean', 'Attacks against monsters below 25% HP deal +2.', ['attack', 'finisher'], [{ type: 'lowMonsterHpAttackBonus', threshold: 0.25, value: 2 }]),
+  art('warningVoice', 'Warning Voice', 'When a monster tell is shown, one other party member gains +2 block once per combat.', ['support', 'tell', 'party'], [{ type: 'tellPartyBlock', value: 2 }], { grantsCards: ['counterCall'] }),
+  art('fieldTeacher', 'Field Teacher', 'After a successful hunt, another surviving party member gains +1 weapon proficiency XP.', ['support', 'weapon', 'party'], [{ type: 'partyWeaponXp', value: 1 }], { grantsCards: ['takeTheLesson'] }),
+  art('useTheFear', 'Use the Fear', 'If Panic is in this survivor’s discard pile, their first attack each combat deals +2.', ['panic', 'attack'], [{ type: 'firstAttackIfPanicDiscard', value: 2 }], { grantsCards: ['fearIntoFire'] }),
+  art('quietMadnessStyle', 'Quiet Madness Style', 'If this survivor plays no attack cards on their turn, gain 1 survival.', ['panic', 'strange'], [{ type: 'survivalIfNoAttack', value: 1 }], { grantsCards: ['doNotLookAway'] }),
+  art('carefulCarver', 'Careful Carver', 'Breaking a weak point with a Precise card slightly improves harvest quality.', ['harvest', 'precise'], [{ type: 'preciseBreakHarvestBonus', value: 1 }], { grantsCards: ['cleanCut'] }),
+  art('brutalButcher', 'Brutal Butcher', 'Gain +3 break damage against hide, shell, and body weak points, but fragile parts are easier to ruin.', ['harvest', 'brutal'], [{ type: 'brutalBreakBonus', value: 3, fragileRisk: 1 }], { grantsCards: ['brutalBreak'] }),
+  art('eyeHunter', 'Eye Hunter', 'Head and eye weak-point attacks gain +2 break damage with dagger, katar, or bow.', ['harvest', 'precise', 'dagger', 'katar', 'bow'], [{ type: 'taggedWeakPointBreakBonus', tags: ['head', 'eye'], weapons: ['dagger', 'katar', 'bow'], value: 2 }]),
+  art('partBreaker', 'Part Breaker', 'Shell, hide, and horn weak-point attacks gain +3 break damage with hammer, axe, or club.', ['harvest', 'breaker', 'hammer', 'axe', 'club'], [{ type: 'taggedWeakPointBreakBonus', tags: ['shell', 'hide', 'horn'], weapons: ['hammer', 'axe', 'club'], value: 3 }]),
+  art('readTheShoulders', 'Read the Shoulders', 'When a vague tell appears, gain +2 block once per combat.', ['tell', 'counter'], [{ type: 'firstVagueTellBlock', value: 2 }], { grantsCards: ['waitForTheShoulder'] }),
+  art('interruptThePattern', 'Interrupt the Pattern', 'The first attack against an Open weak point each combat deals +2 break damage.', ['weakPoint', 'counter'], [{ type: 'firstOpenWeakPointBreakBonus', value: 2 }], { grantsCards: ['strikeTheOpening'] }),
+  art('monsterStudent', 'Monster Student', 'If any party member has Monster Bane for this quarry, the first attack deals +1 damage and +1 break damage.', ['monsterBane', 'party'], [{ type: 'partyBaneFirstAttackBonus', damage: 1, breakDamage: 1 }]),
+  art('swordRhythm', 'Sword Rhythm', 'After playing two sword cards in a combat, draw 1 once per combat.', ['sword', 'combo'], [{ type: 'weaponCardsDraw', weaponType: 'sword', count: 2, value: 1 }], { grantsCards: ['patientBlade'] }),
+  art('daggerPatience', 'Dagger Patience', 'Dagger and katar attacks against Marked weak points gain +2 break damage.', ['dagger', 'katar', 'precise'], [{ type: 'markedWeakPointWeaponBreak', weapons: ['dagger', 'katar'], value: 2 }]),
+  art('hammerCertainty', 'Hammer Certainty', 'Hammer and club cards remove +2 monster block or gain +2 break damage against shell and hide.', ['hammer', 'club', 'breaker'], [{ type: 'heavyBlockOrBreakBonus', value: 2 }]),
+  art('bowStillness', 'Bow Stillness', 'The first bow attack each combat applies Marked.', ['bow', 'marked'], [{ type: 'firstWeaponAttackMarks', weaponType: 'bow' }], { grantsCards: ['markTheJoint'] }),
+  art('spearDistance', 'Spear Distance', 'Spear attacks against leg and body weak points reduce failed-break risk once per combat.', ['spear', 'reach'], [{ type: 'weaponWeakPointRiskReduction', weaponType: 'spear', tags: ['leg', 'body'], value: 1 }]),
+  art('fistDefiance', 'Fist Defiance', 'Counter deals +2 while fist-and-tooth gear is equipped.', ['fistAndTooth', 'counter'], [{ type: 'counterWithWeaponBonus', weaponType: 'fistAndTooth', value: 2 }]),
+  art('strangeGrip', 'Strange Grip', 'The first strange-weapon card each combat draws 1 and adds 1 Panic to discard.', ['strangeWeapon', 'panic'], [{ type: 'firstWeaponCardDrawAndPanic', weaponType: 'strangeWeapon', draw: 1, panic: 1 }], { grantsCards: ['gutFeeling'] }),
+  art('impossibleRefusal', 'Impossible Refusal', 'Once per hunt, when this survivor would die, survive at 1 HP and gain a serious wound instead.', ['rare', 'death', 'wound'], [{ type: 'preventDeathWithWound', value: 1 }], { rarity: 'rare', grantsCards: ['scarMemory'] }),
+  art('monsterInTheBlood', 'Monster in the Blood', 'After defeating a level 3 quarry, start future fights against it with +1 survival and +1 strength.', ['rare', 'quarrySpecific'], [{ type: 'levelThreeQuarryMemory', survival: 1, strength: 1 }], { rarity: 'rare' }),
+  art('perfectStillness', 'Perfect Stillness', 'Once per combat, playing no cards for a turn makes the next turn’s first attack deal +6.', ['rare', 'patience'], [{ type: 'stillTurnNextAttack', value: 6 }], { rarity: 'rare' }),
+  art('lanternSaint', 'Lantern Saint', 'Once per hunt, heal every living party member by 1 after a combat.', ['rare', 'support', 'party'], [{ type: 'partyHealAfterCombat', value: 1 }], { rarity: 'rare', grantsCards: ['lanternOath'] }),
+  art('lowLanternGuard', 'Low Lantern Guard', 'The first block card each combat gains +2 block.', ['block', 'defensive'], [{ type: 'firstBlockBonus', value: 2 }], { grantsCards: ['lowLanternCrawl'] }),
+  art('counterPulse', 'Counter Pulse', 'After using Counter, the next attack deals +2.', ['counter', 'attack'], [{ type: 'counterNextAttackBonus', value: 2 }], { grantsCards: ['pounceReversal'] }),
+  art('sharedGuard', 'Shared Guard', 'The first time this survivor gains 8 block in a turn, the next party member gains 3 block.', ['support', 'block', 'party'], [{ type: 'blockThresholdPartyBlock', threshold: 8, value: 3 }], { grantsCards: ['holdTheLine'] }),
+  art('panicTurner', 'Panic Turner', 'The first Panic removed each combat gives another party member +2 block.', ['panic', 'support'], [{ type: 'panicRemovedPartyBlock', value: 2 }], { grantsCards: ['turnTheRoar'] }),
+  art('disorderedShape', 'Disordered Shape', 'The first attack each combat deals +2 while this survivor has a disorder.', ['disorder', 'attack'], [{ type: 'firstAttackIfDisorder', value: 2 }], { grantsCards: ['rageWithShape'] }),
+  art('scarMemoryArt', 'Scar Memory', 'With any scar, the first skill played each combat draws 1.', ['scar', 'draw'], [{ type: 'firstSkillIfScarDraw', value: 1 }], { grantsCards: ['scarMemory'] }),
+  art('frontLantern', 'Front Lantern', 'In the first party slot, start combat with +2 block.', ['position', 'block', 'party'], [{ type: 'frontPositionBlock', value: 2 }], { grantsCards: ['lowLanternCrawl'] }),
+  art('jointMarker', 'Joint Marker', 'The first weak point hit each combat becomes Marked.', ['weakPoint', 'marked'], [{ type: 'firstWeakPointMarks' }], { grantsCards: ['markTheJoint'] }),
+  art('supportOath', 'Support Oath', 'Healing or guarding an ally grants 1 survival once per combat.', ['support', 'survival', 'party'], [{ type: 'supportActionSurvival', value: 1 }], { grantsCards: ['lanternOath'] }),
+  art('lessonKeeper', 'Lesson Keeper', 'After surviving a combat in which a weapon card was played, gain 1 bonus proficiency XP once per hunt.', ['weapon', 'learning'], [{ type: 'bonusWeaponXp', value: 1 }], { grantsCards: ['takeTheLesson'] }),
+  art('openHandSignal', 'Open Hand Signal', 'The next party member’s first attack each combat deals +1.', ['support', 'party', 'attack'], [{ type: 'nextPartyFirstAttackBonus', value: 1 }], { grantsCards: ['counterCall'] }),
+  art('woundMender', 'Wound Mender', 'The first skill played while wounded heals 1 HP once per combat.', ['wound', 'healing'], [{ type: 'firstSkillWoundedHeal', value: 1 }], { grantsCards: ['boneSetterStance'] }),
+  art('clearerTerror', 'Clearer Terror', 'Adding Panic can clarify the current tell once per combat.', ['panic', 'tell'], [{ type: 'panicClarifiesTell', value: 1 }], { grantsCards: ['doNotLookAway'] }),
+  art('preciseOath', 'Precise Oath', 'The first Precise attack each combat gains +2 break damage.', ['precise', 'weakPoint'], [{ type: 'firstPreciseBreakBonus', value: 2 }], { grantsCards: ['cleanCut'] }),
+  art('harvestVow', 'Harvest Vow', 'The first intact weak point broken each hunt slightly improves harvest quality.', ['harvest', 'weakPoint'], [{ type: 'firstBreakHarvestBonus', value: 1 }]),
+  art('lastBreathGift', 'Last Breath Gift', 'When reduced to 1 HP, another living party member gains 1 survival once per hunt.', ['wound', 'support', 'party'], [{ type: 'oneHpPartySurvival', value: 1 }], { rarity: 'uncommon', grantsCards: ['sharedBreath'] }),
+  art('patientPredator', 'Patient Predator', 'If the first card played this combat is an attack, it applies Marked.', ['attack', 'marked', 'patience'], [{ type: 'firstCardAttackMarks' }], { rarity: 'uncommon', grantsCards: ['patientBlade'] }),
+  art('oathAgainstDeath', 'Oath Against Death', 'Once per hunt, a block card played at 1 HP gains +8 block.', ['rare', 'block', 'death'], [{ type: 'oneHpBlockBonus', value: 8 }], { rarity: 'rare', grantsCards: ['lanternOath'] })
+].map(entry => [entry.id, entry])));
+
 quarryList.forEach(quarry => {
   const id = `monsterBane_${quarry.id}`;
   if (!fightingArts[id]) {
@@ -299,6 +374,10 @@ export const implementedFightingArts = Object.values(fightingArts).filter(art =>
 export const generalFightingArts = implementedFightingArts.filter(
   art => art.effect.type !== 'monsterBane'
 );
+
+export function getFightingArtGrantedCards(artId) {
+  return fightingArts[artId]?.grantsCards || [];
+}
 
 export function getMonsterBaneId(quarryId) {
   return `monsterBane_${quarryId}`;
