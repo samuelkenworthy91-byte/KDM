@@ -49,14 +49,19 @@ export const woundTables = {
   ]
 };
 
-export function getWoundResult(location, severity) {
+export function getWoundResult(location, severity, random = Math.random) {
   const table = woundTables[location] || woundTables.body;
   const candidates = table.filter(result => result.severity === severity);
-  return candidates[Math.floor(Math.random() * candidates.length)] || table[0];
+  return candidates[Math.floor(random() * candidates.length)] || table[0];
 }
 
-export function rollWoundSeverity({ severe = false, damage = 0, protectedLimb = false } = {}) {
-  const roll = Math.random();
+export function rollWoundSeverity({
+  severe = false,
+  damage = 0,
+  protectedLimb = false,
+  random = Math.random
+} = {}) {
+  const roll = random();
   const fatalChance = severe || damage >= 10 ? 0.18 : 0.1;
   const seriousChance = protectedLimb ? 0.28 : severe || damage >= 7 ? 0.5 : 0.38;
   if (roll < fatalChance) return 'fatal';
@@ -65,10 +70,11 @@ export function rollWoundSeverity({ severe = false, damage = 0, protectedLimb = 
 }
 
 export function applyWoundToMember(member, options = {}) {
+  const random = options.random || Math.random;
   const locations = options.location
     ? [options.location]
     : HIT_LOCATION_IDS;
-  const location = locations[Math.floor(Math.random() * locations.length)];
+  const location = locations[Math.floor(random() * locations.length)];
   const protectedLimb = Boolean(
     options.injuryProtection &&
     ['arms', 'legs'].includes(location)
@@ -76,12 +82,13 @@ export function applyWoundToMember(member, options = {}) {
   let severity = options.severity || rollWoundSeverity({
     severe: options.severe,
     damage: options.damage,
-    protectedLimb
+    protectedLimb,
+    random
   });
   if (protectedLimb && severity === 'fatal') severity = 'serious';
   else if (protectedLimb && severity === 'serious') severity = 'light';
 
-  const result = getWoundResult(location, severity);
+  const result = getWoundResult(location, severity, random);
   const survivor = {
     ...member.survivor,
     hitLocations: createHitLocations(member.survivor.hitLocations),
@@ -94,10 +101,6 @@ export function applyWoundToMember(member, options = {}) {
   let fatal = severity === 'fatal';
 
   if (result.id === 'mindBreak' && disorders.length < 2) fatal = false;
-  if (fatal && options.preventFatal) {
-    fatal = false;
-    severity = 'serious';
-  }
 
   survivor.hitLocations[location] = {
     wounded: true,
@@ -115,12 +118,12 @@ export function applyWoundToMember(member, options = {}) {
       reason: result.name
     })));
   }
-  if (!fatal && severity === 'serious' && result.scarId && Math.random() < 0.65 &&
+  if (!fatal && severity === 'serious' && result.scarId && random() < 0.65 &&
     !scars.includes(result.scarId)) {
     scars.push(result.scarId);
   }
 
-  survivor.hp = fatal ? 0 : Math.max(1, survivor.hp);
+  survivor.hp = fatal ? 0 : Math.max(0, survivor.hp);
   return {
     ...member,
     survivor,

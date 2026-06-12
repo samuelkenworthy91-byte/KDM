@@ -75,13 +75,17 @@ function applyEffects(effects, state, context) {
     next.appliedEffects.push(`-${effects.loseHp} HP`);
   }
   if (effects.healHp) {
-    const healed = Math.min(effects.healHp, next.runSurvivor.maxHp - next.runSurvivor.hp);
+    const healed = next.runSurvivor.hp > 0
+      ? Math.min(effects.healHp, next.runSurvivor.maxHp - next.runSurvivor.hp)
+      : 0;
     next.runSurvivor.hp += healed;
     next.appliedEffects.push(`+${healed} HP`);
   }
   if (effects.healFull) {
-    const healed = next.runSurvivor.maxHp - next.runSurvivor.hp;
-    next.runSurvivor.hp = next.runSurvivor.maxHp;
+    const healed = next.runSurvivor.hp > 0
+      ? next.runSurvivor.maxHp - next.runSurvivor.hp
+      : 0;
+    if (next.runSurvivor.hp > 0) next.runSurvivor.hp = next.runSurvivor.maxHp;
     next.appliedEffects.push(`Healed to full (+${healed} HP)`);
   }
   if (effects.gainSurvival) {

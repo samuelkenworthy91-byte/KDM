@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatHistoryDetail, formatValueForDisplay } from '../utils/formatters.js';
 
 export default function RunSummaryScreen({ summary, onContinue }) {
   const isDeath = summary?.outcome === 'death';
@@ -27,13 +28,13 @@ export default function RunSummaryScreen({ summary, onContinue }) {
         {summary?.survivorName && (
           <div>
             <dt>Survivor</dt>
-            <dd>{summary.survivorName}</dd>
+            <dd>{formatValueForDisplay(summary.survivorName)}</dd>
           </div>
         )}
         {summary?.killedBy && (
           <div>
             <dt>Killed By</dt>
-            <dd>{summary.killedBy}</dd>
+            <dd>{formatValueForDisplay(summary.killedBy)}</dd>
           </div>
         )}
         {isDeath && (
@@ -57,7 +58,7 @@ export default function RunSummaryScreen({ summary, onContinue }) {
         {summary?.quarryName && (
           <div>
             <dt>Quarry</dt>
-            <dd>{summary.quarryName} Level {summary.quarryLevel}</dd>
+            <dd>{formatValueForDisplay(summary.quarryName)} Level {summary.quarryLevel}</dd>
           </div>
         )}
         <div>
@@ -74,24 +75,24 @@ export default function RunSummaryScreen({ summary, onContinue }) {
         </div>
         <div>
           <dt>Spoils</dt>
-          <dd>{summary?.resources?.length ? summary.resources.join(', ') : 'None'}</dd>
+          <dd>{summary?.resources?.length ? formatHistoryDetail(summary.resources) : 'None'}</dd>
         </div>
         <div>
           <dt>Injuries Gained</dt>
-          <dd>{summary?.injuriesGained?.join(', ') || 'None'}</dd>
+          <dd>{formatHistoryDetail(summary?.injuriesGained) || 'None'}</dd>
         </div>
         <div>
           <dt>Scars Gained</dt>
-          <dd>{summary?.scarsGained?.join(', ') || 'None'}</dd>
+          <dd>{formatHistoryDetail(summary?.scarsGained) || 'None'}</dd>
         </div>
         <div>
           <dt>Disorders Gained</dt>
-          <dd>{summary?.disordersGained?.join(', ') || 'None'}</dd>
+          <dd>{formatHistoryDetail(summary?.disordersGained) || 'None'}</dd>
         </div>
         {isDeath && (
           <div>
             <dt>Gear Lost</dt>
-            <dd>{summary?.gearLostNames?.join(', ') || 'None'}</dd>
+            <dd>{formatHistoryDetail(summary?.gearLostNames) || 'None'}</dd>
           </div>
         )}
       </dl>
@@ -106,7 +107,9 @@ export default function RunSummaryScreen({ summary, onContinue }) {
           <p key={`disorder-${name}`}>{summary.survivorName} gained disorder: {name}.</p>
         ))}
       </div>
-      {summary?.discoveryMessage && <p className="unlock-message">{summary.discoveryMessage}</p>}
+      {summary?.discoveryMessage && (
+        <p className="unlock-message">{formatHistoryDetail(summary.discoveryMessage)}</p>
+      )}
       <button type="button" onClick={onContinue}>
         {isDeath ? 'Choose Grave Legacy' : 'Return to Settlement'}
       </button>

@@ -40,10 +40,20 @@ import {
 } from '../game/craftingLogic.js';
 import { getPersonalCardId } from '../game/deckLogic.js';
 import {
+  getLegacyDescription,
+  getLegacyDisplayName
+} from '../game/legacyContent.js';
+import {
   getMissingMemoryUnlockRequirements,
   isMemoryActionUsed,
   isMemoryInnovationUnlocked
 } from '../game/memoryInnovationLogic.js';
+import {
+  formatEffectsForDisplay,
+  formatHistoryDetail,
+  formatModifierEffect,
+  formatValueForDisplay
+} from '../utils/formatters.js';
 
 const tabs = ['overview', 'survivors', 'armory', 'innovations', 'population', 'graveyard', 'quarries'];
 function CostList({ cost, stash }) {
@@ -58,7 +68,7 @@ function CostList({ cost, stash }) {
         const sourceName = quarries[source]?.name;
         return (
           <span className={entry.missing ? 'missing' : 'met'} key={entry.resourceId}>
-            {entry.text}
+            {formatValueForDisplay(entry.text)}
             {entry.missing && sourceName ? ` - hunt ${sourceName}` : ''}
           </span>
         );
@@ -102,7 +112,7 @@ function ConditionList({ label, ids, catalog }) {
   return (
     <p>
       <strong>{label}:</strong>{' '}
-      {ids?.length ? ids.map(id => catalog[id]?.name || id).join(', ') : 'None'}
+      {ids?.length ? ids.map(id => getLegacyDisplayName(catalog, id, label)).join(', ') : 'None'}
     </p>
   );
 }
@@ -115,10 +125,20 @@ function ModifierSection({ label, ids, type }) {
       {modifiers.length ? modifiers.map(modifier => (
         <div className="survivor-modifier-entry" key={`${type}-${modifier.id}`}>
           <strong>{modifier.name}</strong>
-          <small>{modifier.type} | {modifier.rarity} | {modifier.tags.join(', ')}</small>
-          <span>{modifier.shortDescription}</span>
-          <span className="effect-text">{modifier.mechanicalEffectText}</span>
-          {modifier.source && <small>Source: {modifier.source}</small>}
+          <small>
+            {formatValueForDisplay(modifier.type)} | {formatValueForDisplay(modifier.rarity)} |{' '}
+            {formatValueForDisplay(modifier.tags)}
+          </small>
+          <span>{formatValueForDisplay(modifier.shortDescription)}</span>
+          <span className="effect-text">
+            {formatModifierEffect(
+              modifier.mechanicalEffectText ||
+              modifier.mechanicalEffect ||
+              modifier.passiveEffects ||
+              modifier.effects
+            )}
+          </span>
+          {modifier.source && <small>Source: {formatValueForDisplay(modifier.source)}</small>}
         </div>
       )) : <p className="muted-text">None</p>}
     </details>
@@ -129,14 +149,14 @@ function DeckCardDetails({ cardId, source, suffix = '' }) {
   const card = cards[cardId];
   return (
     <span>
-      <strong>{card?.name || cardId}</strong>{suffix}
+      <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>{suffix}
       <br />
       <small>
         Cost: {Number.isFinite(card?.cost) ? card.cost : '-'} | Type: {card?.type || 'Unknown'} |{' '}
         Source: {source}
       </small>
       <br />
-      <span>{card?.description || 'No card description available.'}</span>
+      <span>{getLegacyDescription(cards, cardId)}</span>
       <br />
       <small>Tags: {card?.tags?.join(', ') || 'None'}</small>
     </span>
@@ -226,7 +246,7 @@ function SurvivorCard({
           {Object.entries(survivor.hitLocations)
             .filter(([, wound]) => wound.wounded)
             .map(([location, wound]) =>
-              `${location} (${wound.severe ? 'serious' : 'light'}: ${wound.penalty})`
+              `${location} (${wound.severe ? 'serious' : 'light'}: ${formatHistoryDetail(wound.penalty)})`
             )
             .join('; ')}
         </p>
@@ -404,7 +424,12 @@ function SurvivorCard({
             <article className="item-card" key={id}>
               <strong>{art?.name || id}</strong>
               <p>Quarry: {quarries[quarryId]?.name || quarryId}</p>
-              <p>{art?.description || art?.effectText || 'Reveals exact quarry intent and weak-point knowledge.'}</p>
+                <p>{formatValueForDisplay(
+                  art?.description ||
+                  art?.effectText ||
+                  art?.mechanicalEffect ||
+                  'Reveals exact quarry intent and weak-point knowledge.'
+                )}</p>
               <p className="effect-text">Locked. Cannot be forgotten or replaced.</p>
             </article>
           )) : <p className="muted-text">No locked Monster Bane.</p>}
@@ -437,14 +462,18 @@ function SurvivorCard({
           if (disorders[id]) {
             return (
               <div className="muted-text" key={id}>
-                <p><strong>{condition.name}:</strong> {condition.description}</p>
-                <p><strong>Downside:</strong> {condition.downside}</p>
-                <p><strong>Upside:</strong> {condition.upside}</p>
-                <p><strong>Trigger:</strong> {condition.trigger}</p>
+                <p><strong>{condition.name}:</strong> {formatValueForDisplay(condition.description)}</p>
+                <p><strong>Downside:</strong> {formatValueForDisplay(condition.downside)}</p>
+                <p><strong>Upside:</strong> {formatValueForDisplay(condition.upside)}</p>
+                <p><strong>Trigger:</strong> {formatValueForDisplay(condition.trigger)}</p>
               </div>
             );
           }
-          return <p className="muted-text" key={id}><strong>{condition.name}:</strong> {condition.effect}</p>;
+          return (
+            <p className="muted-text" key={id}>
+              <strong>{condition.name}:</strong> {formatModifierEffect(condition.effect)}
+            </p>
+          );
         })}
       </details>
       <button type="button" disabled={active} onClick={() => onSelect(survivor.id)}>
@@ -751,7 +780,7 @@ export default function SettlementScreen({
             <p>Campaign pressure: {settlement.campaignPressure || 0}</p>
             <p>
               Last event: {settlement.lastTimelineEvent
-                ? `${settlement.lastTimelineEvent.name} - ${settlement.lastTimelineEvent.description}`
+                ? `${formatValueForDisplay(settlement.lastTimelineEvent.name)} - ${formatHistoryDetail(settlement.lastTimelineEvent.description)}`
                 : 'No yearly event recorded yet.'}
             </p>
             {nextTimelineMilestone && (
@@ -761,7 +790,7 @@ export default function SettlementScreen({
               <article className="item-card">
                 <p className="eyebrow">Decision Required</p>
                 <h4>Lantern Year {settlement.pendingTimelineEvent.lanternYear}: {settlement.pendingTimelineEvent.title}</h4>
-                <p>{settlement.pendingTimelineEvent.description}</p>
+                <p>{formatHistoryDetail(settlement.pendingTimelineEvent.description)}</p>
                 {(settlement.pendingTimelineEvent.storyParagraphs || []).map((paragraph, index) => (
                   <p key={`${settlement.pendingTimelineEvent.id}-story-${index}`}>
                     {paragraph}
@@ -770,8 +799,8 @@ export default function SettlementScreen({
                 {settlement.pendingTimelineEvent.choices.map(choice => (
                   <div className="event-choice-card" key={choice.id}>
                     <h4>{choice.label}</h4>
-                    <p>{choice.storyText}</p>
-                    <p className="muted-text">{choice.preview}</p>
+                    <p>{formatHistoryDetail(choice.storyText)}</p>
+                    <p className="muted-text">{formatHistoryDetail(choice.preview)}</p>
                     {choice.requiresNomination && (
                       <label>
                         Nominate survivor
@@ -815,7 +844,7 @@ export default function SettlementScreen({
                 )}
                 <ul>
                   {settlement.lastTimelineResult.appliedEffects.map((effect, index) => (
-                    <li key={`${effect}-${index}`}>{effect}</li>
+                    <li key={`timeline-effect-${index}`}>{formatHistoryDetail(effect)}</li>
                   ))}
                 </ul>
               </article>
@@ -824,14 +853,18 @@ export default function SettlementScreen({
               <summary>Settlement Timeline History ({settlement.timelineHistory.length})</summary>
               {settlement.timelineHistory.slice().reverse().map(entry => (
                 <p key={`${entry.lanternYear}-${entry.id}`}>
-                  Year {entry.lanternYear}: <strong>{entry.name}</strong> - {entry.description}
-                  {entry.choiceText ? ` Choice: ${entry.choiceText}.` : ''}
+                  Year {entry.lanternYear}: <strong>{formatValueForDisplay(entry.name)}</strong>
+                  {' - '}{formatHistoryDetail(entry.description)}
+                  {entry.choiceText ? ` Choice: ${formatHistoryDetail(entry.choiceText)}.` : ''}
                 </p>
               ))}
             </details>
             <h4>Timeline Threats</h4>
             {revealedNemeses.length ? revealedNemeses.map(nemesis => (
-              <p key={nemesis.id}><strong>{nemesis.displayName}</strong> - {nemesis.description}</p>
+              <p key={nemesis.id}>
+                <strong>{formatValueForDisplay(nemesis.displayName)}</strong>
+                {' - '}{formatHistoryDetail(nemesis.description)}
+              </p>
             )) : <p>No timeline threat has entered the lanternlight.</p>}
             {unknownThreatCount > 0 && (
               <p>Something watches from beyond the lanternlight. ({unknownThreatCount} unknown threats)</p>
@@ -894,10 +927,15 @@ export default function SettlementScreen({
                     settlement.pendingSpecialChildTrait}
                 </strong>
                 <p>
-                  {childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.description}
+                  {formatValueForDisplay(
+                    childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.description
+                  )}
                 </p>
                 <p className="effect-text">
-                  {childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.effectText}
+                  {formatModifierEffect(
+                    childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.effectText ||
+                    childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.mechanicalEffect
+                  )}
                 </p>
               </div>
             )}
@@ -906,7 +944,7 @@ export default function SettlementScreen({
                 <option value="">No Trial Name trait</option>
                 {Object.values(startingTraits).map(trait => (
                   <option value={trait.id} key={trait.id}>
-                    {trait.name}: {trait.effect}
+                    {trait.name}: {formatModifierEffect(trait.effect)}
                   </option>
                 ))}
               </select>
@@ -967,7 +1005,7 @@ export default function SettlementScreen({
               return (
                 <article className="item-card" key={gear.instanceId}>
                   <h4>{recipe?.name || gear.equipmentId}</h4>
-                  <p>{recipe?.passiveText}</p>
+                  <p>{formatValueForDisplay(recipe?.passiveText)}</p>
                   <p className="muted-text">Free gear. Assign it from the pre-hunt Loadout screen.</p>
                 </article>
               );
@@ -982,7 +1020,7 @@ export default function SettlementScreen({
               return (
                 <article className="item-card built" key={gear.instanceId}>
                   <h4>{recipe?.name || gear.equipmentId}</h4>
-                  <p>{recipe?.passiveText}</p>
+                  <p>{formatValueForDisplay(recipe?.passiveText)}</p>
                   <p className="muted-text">Bound equipment can only be removed from the Loadout screen and will be destroyed.</p>
                 </article>
               );
@@ -1007,8 +1045,8 @@ export default function SettlementScreen({
                       <strong>Hands:</strong> {recipe.hands} | <strong>Speed:</strong> {recipe.speedStyle}
                     </p>
                     <p><strong>Keywords:</strong> {recipe.keywords?.join(', ') || 'Survival'}</p>
-                    <p>{recipe.description}</p>
-                    <p className="effect-text">{recipe.passiveText}</p>
+                    <p>{formatValueForDisplay(recipe.description)}</p>
+                    <p className="effect-text">{formatModifierEffect(recipe.passiveText)}</p>
                     {recipe.deckIdentity && (
                       <p className="effect-text">Deck identity: {recipe.deckIdentity}</p>
                     )}
@@ -1016,7 +1054,8 @@ export default function SettlementScreen({
                     <ul>
                       {recipe.cardPackage.map(cardId => (
                         <li key={cardId}>
-                          <strong>{cards[cardId]?.name || cardId}</strong>: {cards[cardId]?.description}
+                          <strong>{cards[cardId]?.name || cardId}</strong>:{' '}
+                          {formatValueForDisplay(cards[cardId]?.description)}
                           {cards[cardId]?.tags?.length
                             ? ` [${cards[cardId].tags.filter(tag => tag !== 'quarrySpecific').join(', ')}]`
                             : ''}
@@ -1043,8 +1082,8 @@ export default function SettlementScreen({
               <article className="item-card built" key={item.id}>
                 <p className="eyebrow">{item.category}</p>
                 <h4>{item.name}</h4>
-                <p>{item.description}</p>
-                <p className="effect-text">{item.effects.join(' ')}</p>
+                <p>{formatValueForDisplay(item.description)}</p>
+                <p className="effect-text">{formatEffectsForDisplay(item.effects)}</p>
               </article>
             ))}
           </div>
@@ -1056,7 +1095,7 @@ export default function SettlementScreen({
               return (
                 <article className="item-card" key={item.id}>
                   <h4>{item.name}</h4>
-                  <p>{item.description}</p>
+                  <p>{formatValueForDisplay(item.description)}</p>
                   <p>[Requires: {item.unlockText}]</p>
                   <CostList cost={item.cost} stash={settlement.stash} />
                   <button type="button" disabled={!affordable} onClick={() => onBuild(item)}>Build {item.name}</button>
@@ -1099,8 +1138,8 @@ export default function SettlementScreen({
                   <article className="item-card built" key={item.id}>
                     <p className="eyebrow">{item.category}</p>
                     <h4>{item.name}</h4>
-                    <p>{item.description}</p>
-                    <p className="effect-text">{item.effects.join(' ')}</p>
+                    <p>{formatValueForDisplay(item.description)}</p>
+                    <p className="effect-text">{formatEffectsForDisplay(item.effects)}</p>
                   </article>
                 ))}
             </div>
@@ -1147,9 +1186,14 @@ export default function SettlementScreen({
           {settlement.pendingSpecialChildTrait && (
             <div className="item-card">
               <h4>{childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.name}</h4>
-              <p>{childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.description}</p>
+              <p>{formatValueForDisplay(
+                childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.description
+              )}</p>
               <p className="effect-text">
-                {childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.effectText}
+                {formatModifierEffect(
+                  childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.effectText ||
+                  childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.mechanicalEffect
+                )}
               </p>
             </div>
           )}
@@ -1159,7 +1203,8 @@ export default function SettlementScreen({
               {settlement.intimacyHistory.slice(0, 8).map(entry => (
                 <li key={entry.timestamp}>
                   Year {entry.lanternYear ?? '?'}: {entry.participantNames?.join(' and ') || 'Unknown participants'}
-                  {entry.roll ? ` rolled ${entry.roll}.` : ''} {entry.outcome || entry.result}
+                  {entry.roll ? ` rolled ${entry.roll}.` : ''}{' '}
+                  {formatHistoryDetail(entry.outcome || entry.result)}
                   {entry.deathName ? ` ${entry.deathName} died.` : ''}
                   <small>{new Date(entry.timestamp).toLocaleString()}</small>
                 </li>
@@ -1232,7 +1277,11 @@ export default function SettlementScreen({
                     onClick={() => onSelectQuarry(quarry.id)}
                   >
                     <strong>{quarry.name}</strong>
-                    <span>{unlocked ? quarry.description : quarry.unlockRequirement ? `Rumour: ${quarry.name} requires earlier quarry progress.` : 'Locked'}</span>
+                    <span>{unlocked
+                      ? formatValueForDisplay(quarry.description)
+                      : quarry.unlockRequirement
+                        ? `Rumour: ${quarry.name} requires earlier quarry progress.`
+                        : 'Locked'}</span>
                   </button>
                   <p>Highest defeated level: {getHighestDefeatedQuarryLevel(settlement, quarry.id)}</p>
                   <p>Levels unlocked: 1-{getAvailableQuarryLevel(quarry.id, settlement)}</p>
@@ -1260,9 +1309,27 @@ export default function SettlementScreen({
           {settlement.rumourTexts?.length > 0 && (
             <>
               <h3>Quarry Rumours</h3>
-              {settlement.rumourTexts.map(text => <p key={text}>{text}</p>)}
+              {settlement.rumourTexts.map((text, index) => (
+                <p key={`rumour-${index}`}>{formatHistoryDetail(text)}</p>
+              ))}
             </>
           )}
+          <details>
+            <summary>Settlement History ({settlement.settlementHistory?.length || 0})</summary>
+            {(settlement.settlementHistory || []).slice().reverse().map((entry, index) => (
+              <div className="muted-text" key={`${entry.timestamp || 'history'}-${index}`}>
+                <strong>{formatValueForDisplay(
+                  entry.title || entry.message || entry.type || 'Settlement event'
+                )}</strong>
+                {entry.text && <p>{formatHistoryDetail(entry.text)}</p>}
+                {entry.historyText && <p>{formatHistoryDetail(entry.historyText)}</p>}
+                {entry.effects && <p>Effects: {formatHistoryDetail(entry.effects)}</p>}
+                {entry.rewards && <p>Rewards: {formatHistoryDetail(entry.rewards)}</p>}
+                {entry.consequences && <p>Consequences: {formatHistoryDetail(entry.consequences)}</p>}
+                {entry.details && <p>Details: {formatHistoryDetail(entry.details)}</p>}
+              </div>
+            ))}
+          </details>
           <label className="field-label" htmlFor="quarry-level">Quarry level</label>
           <select id="quarry-level" value={selectedLevel} onChange={event => onSelectLevel(Number(event.target.value))}>
             {Array.from({ length: getAvailableQuarryLevel(selectedQuarry, settlement) }, (_, index) => index + 1)
@@ -1285,7 +1352,7 @@ export default function SettlementScreen({
           {revealedNemeses.length ? revealedNemeses.map(nemesis => (
             <article className="quarry-card" key={nemesis.id}>
               <h4>{nemesis.displayName}</h4>
-              <p>{nemesis.description}</p>
+              <p>{formatHistoryDetail(nemesis.description)}</p>
             </article>
           )) : <p>None revealed.</p>}
           <h4>Unknown Threats</h4>

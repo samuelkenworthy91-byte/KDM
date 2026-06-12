@@ -861,6 +861,25 @@ select {
   padding-right: 1.5rem;
 }
 
+.card-type,
+.card-breakdown-hint {
+  display: block;
+  color: #9d917f;
+  text-transform: capitalize;
+}
+
+.card-preview {
+  display: block;
+  margin: 0.55rem 0;
+  color: #e8bd69;
+}
+
+.card-preview-detail {
+  display: block;
+  margin: 0.2rem 0;
+  color: #c9b58f;
+}
+
 .card-source {
   display: block;
   margin-top: 0.75rem;
@@ -1087,4 +1106,9 @@ select {
     min-width: 0;
     flex: 1;
   }
+}
+.recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }

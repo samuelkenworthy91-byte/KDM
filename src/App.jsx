@@ -18,6 +18,7 @@ import {
   isMonsterBaneId
 } from './data/fightingArts.js';
 import { graveLegacies } from './data/graveLegacies.js';
+import { getIntentTargetRule } from './game/monsterTargeting.js';
 import { startingTraits } from './data/memoryInnovations.js';
 import {
   getDrawableInnovationIds,
@@ -74,6 +75,14 @@ import {
   saveSettlement,
   setActiveSlot
 } from './game/saveLogic.js';
+import {
+  addRecoveryHistory,
+  createEmptyRuntime,
+  getInvalidCombatSurvivorIds,
+  validateGameState
+} from './game/gameStateRecovery.js';
+import { consumeRecoveryBootScreen } from './game/recoveryActions.js';
+import { resolveHuntRetreat } from './game/retreatLogic.js';
 import { addPersonalCard, learnFightingArt } from './game/survivorProgression.js';
 import CombatScreen from './screens/CombatScreen.jsx';
 import PartyCombatScreen from './screens/PartyCombatScreen.jsx';
@@ -92,6 +101,7 @@ import QuarrySelectionScreen from './screens/QuarrySelectionScreen.jsx';
 import PartySelectionScreen from './screens/PartySelectionScreen.jsx';
 import QuarryDiscoveryLoreScreen from './screens/QuarryDiscoveryLoreScreen.jsx';
 import RestStopScreen from './screens/RestStopScreen.jsx';
+import RetreatResultScreen from './screens/RetreatResultScreen.jsx';
 import RunSummaryScreen from './screens/RunSummaryScreen.jsx';
 import SettlementScreen from './screens/SettlementScreen.jsx';
 import SurvivorProgressScreen from './screens/SurvivorProgressScreen.jsx';
@@ -101,6 +111,23 @@ const RANDOM_MONSTER_PARTS = ['bone', 'hide', 'sinew', 'organ', 'claw', 'strange
 const DEADLY_EVENT_IDS = new Set(['strangeCarcass', 'blackRain', 'woundedBeast', 'lanternStorm']);
 
 validateQuarryContent();
+
+function createHuntResultId() {
+  return `hunt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function InvalidPhaseScreen({ reason, onRecover }) {
+  return (
+    <section className="placeholder-screen">
+      <p className="eyebrow">Recovery</p>
+      <h2>Something went wrong while loading this screen.</h2>
+      <p className="muted-text">Recovery reason: {reason}</p>
+      <button type="button" onClick={() => onRecover(reason, { resetHunt: true })}>
+        Return to Settlement
+      </button>
+    </section>
+  );
+}
 
 function chooseHuntEvent(level) {
   const deadlyEvents = events.filter(event => DEADLY_EVENT_IDS.has(event.id));
@@ -162,10 +189,10 @@ function createScaledMonster(quarryId, level, type, partySize = 1) {
         ? scaling.dangerousWeight || 0
         : 0)
     );
-    const targetingRule = intent.targetingRule ||
-      (level >= 3 && intent.tags?.includes('dangerous') ? 'lowestHp'
-        : level >= 2 && intent.tags?.includes('precision') ? 'mostBlock'
-          : intent.tags?.includes('wild') ? 'random' : 'front');
+    const targetingRule = getIntentTargetRule(
+      { ...intent, effects },
+      { quarryId: quarry.id, baseId: quarry.id }
+    );
     const scaledIntent = {
       ...intent,
       effects,
@@ -284,7 +311,8 @@ function getLoadoutBonus(settlement, monsterId, quarryId) {
 export default function App() {
   const initialSlot = getActiveSlot();
   const initialSettlement = loadSettlement(initialSlot);
-  const [screen, setScreen] = useState('title');
+  const recoveryBootScreen = consumeRecoveryBootScreen();
+  const [screen, setScreen] = useState(recoveryBootScreen || 'title');
   const [activeSlot, setActiveSlotState] = useState(initialSlot);
   const [settlement, setSettlement] = useState(initialSettlement);
   const [createSlot, setCreateSlot] = useState(null);
@@ -324,6 +352,156 @@ export default function App() {
   });
   const [nemesisResult, setNemesisResult] = useState(null);
   const [pendingQuarryDiscoveryId, setPendingQuarryDiscoveryId] = useState(null);
+  const [currentHuntId, setCurrentHuntId] = useState(null);
+  const [retreatResult, setRetreatResult] = useState(null);
+
+  const getRuntimeSnapshot = (screenOverride = screen) => ({
+    screen: screenOverride,
+    selectedQuarry,
+    selectedLevel,
+    runMap,
+    currentNode,
+    runResources,
+    resourceReward,
+    currentEvent,
+    runSurvivor,
+    runParty,
+    selectedPartyIds,
+    loadoutPartyIndex,
+    partyCombatBonuses,
+    pendingPartyEffects,
+    survivorRewardQueue,
+    runDeck,
+    runEquippedGear,
+    runModifiers,
+    runBonus,
+    combatBonus,
+    runSummary,
+    lootChoices,
+    pendingCombatVictory,
+    bossGenericRewards,
+    progressOfferBane,
+    innovationDraw,
+    innovationPayment,
+    appliedInnovationId,
+    runEventWarningUsed,
+    runConditionGains,
+    nemesisResult,
+    pendingQuarryDiscoveryId,
+    currentHuntId,
+    retreatResult
+  });
+
+  const applyRuntime = runtime => {
+    const safe = { ...createEmptyRuntime(), ...(runtime || {}) };
+    setSelectedQuarry(safe.selectedQuarry);
+    setSelectedLevel(safe.selectedLevel);
+    setRunMap(safe.runMap);
+    setCurrentNode(safe.currentNode);
+    setRunResources(safe.runResources);
+    setResourceReward(safe.resourceReward);
+    setCurrentEvent(safe.currentEvent);
+    setRunSurvivor(safe.runSurvivor);
+    setRunParty(safe.runParty);
+    setSelectedPartyIds(safe.selectedPartyIds);
+    setLoadoutPartyIndex(safe.loadoutPartyIndex);
+    setPartyCombatBonuses(safe.partyCombatBonuses);
+    setPendingPartyEffects(safe.pendingPartyEffects);
+    setSurvivorRewardQueue(safe.survivorRewardQueue);
+    setRunDeck(safe.runDeck);
+    setRunEquippedGear(safe.runEquippedGear);
+    setRunModifiers(safe.runModifiers);
+    setRunBonus(safe.runBonus);
+    setCombatBonus(safe.combatBonus);
+    setRunSummary(safe.runSummary);
+    setLootChoices(safe.lootChoices);
+    setPendingCombatVictory(safe.pendingCombatVictory);
+    setBossGenericRewards(safe.bossGenericRewards);
+    setProgressOfferBane(safe.progressOfferBane);
+    setInnovationDraw(safe.innovationDraw);
+    setInnovationPayment(safe.innovationPayment);
+    setAppliedInnovationId(safe.appliedInnovationId);
+    setRunEventWarningUsed(safe.runEventWarningUsed);
+    setRunConditionGains(safe.runConditionGains);
+    setNemesisResult(safe.nemesisResult);
+    setPendingQuarryDiscoveryId(safe.pendingQuarryDiscoveryId);
+    setCurrentHuntId(safe.currentHuntId);
+    setRetreatResult(safe.retreatResult);
+    setScreen(safe.screen);
+  };
+
+  const returnToSettlementSafely = (reason = null, options = {}) => {
+    const emptyRuntime = createEmptyRuntime('settlement');
+    setSettlement(current => {
+      if (!current) return current;
+      const next = reason
+        ? addRecoveryHistory(current, reason, options.resetHunt)
+        : current;
+      const normalized = normalizeSettlement({
+        ...next,
+        appRuntime: emptyRuntime,
+        recoveryReason: reason
+      });
+      saveSettlement(normalized, activeSlot);
+      return normalized;
+    });
+    applyRuntime(emptyRuntime);
+  };
+
+  useEffect(() => {
+    if (!settlement || ['title', 'createSettlement'].includes(screen)) return;
+    const runtime = getRuntimeSnapshot();
+    saveSettlement({ ...settlement, appRuntime: runtime }, activeSlot);
+  }, [
+    activeSlot,
+    screen,
+    settlement,
+    selectedQuarry,
+    selectedLevel,
+    runMap,
+    currentNode,
+    runResources,
+    resourceReward,
+    currentEvent,
+    runSurvivor,
+    runParty,
+    selectedPartyIds,
+    loadoutPartyIndex,
+    partyCombatBonuses,
+    pendingPartyEffects,
+    survivorRewardQueue,
+    runDeck,
+    runEquippedGear,
+    runModifiers,
+    runBonus,
+    combatBonus,
+    runSummary,
+    lootChoices,
+    pendingCombatVictory,
+    bossGenericRewards,
+    progressOfferBane,
+    innovationDraw,
+    innovationPayment,
+    appliedInnovationId,
+    runEventWarningUsed,
+    runConditionGains,
+    nemesisResult,
+    pendingQuarryDiscoveryId,
+    currentHuntId,
+    retreatResult
+  ]);
+
+  useEffect(() => {
+    if (!settlement || ['title', 'createSettlement'].includes(screen)) return;
+    const validation = validateGameState({
+      activeSlot,
+      settlement,
+      runtime: getRuntimeSnapshot()
+    });
+    if (!validation.valid) {
+      returnToSettlementSafely(validation.reason, { resetHunt: true });
+    }
+  }, [screen]);
 
   useEffect(() => {
     if (!settlement?.pendingNemesisEncounter) return;
@@ -363,9 +541,48 @@ export default function App() {
     setActiveSlot(slotId);
     setActiveSlotState(slotId);
     setSettlement(loaded);
-    setSelectedQuarry('paleHuntLion');
-    setSelectedLevel(1);
-    setScreen('settlement');
+    const runtime = loaded.appRuntime || createEmptyRuntime('settlement');
+    const validation = validateGameState({
+      activeSlot: slotId,
+      settlement: loaded,
+      runtime
+    });
+    if (validation.valid) {
+      applyRuntime(runtime);
+    } else {
+      const invalidCombatSurvivorIds = getInvalidCombatSurvivorIds(runtime);
+      const invalidCombatSurvivors = loaded.survivors.filter(survivor =>
+        invalidCombatSurvivorIds.includes(survivor.id) && survivor.alive !== false
+      );
+      const recovered = normalizeSettlement({
+        ...addRecoveryHistory(loaded, validation.reason, true),
+        population: Math.max(0, loaded.population - invalidCombatSurvivors.length),
+        deadSurvivors: (loaded.deadSurvivors || 0) + invalidCombatSurvivors.length,
+        survivors: loaded.survivors.map(survivor =>
+          invalidCombatSurvivorIds.includes(survivor.id)
+            ? { ...survivor, hp: 0, alive: false, isAlive: false, boundGear: [] }
+            : survivor
+        ),
+        graveHistory: [
+          ...invalidCombatSurvivors.map(survivor => ({
+            survivorName: survivor.name,
+            survivorId: survivor.id,
+            killedBy: 'Unresolved lethal combat damage',
+            lanternYear: loaded.lanternYear,
+            gearLostCount: survivor.boundGear?.length || 0,
+            gearLostNames: (survivor.boundGear || []).map(gear =>
+              equipment[gear.equipmentId]?.name || gear.equipmentId),
+            timestamp: new Date().toISOString()
+          })),
+          ...(loaded.graveHistory || [])
+        ],
+        appRuntime: createEmptyRuntime('settlement'),
+        recoveryReason: validation.reason
+      });
+      saveSettlement(recovered, slotId);
+      setSettlement(recovered);
+      applyRuntime(createEmptyRuntime('settlement'));
+    }
   };
 
   const handleCreate = data => {
@@ -421,8 +638,21 @@ export default function App() {
     const activeRunBonus = {};
     const huntParty = selectedParty.map(survivor => ({
       ...survivor,
-      hp: survivor.injuries?.includes('deepCut') ? Math.max(1, survivor.hp - 1) : survivor.hp
+      hp: survivor.injuries?.includes('deepCut') ? Math.max(0, survivor.hp - 1) : survivor.hp,
+      survival: Math.min(
+        survivor.maxSurvival || 3,
+        (survivor.survival || 0) + (survivor.nextHuntSurvivalBonus || 0)
+      ),
+      nextHuntSurvivalBonus: 0
     }));
+    if (huntParty.some(survivor => survivor.hp <= 0)) {
+      handleCombatDefeat({
+        survivors: huntParty,
+        killedBy: 'Deep Cut',
+        killedById: 'injury:deepCut'
+      });
+      return;
+    }
     const partyDecks = huntParty.map(survivor => {
       const equippedGear = (survivor.boundGear || []).map(gear => equipment[gear.equipmentId]).filter(Boolean);
       const deck = buildRunDeck({ survivor, equippedGear });
@@ -449,6 +679,9 @@ export default function App() {
     if (nextRunBonus.nextCombatMonsterBonusHp) {
       activeRunBonus.nextCombatMonsterBonusHp = nextRunBonus.nextCombatMonsterBonusHp;
     }
+    activeRunBonus.retreatMonsterEnrage =
+      (settlement.temporarySettlementModifiers?.followedBySomething || 0) +
+      (settlement.quarryRetreatModifiers?.[selectedQuarry]?.aggression || 0);
     if (activeSurvivor.traits?.includes('steady')) activeRunBonus.firstCombatBlock = 1;
     if (activeSurvivor.traits?.includes('bold')) activeRunBonus.firstHuntAttackBonus = 1;
     if (
@@ -464,6 +697,20 @@ export default function App() {
 
     updateSettlement(current => ({
       ...current,
+      survivors: current.survivors.map(survivor => selectedPartyIds.includes(survivor.id)
+        ? { ...survivor, nextHuntSurvivalBonus: 0 }
+        : survivor),
+      temporarySettlementModifiers: {
+        ...(current.temporarySettlementModifiers || {}),
+        followedBySomething: 0
+      },
+      quarryRetreatModifiers: {
+        ...(current.quarryRetreatModifiers || {}),
+        [selectedQuarry]: {
+          ...(current.quarryRetreatModifiers?.[selectedQuarry] || {}),
+          aggression: 0
+        }
+      },
       nextRunBonus: {
         ...current.nextRunBonus,
         randomMonsterPart: false,
@@ -476,6 +723,8 @@ export default function App() {
       }
     }));
     setRunMap(generateMap(selectedLevel));
+    setCurrentHuntId(createHuntResultId());
+    setRetreatResult(null);
     setCurrentNode(null);
     setRunResources(startingResources);
     setRunSurvivor(huntSurvivor);
@@ -496,6 +745,40 @@ export default function App() {
     setRunConditionGains({ injuries: [], scars: [], disorders: [] });
     setRunEventWarningUsed(false);
     setScreen('map');
+  };
+
+  const handleRetreat = () => {
+    const huntResultId = currentHuntId || createHuntResultId();
+    const resolved = resolveHuntRetreat({
+      settlement,
+      party: runParty,
+      gatheredResources: runResources,
+      quarryId: selectedQuarry,
+      quarryLevel: selectedLevel,
+      huntResultId
+    });
+    setCurrentHuntId(huntResultId);
+    setSettlement(resolved.settlement);
+    saveSettlement({
+      ...resolved.settlement,
+      appRuntime: {
+        ...getRuntimeSnapshot('retreatResult'),
+        currentHuntId: huntResultId,
+        retreatResult: resolved.result
+      }
+    }, activeSlot);
+    setRetreatResult(resolved.result);
+    setPendingCombatVictory(null);
+    setLootChoices([]);
+    setBossGenericRewards([]);
+    setCurrentNode(null);
+    setScreen('retreatResult');
+  };
+
+  const finishRetreat = () => {
+    setRetreatResult(null);
+    setCurrentHuntId(null);
+    applyRuntime(createEmptyRuntime('settlement'));
   };
 
   const prepareHunt = survivorId => {
@@ -563,7 +846,9 @@ export default function App() {
           (runModifiers.monsterStartsWounded || 0) +
           (loadoutBonus.monsterStartsWounded || 0),
         counterDamageBonus: loadoutBonus.counterDamageBonus || 0,
-        monsterEnrage: runModifiers.monsterEnrage || 0,
+        monsterEnrage:
+          (runModifiers.monsterEnrage || 0) +
+          (runBonus.retreatMonsterEnrage || 0),
         firstAttackBonus:
           (runModifiers.firstAttackBonus || 0) +
           (runBonus.firstHuntAttackBonus || 0),
@@ -686,6 +971,7 @@ export default function App() {
       const isBoss = currentNode?.type === 'boss';
       setBossGenericRewards(isBoss ? rollTierGenericBossRewards(selectedQuarry, selectedLevel) : []);
       setPendingCombatVictory({
+        huntResultId: createHuntResultId(),
         isBoss,
         survivors: living,
         brokenWeakPoints,
@@ -723,6 +1009,7 @@ export default function App() {
       : [];
     setBossGenericRewards(genericRewards);
     setPendingCombatVictory({
+      huntResultId: createHuntResultId(),
       isBoss,
       survivor: survivorAfterCombat
     });
@@ -732,7 +1019,7 @@ export default function App() {
     setScreen('lootReward');
   };
 
-  const finishBossVictory = (selectedResources, survivorAfterFight) => {
+  const finishBossVictory = (selectedResources, survivorAfterFight, huntResultId) => {
     const completedMap = completeMapNode(runMap, currentNode.id);
     const progress = getRunProgress(completedMap, currentNode);
     const monsterPartRewards = Array.isArray(selectedResources)
@@ -770,13 +1057,16 @@ export default function App() {
       populationAfter: settlement.population,
       lanternYearBefore: settlement.lanternYear,
       lanternYearAfter: settlement.lanternYear + 1,
-      quarryUnlockTriggered
+      quarryUnlockTriggered,
+      huntResultId
     };
 
     setRunMap(completedMap);
     setRunResources(allRewards);
     setRunSummary(summary);
     updateSettlement(current => {
+      const existingReward = current.huntRewardLedger?.[huntResultId];
+      if (huntResultId && existingReward?.partsApplied) return current;
       const nextYear = (current.lanternYear || 0) + 1;
       const next = {
       ...current,
@@ -843,6 +1133,26 @@ export default function App() {
             ...(QUARRY_INNOVATION_POOL[selectedQuarry] || [])
           ])
         ]
+      },
+      settlementHistory: [
+        ...current.settlementHistory,
+        {
+          type: 'huntResult',
+          huntResultId,
+          message: `${survivorAfterFight.name} returned from the hunt.`,
+          timestamp: new Date().toISOString()
+        }
+      ],
+      huntRewardLedger: {
+        ...current.huntRewardLedger,
+        [huntResultId]: {
+          huntResultId,
+          partsApplied: true,
+          survivorRewardsApplied: false,
+          settlementHistoryApplied: true,
+          quarryUnlockApplied: quarryUnlockTriggered,
+          survivorRewardIds: []
+        }
       }
       };
       return applyLanternYearTimeline(next, nextYear);
@@ -861,7 +1171,7 @@ export default function App() {
     setScreen('survivorProgress');
   };
 
-  const finishPartyBossVictory = (selectedResources, survivingParty) => {
+  const finishPartyBossVictory = (selectedResources, survivingParty, huntResultId) => {
     const completedMap = completeMapNode(runMap, currentNode.id);
     const progress = getRunProgress(completedMap, currentNode);
     const monsterParts = Array.isArray(selectedResources)
@@ -895,7 +1205,8 @@ export default function App() {
       populationAfter: settlement.population,
       lanternYearBefore: settlement.lanternYear,
       lanternYearAfter: settlement.lanternYear + 1,
-      quarryUnlockTriggered
+      quarryUnlockTriggered,
+      huntResultId
     };
 
     setRunMap(completedMap);
@@ -904,6 +1215,8 @@ export default function App() {
     setRunSummary(summary);
     setSurvivorRewardQueue(healedParty.map(survivor => survivor.id));
     updateSettlement(current => {
+      const existingReward = current.huntRewardLedger?.[huntResultId];
+      if (huntResultId && existingReward?.partsApplied) return current;
       const nextYear = current.lanternYear + 1;
       const next = {
         ...current,
@@ -954,6 +1267,26 @@ export default function App() {
               ...(QUARRY_INNOVATION_POOL[selectedQuarry] || [])
             ])
           ]
+        },
+        settlementHistory: [
+          ...current.settlementHistory,
+          {
+            type: 'huntResult',
+            huntResultId,
+            message: `${healedParty.map(survivor => survivor.name).join(', ')} returned from the hunt.`,
+            timestamp: new Date().toISOString()
+          }
+        ],
+        huntRewardLedger: {
+          ...current.huntRewardLedger,
+          [huntResultId]: {
+            huntResultId,
+            partsApplied: true,
+            survivorRewardsApplied: false,
+            settlementHistoryApplied: true,
+            quarryUnlockApplied: quarryUnlockTriggered,
+            survivorRewardIds: []
+          }
         }
       };
       return applyLanternYearTimeline(next, nextYear);
@@ -1007,7 +1340,15 @@ export default function App() {
           deadSurvivors: current.deadSurvivors + fallen.length,
           totalRuns: current.totalRuns + 1,
           lanternYear: nextYear,
-          settlementMemory: current.settlementMemory + progress.nodesCompleted,
+          settlementMemory: Math.max(
+            0,
+            current.settlementMemory + progress.nodesCompleted -
+              (current.temporarySettlementModifiers?.graveDebt ? 1 : 0)
+          ),
+          temporarySettlementModifiers: {
+            ...(current.temporarySettlementModifiers || {}),
+            graveDebt: false
+          },
           stash: addResources(current.stash, runResources),
           survivors: current.survivors.map(survivor => fallen.some(item => item.id === survivor.id)
             ? { ...survivor, alive: false, hp: 0, boundGear: [] }
@@ -1018,9 +1359,11 @@ export default function App() {
             ...fallen.map(survivor => ({
               survivorName: survivor.name,
               survivorId: survivor.id,
-              killedBy: deathDetails.killedBy,
+              killedBy: survivor.causeOfDeath || deathDetails.killedBy,
               quarryId: selectedQuarry,
               quarryLevel: selectedLevel,
+              lanternYear: current.lanternYear,
+              huntResultId: currentHuntId,
               huntPartyMembers: deathDetails.survivors.map(item => item.name),
               weaponProficiency: survivor.weaponProficiency || {},
               proficientWeaponTypes: getProficientWeaponSummary(survivor.weaponProficiency),
@@ -1040,6 +1383,18 @@ export default function App() {
               timestamp: new Date().toISOString()
             })),
             ...current.graveHistory
+          ],
+          settlementHistory: [
+            ...(current.settlementHistory || []),
+            {
+              type: 'huntFailure',
+              huntResultId: currentHuntId,
+              quarryId: selectedQuarry,
+              quarryLevel: selectedLevel,
+              message: `The hunting party was wiped out by ${deathDetails.killedBy}.`,
+              survivorIds: fallen.map(survivor => survivor.id),
+              timestamp: new Date().toISOString()
+            }
           ]
         };
         return applyLanternYearTimeline(next, nextYear);
@@ -1101,7 +1456,15 @@ export default function App() {
       deadSurvivors: (current.deadSurvivors || 0) + 1,
       totalRuns: (current.totalRuns || 0) + 1,
       lanternYear: nextYear,
-      settlementMemory: (current.settlementMemory || 0) + summary.settlementMemoryEarned,
+      settlementMemory: Math.max(
+        0,
+        (current.settlementMemory || 0) + summary.settlementMemoryEarned -
+          (current.temporarySettlementModifiers?.graveDebt ? 1 : 0)
+      ),
+      temporarySettlementModifiers: {
+        ...(current.temporarySettlementModifiers || {}),
+        graveDebt: false
+      },
       stash: addResources(current.stash, fallenResources),
       conditionHistory: {
         ...current.conditionHistory,
@@ -1115,24 +1478,44 @@ export default function App() {
         : survivor),
       activeSurvivorId: current.survivors.find(
         survivor => survivor.id !== fallenSurvivor?.id && survivor.alive !== false
-      )?.id || null
+      )?.id || null,
+      graveHistory: fallenSurvivor ? [{
+        survivorName: fallenSurvivor.name,
+        survivorId: fallenSurvivor.id,
+        killedBy: fallenSurvivor.causeOfDeath || summary.killedBy,
+        quarryId: selectedQuarry,
+        quarryLevel: selectedLevel,
+        lanternYear: current.lanternYear,
+        huntResultId: currentHuntId,
+        weaponProficiency: fallenSurvivor.weaponProficiency || {},
+        proficientWeaponTypes: getProficientWeaponSummary(fallenSurvivor.weaponProficiency),
+        injuries: fallenSurvivor.injuries || [],
+        scars: fallenSurvivor.scars || [],
+        disorders: fallenSurvivor.disorders || [],
+        gearLostCount: lostGear.length,
+        gearLostNames: lostGear.map(gear =>
+          equipment[gear.equipmentId]?.name || gear.equipmentId),
+        timestamp: new Date().toISOString()
+      }, ...(current.graveHistory || [])] : current.graveHistory,
+      settlementHistory: [
+        ...(current.settlementHistory || []),
+        {
+          type: 'huntFailure',
+          huntResultId: currentHuntId,
+          quarryId: selectedQuarry,
+          quarryLevel: selectedLevel,
+          message: `${fallenSurvivor?.name || 'A survivor'} was killed during the hunt.`,
+          survivorIds: fallenSurvivor?.id ? [fallenSurvivor.id] : [],
+          timestamp: new Date().toISOString()
+        }
+      ]
       };
       return applyLanternYearTimeline(next, nextYear);
     });
     setScreen('runSummary');
   };
 
-  const returnToSettlement = () => {
-    setCurrentNode(null);
-    setCombatBonus({});
-    setRunSummary(null);
-    setRunConditionGains({ injuries: [], scars: [], disorders: [] });
-    setSelectedLevel(Math.min(
-      3,
-      getHighestDefeatedQuarryLevel(settlement, selectedQuarry) + 1
-    ));
-    setScreen('settlement');
-  };
+  const returnToSettlement = () => returnToSettlementSafely();
 
   const continueFromSummary = () => {
     if (runSummary?.outcome === 'death') setScreen('graveLegacy');
@@ -1243,10 +1626,15 @@ export default function App() {
     const availableResources = basicIds.flatMap(resourceId =>
       Array(settlement.stash[resourceId] || 0).fill(resourceId)
     );
-    if (settlement.settlementMemory < 1 || availableResources.length < 3 || !drawable.length) {
+    const resourceCost = settlement.temporarySettlementModifiers?.delayedWork ? 4 : 3;
+    if (
+      settlement.settlementMemory < 1 ||
+      availableResources.length < resourceCost ||
+      !drawable.length
+    ) {
       return;
     }
-    const payment = availableResources.slice(0, 3);
+    const payment = availableResources.slice(0, resourceCost);
     const choices = [...drawable].sort(() => Math.random() - 0.5).slice(0, 3);
     updateSettlement(current => {
       const stash = { ...current.stash };
@@ -1257,6 +1645,10 @@ export default function App() {
         ...current,
         settlementMemory: current.settlementMemory - 1,
         stash,
+        temporarySettlementModifiers: {
+          ...(current.temporarySettlementModifiers || {}),
+          delayedWork: false
+        },
         innovationDeckState: {
           ...current.innovationDeckState,
           innovationHistory: [
@@ -1777,8 +2169,11 @@ export default function App() {
     setPendingCombatVictory(null);
     setLootChoices([]);
     if (pending?.isBoss) {
-      if (pending.survivors) finishPartyBossVictory(resourceIds, pending.survivors);
-      else finishBossVictory(resourceIds, pending.survivor);
+      if (pending.survivors) {
+        finishPartyBossVictory(resourceIds, pending.survivors, pending.huntResultId);
+      } else {
+        finishBossVictory(resourceIds, pending.survivor, pending.huntResultId);
+      }
       setBossGenericRewards([]);
       return;
     }
@@ -1788,12 +2183,28 @@ export default function App() {
   };
 
   const handleProgressChoice = (rewardId, offeredIds = []) => {
-    const monsterReward = findMonsterSurvivorReward(rewardId);
-    const reward = findSurvivorReward(rewardId);
+    const knownReward = ['survival', 'strengthLesson', 'hardenedBody', 'weaponPractice']
+      .includes(rewardId) ||
+      Boolean(findMonsterSurvivorReward(rewardId)) ||
+      Boolean(findSurvivorReward(rewardId)) ||
+      Boolean(cards[rewardId]) ||
+      Boolean(fightingArts[rewardId]);
+    const safeRewardId = knownReward ? rewardId : 'survival';
+    if (!knownReward) {
+      console.warn(`[Reward recovery] Unknown reward id "${rewardId}"; granting Survival.`);
+    }
+    const monsterReward = findMonsterSurvivorReward(safeRewardId);
+    const reward = findSurvivorReward(safeRewardId);
     const rewardSurvivorId = survivorRewardQueue[0] || runSummary.survivorId;
+    const remainingRewardQueue = survivorRewardQueue.slice(1);
+    const huntResultId = runSummary?.huntResultId;
     updateSettlement(current => ({
-      ...current,
-      survivors: current.survivors.map(survivor => {
+      ...(huntResultId && current.huntRewardLedger?.[huntResultId]?.survivorRewardIds
+        ?.includes(rewardSurvivorId)
+        ? current
+        : {
+          ...current,
+          survivors: current.survivors.map(survivor => {
         if (survivor.id !== rewardSurvivorId) return survivor;
         const withHistory = {
           ...survivor,
@@ -1802,23 +2213,23 @@ export default function App() {
             ...offeredIds
           ].slice(-15)
         };
-        if (rewardId === 'survival') {
+        if (safeRewardId === 'survival') {
           return {
             ...withHistory,
             survival: Math.min(survivor.maxSurvival || 3, (survivor.survival || 0) + 1)
           };
         }
-        if (rewardId === 'strengthLesson') {
+        if (safeRewardId === 'strengthLesson') {
           return { ...withHistory, strength: (survivor.strength || 0) + 1 };
         }
-        if (rewardId === 'hardenedBody') {
+        if (safeRewardId === 'hardenedBody') {
           return {
             ...withHistory,
             maxHp: (survivor.maxHp || 30) + 1,
             hp: Math.min((survivor.maxHp || 30) + 1, (survivor.hp || 0) + 1)
           };
         }
-        if (rewardId === 'weaponPractice') {
+        if (safeRewardId === 'weaponPractice') {
           return {
             ...withHistory,
             weaponProficiency: addWeaponProficiencyXp(
@@ -1828,7 +2239,7 @@ export default function App() {
           };
         }
         if (monsterReward?.type === 'card') {
-          return addPersonalCard(withHistory, rewardId, {
+          return addPersonalCard(withHistory, safeRewardId, {
             sourceType: 'monsterReward',
             reason: `${quarries[selectedQuarry].name} Level ${selectedLevel}`
           });
@@ -1836,17 +2247,17 @@ export default function App() {
         if (monsterReward?.type === 'trait') {
           return {
             ...withHistory,
-            traits: [...new Set([...(survivor.traits || []), rewardId])]
+            traits: [...new Set([...(survivor.traits || []), safeRewardId])]
           };
         }
-        if (cards[rewardId]?.sourceType === 'personal') {
-          return addPersonalCard(withHistory, rewardId, {
+        if (cards[safeRewardId]?.sourceType === 'personal') {
+          return addPersonalCard(withHistory, safeRewardId, {
             sourceType: 'personal',
             reason: 'Survivor victory'
           });
         }
-        if (!fightingArts[rewardId]?.implemented) return withHistory;
-        if (isMonsterBaneId(rewardId) && getSurvivorMonsterBaneId(survivor)) {
+        if (!fightingArts[safeRewardId]?.implemented) return withHistory;
+        if (isMonsterBaneId(safeRewardId) && getSurvivorMonsterBaneId(survivor)) {
           return {
             ...withHistory,
             survival: Math.min(
@@ -1855,10 +2266,22 @@ export default function App() {
             )
           };
         }
-        return learnFightingArt(withHistory, rewardId, reward?.source || 'Survivor reward');
-      })
+        return learnFightingArt(withHistory, safeRewardId, reward?.source || 'Survivor reward');
+          }),
+          huntRewardLedger: huntResultId ? {
+            ...current.huntRewardLedger,
+            [huntResultId]: {
+              ...current.huntRewardLedger?.[huntResultId],
+              huntResultId,
+              survivorRewardIds: [
+                ...(current.huntRewardLedger?.[huntResultId]?.survivorRewardIds || []),
+                rewardSurvivorId
+              ],
+              survivorRewardsApplied: remainingRewardQueue.length === 0
+            }
+          } : current.huntRewardLedger
+        })
     }));
-    const remainingRewardQueue = survivorRewardQueue.slice(1);
     setSurvivorRewardQueue(remainingRewardQueue);
     if (remainingRewardQueue.length) return;
     if (!runSummary?.quarryUnlockTriggered) {
@@ -2539,7 +2962,12 @@ export default function App() {
             seen={settlement.seenNemesisLoreIds.includes(encounter.id)}
             onContinue={continueNemesisLore}
           />
-        ) : null;
+        ) : (
+          <InvalidPhaseScreen
+            reason="missing nemesis lore data"
+            onRecover={returnToSettlementSafely}
+          />
+        );
       }
       case 'nemesisWarning': {
         const pending = settlement.pendingNemesisEncounter;
@@ -2550,7 +2978,12 @@ export default function App() {
             lanternYear={pending.lanternYear}
             onPrepare={beginNemesisPreparation}
           />
-        ) : null;
+        ) : (
+          <InvalidPhaseScreen
+            reason="missing nemesis warning data"
+            onRecover={returnToSettlementSafely}
+          />
+        );
       }
       case 'nemesisPreparation': {
         const pending = settlement.pendingNemesisEncounter;
@@ -2565,7 +2998,12 @@ export default function App() {
             onHeal={healNemesisSurvivor}
             onContinue={prepareNemesisLoadout}
           />
-        ) : null;
+        ) : (
+          <InvalidPhaseScreen
+            reason="missing nemesis preparation data"
+            onRecover={returnToSettlementSafely}
+          />
+        );
       }
       case 'nemesisCombat': {
         const pending = settlement.pendingNemesisEncounter;
@@ -2584,7 +3022,12 @@ export default function App() {
             onVictory={finishNemesisVictory}
             onDefeat={finishNemesisDefeat}
           />
-        ) : null;
+        ) : (
+          <InvalidPhaseScreen
+            reason="missing nemesis combat data"
+            onRecover={returnToSettlementSafely}
+          />
+        );
       }
       case 'nemesisResult':
         return nemesisResult ? (
@@ -2598,7 +3041,12 @@ export default function App() {
               }
             }}
           />
-        ) : null;
+        ) : (
+          <InvalidPhaseScreen
+            reason="missing nemesis result data"
+            onRecover={returnToSettlementSafely}
+          />
+        );
       case 'innovationDraw':
         return (
           <InnovationDrawScreen
@@ -2634,7 +3082,27 @@ export default function App() {
           />
         );
       case 'map':
-        return <MapScreen map={runMap} onSelectNode={selectNode} resources={runResources.map(id => resourceData[id]?.name || id)} />;
+        return (
+          <MapScreen
+            map={runMap}
+            onSelectNode={selectNode}
+            onRetreat={handleRetreat}
+            resources={runResources.map(id => resourceData[id]?.name || id)}
+          />
+        );
+      case 'retreatResult':
+        return retreatResult ? (
+          <RetreatResultScreen
+            result={retreatResult}
+            settlement={settlement}
+            onContinue={finishRetreat}
+          />
+        ) : (
+          <InvalidPhaseScreen
+            reason="missing retreat result"
+            onRecover={returnToSettlementSafely}
+          />
+        );
       case 'combat':
         return (
           <PartyCombatScreen
@@ -2731,13 +3199,18 @@ export default function App() {
         );
       }
       case 'quarryDiscoveryLore':
-        return (
+        return getQuarryDiscoveryEvent(pendingQuarryDiscoveryId) ? (
           <QuarryDiscoveryLoreScreen
             event={getQuarryDiscoveryEvent(pendingQuarryDiscoveryId)}
             onContinue={() => {
               setPendingQuarryDiscoveryId(null);
               setScreen('runSummary');
             }}
+          />
+        ) : (
+          <InvalidPhaseScreen
+            reason="missing quarry discovery data"
+            onRecover={returnToSettlementSafely}
           />
         );
       case 'runSummary':

@@ -3,6 +3,8 @@ import Card from '../components/Card.jsx';
 import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorPanel from '../components/SurvivorPanel.jsx';
 import { createCombatState, endTurn, playCard, useSurvivalAction } from '../game/combatLogic.js';
+import { formatHistoryDetail, formatValueForDisplay } from '../utils/formatters.js';
+import { getCardPreview } from '../utils/cardPreview.js';
 
 export default function CombatScreen({
   monster,
@@ -94,7 +96,7 @@ export default function CombatScreen({
               ? 'Already used this turn'
               : insufficient
                 ? 'Not enough survival'
-                : `${action.name}: ${action.effect}`;
+                : `${formatValueForDisplay(action.name)}: ${formatHistoryDetail(action.effect)}`;
             return (
               <button
                 type="button"
@@ -155,6 +157,12 @@ export default function CombatScreen({
             <Card
               key={`${card.id}-${index}`}
               card={card}
+              preview={getCardPreview({
+                card,
+                survivor: combat.survivor,
+                combatState: combat,
+                monster: combat.monster
+              })}
               disabled={disabled}
               onPlay={() => handlePlayCard(index)}
             />

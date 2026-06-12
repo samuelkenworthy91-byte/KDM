@@ -52,7 +52,7 @@ const quarryRewardSpecs = {
     ['scaleAgainstBlood', 'Scale Against Blood', 1, 'counter', 1, 'Gain 7 block and remove 1 Panic.', [{ type: 'block', amount: 7 }, { type: 'removePanicAny' }], ['block', 'counter', 'bleed']],
     ['dragUnder', 'Drag Under', 2, 'mimic', 1, 'Deal 4 damage and remove 4 monster block.', [{ type: 'damage', amount: 4 }, { type: 'removeMonsterBlock', amount: 4 }], ['attack', 'drag', 'grip']],
     ['breakTheJaw', 'Break the Jaw', 2, 'counter', 2, 'Deal 5 damage with strong break pressure against head and armour.', [{ type: 'damage', amount: 5 }], ['attack', 'counter', 'headHunter', 'breaker']],
-    ['blockThenBite', 'Block Then Bite', 2, 'mimic', 1, 'Deal damage equal to half your block, maximum 9.', [{ type: 'damageFromBlock', divisor: 2, maximum: 9 }], ['attack', 'block', 'bite']],
+    ['blockThenBite', 'Block Then Bite', 2, 'mimic', 1, 'Deal damage equal to half your block, up to 20.', [{ type: 'damageFromBlock', divisor: 2, maximum: 20 }], ['attack', 'block', 'bite']],
     ['deathRoll', 'Death Roll', 3, 'mimic', 3, 'Deal 4 damage three times, +1 per hit if the monster is Marked.', [{ type: 'multiHitDamage', amount: 4, hits: 3, markedAmount: 5 }], ['attack', 'rare', 'multiHit', 'marked']]
   ],
   frogdog: [
@@ -91,7 +91,7 @@ const quarryRewardSpecs = {
     ['closeTheShell', 'Close the Shell', 1, 'mimic', 1, 'Gain 10 block. Discard another card.', [{ type: 'block', amount: 10 }, { type: 'discard', amount: 1 }], ['block', 'shell', 'heavy']],
     ['stepAsideTheHorn', 'Step Aside the Horn', 1, 'counter', 1, 'Gain 6 block and reduce the next monster attack by 1.', [{ type: 'block', amount: 6 }, { type: 'nextMonsterDamageReduction', amount: 1 }], ['block', 'counter', 'charge']],
     ['resinGuard', 'Resin Guard', 2, 'mimic', 1, 'Gain 7 block. Your next attack deals +2.', [{ type: 'block', amount: 7 }, { type: 'nextAttackBonus', amount: 2 }], ['block', 'guard', 'shell']],
-    ['returnTheShell', 'Return the Shell', 2, 'mimic', 1, 'Deal damage equal to half your block, maximum 10.', [{ type: 'damageFromBlock', divisor: 2, maximum: 10 }], ['attack', 'block', 'shell']],
+    ['returnTheShell', 'Return the Shell', 2, 'mimic', 1, 'Deal damage equal to half your block, up to 20.', [{ type: 'damageFromBlock', divisor: 2, maximum: 20 }], ['attack', 'block', 'shell']],
     ['crackThePlate', 'Crack the Plate', 2, 'counter', 2, 'Remove all monster block, then deal 3 damage.', [{ type: 'removeAllMonsterBlock' }, { type: 'damage', amount: 3 }], ['attack', 'counter', 'armour', 'breaker']],
     ['crusaderAdvance', 'Crusader Advance', 3, 'mimic', 4, 'Deal 13 damage and gain 8 block.', [{ type: 'damage', amount: 13 }, { type: 'block', amount: 8 }], ['attack', 'rare', 'heavy', 'guard']]
   ],

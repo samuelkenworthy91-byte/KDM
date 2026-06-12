@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { resources } from '../data/resources.js';
+import {
+  formatEffectForDisplay,
+  formatHistoryDetail,
+  formatValueForDisplay
+} from '../utils/formatters.js';
 
 export default function LootRewardScreen({
   quarryName,
@@ -38,8 +43,16 @@ export default function LootRewardScreen({
           <strong>Broken weak points:</strong>
           {brokenWeakPoints.map(weakPoint => (
             <p key={weakPoint.id}>
-              {weakPoint.name} - {weakPoint.harvestResult?.quality || 'Messy'} harvest -{' '}
-              {weakPoint.harvestResult?.impactText || 'related part odds improved'}
+              {formatValueForDisplay(weakPoint.name)} -{' '}
+              {formatValueForDisplay(weakPoint.harvestResult?.quality) || 'Messy'} harvest -{' '}
+              {formatHistoryDetail(
+                weakPoint.harvestResult?.impactText ||
+                weakPoint.harvestResult?.effect ||
+                'related part odds improved'
+              )}
+              {weakPoint.onBreakEffect && (
+                <> ({formatEffectForDisplay(weakPoint.onBreakEffect)})</>
+              )}
             </p>
           ))}
         </div>
@@ -47,7 +60,7 @@ export default function LootRewardScreen({
       {wounds.length > 0 && (
         <p>
           Wounds suffered: {wounds.map(wound =>
-            `${wound.name} (${wound.location}, ${wound.severity})`
+            `${formatValueForDisplay(wound.name)} (${formatValueForDisplay(wound.location)}, ${formatValueForDisplay(wound.severity)})`
           ).join(', ')}
         </p>
       )}
@@ -64,7 +77,7 @@ export default function LootRewardScreen({
             >
               <strong>{resource?.name || resourceId}</strong>
               <span>{rarityLabel(resource)}</span>
-              <span>{resource?.description}</span>
+              <span>{formatValueForDisplay(resource?.description)}</span>
             </button>
           );
         })}

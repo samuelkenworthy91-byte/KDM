@@ -4,6 +4,11 @@ import {
 } from '../data/fightingArts.js';
 import { generateSurvivorRewardChoices } from '../data/survivorRewards.js';
 import { quarries } from '../data/quarries.js';
+import {
+  formatModifierEffect,
+  formatRewardForDisplay,
+  formatValueForDisplay
+} from '../utils/formatters.js';
 
 export default function SurvivorProgressScreen({
   survivorName,
@@ -49,10 +54,16 @@ export default function SurvivorProgressScreen({
           >
             <strong>{reward.name}</strong>
             <span>{reward.type} - {reward.rarity}</span>
-            <span>{reward.description}</span>
-            {reward.mechanicalEffectText && (
-              <span className="effect-text">{reward.mechanicalEffectText}</span>
-            )}
+            <span>{formatValueForDisplay(reward.description)}</span>
+            <span className="effect-text">
+              {formatModifierEffect(
+                reward.mechanicalEffectText ||
+                reward.effectText ||
+                reward.mechanicalEffect ||
+                reward.effects ||
+                formatRewardForDisplay(reward)
+              )}
+            </span>
           </button>
         ))}
       </div>

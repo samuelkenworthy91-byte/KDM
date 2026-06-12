@@ -12,6 +12,12 @@ import {
   treatPartyWound,
   usePartySurvivalAction
 } from '../game/partyCombatLogic.js';
+import {
+  formatEffectForDisplay,
+  formatHistoryDetail,
+  formatValueForDisplay
+} from '../utils/formatters.js';
+import { getCardPreview } from '../utils/cardPreview.js';
 
 const survivalActions = [
   { id: 'dodge', name: 'Dodge', cost: 1, effect: '+5 block' },
@@ -50,12 +56,43 @@ export default function PartyCombatScreen({
   const selectedWeakPoint = selectedWeakPointId
     ? combat.monster.weakPoints.find(point => point.id === selectedWeakPointId)
     : null;
-  const selectedPreview = selectedWeakPointId
-    ? getPartyWeakPointPreview(combat, selectedWeakPointId)
+  const previewAttack = selectedWeakPointId
+    ? active?.hand.find(card =>
+      card.type === 'attack' && !card.unplayable && card.cost <= active.survivor.energy
+    )
     : null;
   const baneRevealsWeakPoints = livingPartyHasMonsterBane || (
     hasMonsterBane && combat.members.some(member => member.survivor.hp > 0 && member.hasMonsterBane)
   );
+  const selectedCardPreview = previewAttack && selectedWeakPoint
+    ? getCardPreview({
+        card: previewAttack,
+        survivor: active.survivor,
+        combatState: {
+          ...active,
+          monster: combat.monster,
+          intentIndex: combat.intentIndex,
+          selectedWeakPointId,
+          hasMonsterBane: baneRevealsWeakPoints
+        },
+        monster: combat.monster,
+        selectedTarget: combat.selectedCombatTarget,
+        selectedWeakPoint,
+        party: combat.members
+      })
+    : null;
+  const selectedPreview = selectedCardPreview
+    ? {
+        cardName: previewAttack.name,
+        monsterDamage: selectedCardPreview.monsterHpDamage,
+        breakDamage: selectedCardPreview.weakPointBreakDamage,
+        weaponMatch: selectedCardPreview.weaponMatch || 'Neutral',
+        tellState: selectedCardPreview.tellState === 'unknown'
+          ? getPartyWeakPointPreview(combat, selectedWeakPointId)?.tellState || 'neutral'
+          : selectedCardPreview.tellState,
+        riskSuppressed: selectedCardPreview.willBreakWeakPoint
+      }
+    : null;
   const tellLabel = tellState => {
     if (baneRevealsWeakPoints) {
       return {
@@ -128,6 +165,12 @@ export default function PartyCombatScreen({
       disorders: member.disorders,
       personalDeckAdditions: member.personalDeckAdditions,
       woundHistory: member.woundHistory,
+      boundGear: member.status === 'dead'
+        ? member.destroyedBoundGear || []
+        : member.boundGear,
+      causeOfDeath: member.causeOfDeath || null,
+      alive: member.status !== 'dead',
+      isAlive: member.status !== 'dead',
       combatStats: {
         cardsPlayed: member.cardsPlayedThisTurn,
         attacksPlayed: member.attacksPlayedThisTurn,
@@ -177,13 +220,6 @@ export default function PartyCombatScreen({
         />
       </div>
 
-      {combat.lastTargetId && (
-        <p className="run-bonus-note">
-          The monster targeted {combat.members.find(member =>
-            member.survivor.id === combat.lastTargetId)?.survivor.name || 'the front survivor'}.
-        </p>
-      )}
-
       <section className="survival-command-bar targeting-bar">
         <div>
           <strong>Target</strong>
@@ -209,7 +245,7 @@ export default function PartyCombatScreen({
               key={weakPoint.id}
               disabled={weakPoint.broken}
               className={selectedWeakPointId === weakPoint.id ? 'selected' : ''}
-              title={weakPoint.description}
+              title={formatValueForDisplay(weakPoint.description)}
               onClick={() => setCombat(current => selectPartyCombatTarget({
                 type: 'weakPoint',
                 id: weakPoint.id
@@ -249,7 +285,7 @@ export default function PartyCombatScreen({
           <summary>Combat Log ({combat.combatLog.length})</summary>
           <ul>
             {combat.combatLog.slice(-10).map((entry, index) => (
-              <li key={`${index}-${entry}`}>{entry}</li>
+              <li key={`combat-log-${index}`}>{formatHistoryDetail(entry)}</li>
             ))}
           </ul>
         </details>
@@ -260,8 +296,16 @@ export default function PartyCombatScreen({
           <div>{combat.status === 'won' ? 'Victory!' : 'Party Defeated'}</div>
           {brokenWeakPoints.map(weakPoint => (
             <p key={weakPoint.id}>
-              Broken weak point: {weakPoint.name} - {weakPoint.harvestResult?.quality || 'messy'} harvest.{' '}
-              {weakPoint.harvestResult?.impactText}
+              Broken weak point: {formatValueForDisplay(weakPoint.name)} -{' '}
+              {formatValueForDisplay(weakPoint.harvestResult?.quality) || 'messy'} harvest.{' '}
+              {formatHistoryDetail(
+                weakPoint.harvestResult?.impactText ||
+                weakPoint.harvestResult?.effect ||
+                weakPoint.onBreakEffect
+              )}
+              {weakPoint.onBreakEffect && (
+                <> {formatEffectForDisplay(weakPoint.onBreakEffect)}</>
+              )}
             </p>
           ))}
           {combat.members.flatMap((member, memberIndex) =>
@@ -269,7 +313,10 @@ export default function PartyCombatScreen({
               .filter(([, wound]) => wound.wounded)
               .map(([location, wound]) => (
                 <div key={`${member.survivor.id}-${location}`}>
-                  <p>{member.survivor.name}: {location} - {wound.penalty}</p>
+                  <p>
+                    {formatValueForDisplay(member.survivor.name)}:{' '}
+                    {formatValueForDisplay(location)} - {formatHistoryDetail(wound.penalty)}
+                  </p>
                   {!wound.severe && ['arms', 'body'].includes(location) && (
                     <button
                       type="button"
@@ -315,7 +362,7 @@ export default function PartyCombatScreen({
                     type="button"
                     key={action.id}
                     disabled={used || insufficient}
-                    title={`${action.name}: ${action.effect}`}
+                    title={`${formatValueForDisplay(action.name)}: ${formatHistoryDetail(action.effect)}`}
                     onClick={() => setCombat(current => usePartySurvivalAction(action.id, current))}
                   >
                     {action.name} ({action.cost})
@@ -354,6 +401,21 @@ export default function PartyCombatScreen({
               <Card
                 key={`${card.id}-${index}`}
                 card={card}
+                preview={getCardPreview({
+                  card,
+                  survivor: active.survivor,
+                  combatState: {
+                    ...active,
+                    monster: combat.monster,
+                    intentIndex: combat.intentIndex,
+                    selectedWeakPointId,
+                    hasMonsterBane: baneRevealsWeakPoints
+                  },
+                  monster: combat.monster,
+                  selectedTarget: combat.selectedCombatTarget,
+                  selectedWeakPoint,
+                  party: combat.members
+                })}
                 disabled={card.unplayable || card.cost > active.survivor.energy}
                 onPlay={() => setCombat(current => playPartyCard(index, current))}
               />

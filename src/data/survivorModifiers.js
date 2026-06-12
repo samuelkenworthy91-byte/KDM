@@ -26,7 +26,7 @@ const normalize = (entry, type, defaults = {}) => ({
   mechanicalEffectText:
     entry.mechanicalEffectText ||
     entry.effectText ||
-    entry.effect ||
+    (typeof entry.effect === 'string' ? entry.effect : null) ||
     entry.description ||
     'This legacy modifier has no additional rules text.',
   tags: entry.tags || defaults.tags || [type],
@@ -116,7 +116,7 @@ export function getSurvivorModifier(id, expectedType = 'trait') {
   }
   return {
     id: id || 'unknownLegacyTrait',
-    name: 'Unknown legacy trait',
+    name: 'Unknown legacy item',
     type: expectedType,
     shortDescription: 'This modifier came from an older save and is no longer recognized.',
     fullDescription: 'This modifier came from an older save. It is preserved so the save remains usable.',

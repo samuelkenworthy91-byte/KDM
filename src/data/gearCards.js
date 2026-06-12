@@ -139,7 +139,7 @@ const exactSets = {
   ],
   lionhideBuckler: [
     skill('lionhideBuckler', 'catchThePounce', 'Catch the Pounce', 1, 'Gain 8 block.', [{ type: 'block', amount: 8 }], ['block', 'pounce', 'counter']),
-    attack('lionhideBuckler', 'maneRimStrike', 'Mane-Rim Strike', 1, 'Deal damage equal to half your block, maximum 7.', [{ type: 'damageFromBlock', divisor: 2, maximum: 7 }], ['attack', 'block', 'counter']),
+    attack('lionhideBuckler', 'maneRimStrike', 'Mane-Rim Strike', 1, 'Deal damage equal to half your block, up to 20.', [{ type: 'damageFromBlock', divisor: 2, maximum: 20 }], ['attack', 'block', 'counter']),
     skill('lionhideBuckler', 'standUnderClaws', 'Stand Under Claws', 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], ['block', 'exhaust'], true)
   ],
   maneCloak: [
@@ -182,7 +182,7 @@ const exactSets = {
   ],
   trampleBoots: [
     skill('trampleBoots', 'braceHooves', 'Brace Hooves', 1, 'Gain 7 block.', [{ type: 'block', amount: 7 }], ['block']),
-    attack('trampleBoots', 'returnTrample', 'Return Trample', 1, 'Deal damage equal to half your block, maximum 8.', [{ type: 'damageFromBlock', divisor: 2, maximum: 8 }], ['block']),
+    attack('trampleBoots', 'returnTrample', 'Return Trample', 1, 'Deal damage equal to half your block, up to 20.', [{ type: 'damageFromBlock', divisor: 2, maximum: 20 }], ['block']),
     attack('trampleBoots', 'stampForward', 'Stamp Forward', 1, 'Deal 4 damage and gain 2 block.', [{ type: 'damage', amount: 4 }, { type: 'block', amount: 2 }], ['block'])
   ],
   hungerDrum: [
@@ -441,7 +441,7 @@ function profileCards(gearId, name, profile) {
     case 'chargeAfterBlock':
       return [guard('Lower', 'Lower the Horn', 6, [{ type: 'nextAttackBonus', amount: 2 }], ['heavy', 'breaker']), strike('Charge', 'Horn Charge', 6, { effect: { bonusIfBlockThisTurn: 3 }, description: 'Deal 6 damage, +3 if block was gained this turn.' }, ['heavy', 'block', 'breaker'])];
     case 'blockDamage':
-      return [guard('Harden', 'Harden Resin', 7, [], ['counter']), attack(gearId, `${slug}Return`, `${name}: Return the Weight`, 1, 'Deal damage equal to half your current block, maximum 8.', [{ type: 'damageFromBlock', divisor: 2, maximum: 8 }], ['block', 'counter'])];
+      return [guard('Harden', 'Harden Resin', 7, [], ['counter']), attack(gearId, `${slug}Return`, `${name}: Return the Weight`, 1, 'Deal damage equal to half your current block, up to 20.', [{ type: 'damageFromBlock', divisor: 2, maximum: 20 }], ['block', 'counter'])];
     case 'survivalDraw':
       return [skill(gearId, `${slug}Flash`, `${name}: Jewel Flash`, 0, 'Gain 1 survival and draw 1. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'draw', amount: 1 }], ['survival', 'exhaust'], true), skill(gearId, `${slug}Wing`, `${name}: Wing Pattern`, 1, 'Clarify the tell and gain 3 block.', [{ type: 'revealIntentHint' }, { type: 'block', amount: 3 }], ['reveal', 'block'])];
     case 'bombBurst':
@@ -471,7 +471,7 @@ function profileCards(gearId, name, profile) {
     case 'healingSupport':
       return [skill(gearId, `${slug}Warm`, `${name}: Steady Warmth`, 0, 'Heal 1 HP and gain 1 survival. Exhaust.', [{ type: 'heal', amount: 1 }, { type: 'survival', amount: 1 }], ['wound', 'survival', 'exhaust'], true), guard('Comfort', 'Pearl Comfort', 5, [{ type: 'removePanicAny' }], ['panic'])];
     case 'reflectBlock':
-      return [skill(gearId, `${slug}Catch`, `${name}: Catch Noon`, 1, 'Gain 7 block, add 1 Panic, and improve the next Counter by 2.', [{ type: 'block', amount: 7 }, { type: 'addPanic', amount: 1 }, { type: 'nextCounterBonus', amount: 2 }], ['strange', 'panic', 'block', 'counter']), attack(gearId, `${slug}Return`, `${name}: Return the Glare`, 1, 'Deal damage equal to half your block, maximum 7.', [{ type: 'damageFromBlock', divisor: 2, maximum: 7 }], ['strange', 'panic', 'block'])];
+      return [skill(gearId, `${slug}Catch`, `${name}: Catch Noon`, 1, 'Gain 7 block, add 1 Panic, and improve the next Counter by 2.', [{ type: 'block', amount: 7 }, { type: 'addPanic', amount: 1 }, { type: 'nextCounterBonus', amount: 2 }], ['strange', 'panic', 'block', 'counter']), attack(gearId, `${slug}Return`, `${name}: Return the Glare`, 1, 'Deal damage equal to half your block, up to 20.', [{ type: 'damageFromBlock', divisor: 2, maximum: 20 }], ['strange', 'panic', 'block'])];
     case 'intimidation':
       return [skill(gearId, `${slug}Rise`, `${name}: Raise the Mane`, 0, 'Gain 1 survival and Mark the monster. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'markMonster' }], ['survival', 'marked', 'exhaust'], true), guard('Presence', 'Royal Presence', 6)];
     case 'highSurvival':

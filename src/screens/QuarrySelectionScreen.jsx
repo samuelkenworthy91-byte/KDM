@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatValueForDisplay } from '../utils/formatters.js';
 import {
   calculateAvailableQuarryTiers,
   getAvailableQuarryLevel,
@@ -60,7 +61,7 @@ export default function QuarrySelectionScreen({
             <strong>{quarry.name}</strong>
             <span>Monster Tier: {quarry.tier.charAt(0).toUpperCase() + quarry.tier.slice(1)}</span>
             <span>Highest defeated level: {getHighestDefeatedQuarryLevel(settlement, quarry.id)}</span>
-            <span>{quarry.description}</span>
+            <span>{formatValueForDisplay(quarry.description)}</span>
             <span>{getQuarryBehaviourLabel(quarry)}</span>
             {getQuarryBehaviourNote(quarry) && <span>{getQuarryBehaviourNote(quarry)}</span>}
           </button>

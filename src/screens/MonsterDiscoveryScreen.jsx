@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatValueForDisplay } from '../utils/formatters.js';
 import { resources } from '../data/resources.js';
 import { getQuarryBehaviourLabel, getQuarryBehaviourNote } from '../data/quarries.js';
 
@@ -14,7 +15,7 @@ export default function MonsterDiscoveryScreen({ quarries, storyText, onChoose, 
         {visible.map(quarry => (
           <button type="button" key={quarry.id} onClick={() => onChoose(quarry.id)}>
             <strong>{quarry.name}</strong>
-            <span>{quarry.description}</span>
+            <span>{formatValueForDisplay(quarry.description)}</span>
             <span>{getQuarryBehaviourLabel(quarry)}</span>
             {getQuarryBehaviourNote(quarry) && <span>{getQuarryBehaviourNote(quarry)}</span>}
             <span>Reveals: {quarry.associatedInnovations?.[0] || 'future settlement knowledge'}</span>

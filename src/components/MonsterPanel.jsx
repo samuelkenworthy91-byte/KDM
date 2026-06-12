@@ -1,4 +1,9 @@
 import React from 'react';
+import { formatValueForDisplay } from '../utils/formatters.js';
+import {
+  getIntentTargetRule,
+  getTargetingTell
+} from '../game/monsterTargeting.js';
 
 function clearerTell(intent) {
   const tags = intent?.tags || [];
@@ -14,10 +19,17 @@ function clearerTell(intent) {
   return 'The pattern becomes clearer, but exact consequences remain hidden.';
 }
 
-export default function MonsterPanel({ monster, intent, hasMonsterBane, intentHintLevel = 0 }) {
+export default function MonsterPanel({
+  monster,
+  intent,
+  hasMonsterBane,
+  intentHintLevel = 0,
+  likelyTargetNames = []
+}) {
+  const targetRule = getIntentTargetRule(intent, monster);
   return (
     <div className="combatant-panel monster-panel">
-      <h2>{monster.name}</h2>
+      <h2>{formatValueForDisplay(monster.name)}</h2>
       <p>HP: {monster.hp} / {monster.maxHp}</p>
       <p>Block: {monster.block}</p>
       {monster.level && <p>Quarry Level: {monster.level}</p>}
@@ -25,12 +37,19 @@ export default function MonsterPanel({ monster, intent, hasMonsterBane, intentHi
       {monster.passiveTell && (
         <p className="monster-passive">
           <strong>{hasMonsterBane ? 'Known behaviour:' : 'Creature nature:'}</strong>{' '}
-          {hasMonsterBane ? monster.passiveText : monster.passiveTell}
+          {formatValueForDisplay(hasMonsterBane ? monster.passiveText : monster.passiveTell)}
         </p>
       )}
       <div className="intent">
-        <strong>{hasMonsterBane ? intent.name : 'Creature Tell'}</strong>
-        <p>{hasMonsterBane ? intent.revealedText : intent.tellText}</p>
+        <strong>{hasMonsterBane ? formatValueForDisplay(intent.name) : 'Creature Tell'}</strong>
+        <p>{formatValueForDisplay(hasMonsterBane ? intent.revealedText : intent.tellText)}</p>
+        <p>{formatValueForDisplay(getTargetingTell(targetRule, hasMonsterBane))}</p>
+        {likelyTargetNames.length > 0 && (
+          <p>
+            Likely target{likelyTargetNames.length > 1 ? 's' : ''}:{' '}
+            {formatValueForDisplay(likelyTargetNames.join(', '))}
+          </p>
+        )}
         {!hasMonsterBane && intentHintLevel > 0 && <p>{clearerTell(intent)}</p>}
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatValueForDisplay } from '../utils/formatters.js';
 
 const choices = [
   { id: 'bindWounds', name: 'Bind Wounds', description: 'Heal 25% of max HP and remove one light wound.' },
@@ -17,7 +18,7 @@ export default function RestStopScreen({ onChoose }) {
         {choices.map(choice => (
           <button type="button" key={choice.id} onClick={() => onChoose(choice.id)}>
             <strong>{choice.name}</strong>
-            <span>{choice.description}</span>
+            <span>{formatValueForDisplay(choice.description)}</span>
           </button>
         ))}
       </div>

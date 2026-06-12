@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { graveLegacyList } from '../data/graveLegacies.js';
+import { formatModifierEffect, formatValueForDisplay } from '../utils/formatters.js';
 
 export default function GraveLegacyScreen({ summary, showAllChoices, onChooseLegacy }) {
   const visibleLegacies = showAllChoices ? graveLegacyList : graveLegacyList.slice(0, 4);
@@ -29,8 +30,8 @@ export default function GraveLegacyScreen({ summary, showAllChoices, onChooseLeg
             onClick={() => setSelectedLegacyId(legacy.id)}
           >
             <h3>{legacy.name}</h3>
-            <p>{legacy.description}</p>
-            <strong>{legacy.effect}</strong>
+            <p>{formatValueForDisplay(legacy.description)}</p>
+            <strong>{formatModifierEffect(legacy.effect)}</strong>
           </button>
         ))}
       </div>

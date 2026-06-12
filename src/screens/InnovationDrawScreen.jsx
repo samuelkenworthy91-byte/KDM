@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatEffectsForDisplay, formatValueForDisplay } from '../utils/formatters.js';
 
 export default function InnovationDrawScreen({
   cards,
@@ -13,14 +14,14 @@ export default function InnovationDrawScreen({
       <h2>The Settlement Attempts To Innovate</h2>
       <p>
         Paid: 1 settlementMemory and 3 basic resources
-        {paidResources?.length ? ` (${paidResources.join(', ')})` : ''}.
+        {paidResources?.length ? ` (${formatValueForDisplay(paidResources)})` : ''}.
       </p>
       {appliedCard ? (
         <article className="item-card built">
           <p className="eyebrow">Applied Effects</p>
           <h3>{appliedCard.name}</h3>
-          <p>{appliedCard.description}</p>
-          <p className="effect-text">{appliedCard.effects.join(' ')}</p>
+          <p>{formatValueForDisplay(appliedCard.description)}</p>
+          <p className="effect-text">{formatEffectsForDisplay(appliedCard.effects)}</p>
           <button type="button" onClick={onContinue}>Return to Settlement</button>
         </article>
       ) : (
@@ -29,8 +30,8 @@ export default function InnovationDrawScreen({
             <button type="button" key={card.id} onClick={() => onChoose(card.id)}>
               <strong>{card.name}</strong>
               <span>{card.category}</span>
-              <span>{card.description}</span>
-              <span>{card.effects.join(' ')}</span>
+              <span>{formatValueForDisplay(card.description)}</span>
+              <span>{formatEffectsForDisplay(card.effects) || 'Effect not described yet'}</span>
               <span>Choose</span>
             </button>
           ))}

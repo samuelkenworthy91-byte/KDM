@@ -9,7 +9,14 @@ const NODE_LABELS = {
   boss: 'Boss'
 };
 
-export default function MapScreen({ map, onSelectNode, resources }) {
+export default function MapScreen({ map, onSelectNode, resources, onRetreat }) {
+  const [confirmingRetreat, setConfirmingRetreat] = React.useState(false);
+  const [retreatPending, setRetreatPending] = React.useState(false);
+  const confirmRetreat = () => {
+    if (retreatPending) return;
+    setRetreatPending(true);
+    onRetreat();
+  };
   return (
     <section className="map-screen">
       <header className="screen-header">
@@ -21,6 +28,24 @@ export default function MapScreen({ map, onSelectNode, resources }) {
           Spoils: {resources.length ? resources.join(', ') : 'None'}
         </div>
       </header>
+
+      {!confirmingRetreat ? (
+        <button type="button" onClick={() => setConfirmingRetreat(true)}>Retreat</button>
+      ) : (
+        <section className="event-outcome" role="dialog" aria-labelledby="retreat-title">
+          <h3 id="retreat-title">Retreat from the Hunt?</h3>
+          <p>
+            The party drags itself back through the dark. They keep what they have gathered so far,
+            but the settlement pays the price.
+          </p>
+          <div className="event-choices">
+            <button type="button" disabled={retreatPending} onClick={confirmRetreat}>
+              {retreatPending ? 'Resolving Retreat...' : 'Confirm Retreat'}
+            </button>
+            <button type="button" onClick={() => setConfirmingRetreat(false)}>Continue Hunt</button>
+          </div>
+        </section>
+      )}
 
       <div className="hunt-map" aria-label="Hunt map">
         {map.map((row, rowIndex) => (

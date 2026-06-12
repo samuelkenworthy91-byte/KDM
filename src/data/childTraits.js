@@ -30,8 +30,8 @@ export const childTraits = {
   scarless: trait(
     'scarless', 'Scarless',
     'Wounds close strangely clean on their skin.',
-    'Once per hunt, dropping to 0 HP leaves them at 1 HP instead.',
-    { preventDeathOnce: true }
+    'This no longer prevents death. Start each combat with 1 block instead.',
+    { startingBlock: 1 }
   ),
   luckyBirth: trait(
     'luckyBirth', 'Lucky Birth',

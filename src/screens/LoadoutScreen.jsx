@@ -7,23 +7,30 @@ import {
   getActiveProficiencyPassive,
   weaponProficiencyDefinitions
 } from '../data/weaponProficiency.js';
+import {
+  getLegacyDescription,
+  getLegacyDisplayName
+} from '../game/legacyContent.js';
+import { formatValueForDisplay } from '../utils/formatters.js';
 
 function GearCards({ gear }) {
   const item = equipment[gear.equipmentId];
   return (
     <article className="item-card">
-      <h4>{item?.name || gear.equipmentId}</h4>
+      <h4>{getLegacyDisplayName(equipment, gear.equipmentId, 'gear')}</h4>
+      {!item && <small>Legacy id: {gear.equipmentId}</small>}
       <p>
         Type: {item?.weaponType || 'Non-weapon'} | Hands: {item?.hands ?? 0} | Slot: {item?.slot}
       </p>
       <p>Keywords: {item?.keywords?.join(', ') || 'Survival'}</p>
-      <p>{item?.passiveText}</p>
+      <p>{formatValueForDisplay(item?.passiveText)}</p>
       {item?.affectsOtherSurvivors && <p className="effect-text">Affects other survivors.</p>}
       {item?.deckIdentity && <p className="effect-text">Deck identity: {item.deckIdentity}</p>}
       <ul>
         {(item?.cardPackage || []).map(cardId => (
           <li key={cardId}>
-            <strong>{cards[cardId]?.name || cardId}</strong>: {cards[cardId]?.description}
+            <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
+            {getLegacyDescription(cards, cardId)}
           </li>
         ))}
       </ul>
@@ -90,10 +97,16 @@ export default function LoadoutScreen({
       {(survivor.injuries?.length > 0 || survivor.disorders?.length > 0) && (
         <ul className="condition-warning-list">
           {(survivor.injuries || []).map(id => (
-            <li key={id}><strong>{injuries[id]?.name || id}:</strong> {injuries[id]?.effect}</li>
+            <li key={id}>
+              <strong>{getLegacyDisplayName(injuries, id, 'injury')}:</strong>{' '}
+              {getLegacyDescription(injuries, id)}
+            </li>
           ))}
           {(survivor.disorders || []).map(id => (
-            <li key={id}><strong>{disorders[id]?.name || id}:</strong> {disorders[id]?.effect}</li>
+            <li key={id}>
+              <strong>{getLegacyDisplayName(disorders, id, 'disorder')}:</strong>{' '}
+              {getLegacyDescription(disorders, id)}
+            </li>
           ))}
         </ul>
       )}
@@ -119,13 +132,14 @@ export default function LoadoutScreen({
           const selected = selectedInstanceIds.includes(gear.instanceId);
           return (
             <article className={`item-card ${selected ? 'built' : ''}`} key={gear.instanceId}>
-              <h4>{equipment[gear.equipmentId]?.name || gear.equipmentId}</h4>
+              <h4>{getLegacyDisplayName(equipment, gear.equipmentId, 'gear')}</h4>
+              {!equipment[gear.equipmentId] && <small>Legacy id: {gear.equipmentId}</small>}
               <p>
                 Type: {equipment[gear.equipmentId]?.weaponType || 'Non-weapon'} |{' '}
                 Hands: {equipment[gear.equipmentId]?.hands ?? 0} | Slot: {equipment[gear.equipmentId]?.slot}
               </p>
               <p>Keywords: {equipment[gear.equipmentId]?.keywords?.join(', ') || 'Survival'}</p>
-              <p>{equipment[gear.equipmentId]?.passiveText}</p>
+              <p>{formatValueForDisplay(equipment[gear.equipmentId]?.passiveText)}</p>
               {equipment[gear.equipmentId]?.affectsOtherSurvivors && (
                 <p className="effect-text">Affects other survivors.</p>
               )}
@@ -137,7 +151,8 @@ export default function LoadoutScreen({
               <ul>
                 {(equipment[gear.equipmentId]?.cardPackage || []).map(cardId => (
                   <li key={cardId}>
-                    <strong>{cards[cardId]?.name || cardId}</strong>: {cards[cardId]?.description}
+                    <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
+                    {getLegacyDescription(cards, cardId)}
                   </li>
                 ))}
               </ul>
@@ -164,7 +179,8 @@ export default function LoadoutScreen({
               <ul>
                 {(item?.cardPackage || []).map((cardId, cardIndex) => (
                   <li key={`${cardId}-${cardIndex}`}>
-                    <strong>{cards[cardId]?.name || cardId}</strong>: {cards[cardId]?.description}
+                    <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
+                    {getLegacyDescription(cards, cardId)}
                   </li>
                 ))}
               </ul>

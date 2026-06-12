@@ -14,6 +14,7 @@ import { syncFightingArtCards } from './survivorProgression.js';
 const LEGACY_SAVE_KEY = 'settlement';
 const ACTIVE_SLOT_KEY = 'lanternDeckbuilder.activeSlot';
 const SLOT_COUNT = 3;
+const SAVE_VERSION = 2;
 const BASE_INNOVATION_POOL_IDS = [
   'language', 'symposium', 'ammonia', 'cooking', 'bloodletting', 'graves',
   'oralTradition', 'sharedWarnings', 'trailSignals'
@@ -128,6 +129,7 @@ export function createSurvivor(name = 'Nameless Survivor', gender = 'other', opt
 }
 
 export const defaultSettlement = {
+  saveVersion: SAVE_VERSION,
   settlementName: 'Unnamed Settlement',
   population: 10,
   settlementMemory: 0,
@@ -180,6 +182,9 @@ export const defaultSettlement = {
   revealedNemesisIds: [],
   seenNemesisLoreIds: [],
   settlementHistory: [],
+  huntRewardLedger: {},
+  temporarySettlementModifiers: {},
+  quarryRetreatModifiers: {},
   lastNemesisResult: null,
   discoveredQuarries: ['paleHuntLion'],
   unlockedQuarries: ['paleHuntLion'],
@@ -391,6 +396,7 @@ export function normalizeSettlement(data = {}) {
       ? data.deadSurvivors
       : (Array.isArray(data.graveHistory) ? data.graveHistory.length : 0),
     survivors,
+    livingSurvivors,
     activeSurvivorId,
     maxHuntPartySize: Math.min(4, Math.max(1, Number(data.maxHuntPartySize) || 1)),
     huntingParty: (Array.isArray(data.huntingParty) ? data.huntingParty : [activeSurvivorId])
@@ -475,6 +481,17 @@ export function normalizeSettlement(data = {}) {
       ? [...new Set(data.seenNemesisLoreIds)]
       : [],
     settlementHistory: Array.isArray(data.settlementHistory) ? data.settlementHistory : [],
+    huntRewardLedger: data.huntRewardLedger && typeof data.huntRewardLedger === 'object'
+      ? data.huntRewardLedger
+      : {},
+    temporarySettlementModifiers:
+      data.temporarySettlementModifiers && typeof data.temporarySettlementModifiers === 'object'
+        ? data.temporarySettlementModifiers
+        : {},
+    quarryRetreatModifiers:
+      data.quarryRetreatModifiers && typeof data.quarryRetreatModifiers === 'object'
+        ? data.quarryRetreatModifiers
+        : {},
     lastNemesisResult: data.lastNemesisResult || null,
     rumouredInnovations: Array.isArray(data.rumouredInnovations) ? data.rumouredInnovations : [],
     unlockedRecipeFamilies: [...new Set([
@@ -486,6 +503,32 @@ export function normalizeSettlement(data = {}) {
     discoveredQuarries: [...new Set(['paleHuntLion', ...discoveredQuarryIds])],
     unlockedQuarries: [...new Set(['paleHuntLion', ...discoveredQuarryIds])]
   };
+}
+
+export function safeParseSave(rawSave, slotId = 1) {
+  if (typeof rawSave !== 'string' || !rawSave.trim()) return null;
+  try {
+    const parsed = JSON.parse(rawSave);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('Save root is not an object.');
+    }
+    return normalizeSettlement(parsed);
+  } catch (error) {
+    if (import.meta.env?.DEV) {
+      console.warn(`[Save recovery] Save Slot ${slotId} is malformed.`, error);
+    }
+    return normalizeSettlement({
+      ...defaultSettlement,
+      settlementName: `Recovered Save Slot ${slotId}`,
+      recoveryReason: 'The save data was malformed. The original data was preserved as a backup.',
+      settlementHistory: [{
+        type: 'recovery',
+        message: 'A malformed save was opened in recovery mode.',
+        reason: error instanceof Error ? error.message : 'Malformed save',
+        timestamp: new Date().toISOString()
+      }]
+    });
+  }
 }
 
 export function migrateLegacySave() {
@@ -519,12 +562,14 @@ export function loadSettlement(slotId = getActiveSlot()) {
 
   migrateLegacySave();
 
-  try {
-    const rawSave = localStorage.getItem(getSaveSlotKey(slotId));
-    return rawSave ? normalizeSettlement(JSON.parse(rawSave)) : null;
-  } catch (error) {
-    return null;
+  const rawSave = localStorage.getItem(getSaveSlotKey(slotId));
+  if (!rawSave) return null;
+  const parsed = safeParseSave(rawSave, slotId);
+  if (parsed?.recoveryReason) {
+    const backupKey = `${getSaveSlotKey(slotId)}.brokenBackup`;
+    if (!localStorage.getItem(backupKey)) localStorage.setItem(backupKey, rawSave);
   }
+  return parsed;
 }
 
 export function saveSettlement(data, slotId = getActiveSlot()) {
@@ -532,7 +577,11 @@ export function saveSettlement(data, slotId = getActiveSlot()) {
     return;
   }
 
-  localStorage.setItem(getSaveSlotKey(slotId), JSON.stringify(normalizeSettlement(data)));
+  try {
+    localStorage.setItem(getSaveSlotKey(slotId), JSON.stringify(normalizeSettlement(data)));
+  } catch (error) {
+    console.warn(`[Save recovery] Could not save Slot ${slotId}.`, error);
+  }
 }
 
 export function deleteSettlement(slotId) {

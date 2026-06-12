@@ -2,17 +2,22 @@ import {
   applyMonsterIntent,
   createCombatState,
   getCounterWeakPointPreview,
+  getMonsterIntentForResolution,
   playCard,
   useSurvivalAction
 } from './combatLogic.js';
 import { cards } from '../data/cards.js';
 import { drawCards } from './deckLogic.js';
-import { applyWoundToMember, treatWound } from '../data/woundTables.js';
+import { treatWound } from '../data/woundTables.js';
 import {
   getTellBreakModifier,
   getWeakPointTellState,
   getWeaponSuitability
 } from '../data/weakPoints.js';
+import {
+  isLivingPartyMember,
+  selectMonsterTargets
+} from './monsterTargeting.js';
 
 const HAND_SIZE = 5;
 const ENERGY_PER_TURN = 3;
@@ -23,13 +28,20 @@ function syncMonster(members, monster) {
 
 function livingIndexes(members) {
   return members
-    .map((member, index) => member.survivor.hp > 0 ? index : -1)
+    .map((member, index) =>
+      member.survivor.hp > 0 &&
+      member.survivor.isAlive !== false &&
+      member.survivor.alive !== false &&
+      member.status !== 'dead'
+        ? index
+        : -1
+    )
     .filter(index => index >= 0);
 }
 
 function buildTurnOrder(members) {
   return [
-    ...members.filter(member => member.survivor.hp > 0).map(member => member.survivor.id),
+    ...livingIndexes(members).map(index => members[index].survivor.id),
     'monster'
   ];
 }
@@ -103,69 +115,175 @@ function applyPendingEffects(state, targetIndex) {
   return { member, pendingPartyEffects: remaining.filter(effect => effect.target !== 'all') };
 }
 
-function chooseTargetIndex(state, intent) {
-  const living = livingIndexes(state.members);
-  if (!living.length) return -1;
-  const forcedIndex = living.find(index =>
-    state.members[index].survivor.id === state.forcedMonsterTargetId
-  );
-  if (forcedIndex !== undefined) return forcedIndex;
-  const rule = intent?.target || intent?.targetingRule || 'front';
-  if (rule === 'lowestHp') {
-    return living.reduce((chosen, index) =>
-      state.members[index].survivor.hp < state.members[chosen].survivor.hp ? index : chosen
-    , living[0]);
-  }
-  if (rule === 'mostBlock') {
-    return living.reduce((chosen, index) =>
-      state.members[index].survivor.block > state.members[chosen].survivor.block ? index : chosen
-    , living[0]);
-  }
-  if (rule === 'random') return living[Math.floor(Math.random() * living.length)];
-  return living[0];
+export function killSurvivorImmediately(member, source) {
+  const destroyedBoundGear = [
+    ...(member.destroyedBoundGear || []),
+    ...(member.boundGear || [])
+  ];
+  return {
+    ...member,
+    status: 'dead',
+    causeOfDeath: source,
+    destroyedBoundGear,
+    boundGear: [],
+    hand: [],
+    drawPile: [],
+    discardPile: [],
+    exhaustPile: [],
+    survivor: {
+      ...member.survivor,
+      hp: 0,
+      alive: false,
+      isAlive: false
+    }
+  };
 }
 
-function resolveMonsterTurn(state) {
-  const intent = state.monster.intents[state.intentIndex];
-  const targetIndex = chooseTargetIndex(state, intent);
-  if (targetIndex < 0) return { ...state, status: 'lost', activeCombatant: 'monster' };
-
-  const targetResult = applyMonsterIntent(state.monster, {
-    ...state.members[targetIndex],
-    monster: state.monster,
-    intentIndex: state.intentIndex,
-    status: 'playing'
-  });
-  const damage = targetResult.damageTakenThisTurn || 0;
-  const severeIntent = intent?.tags?.some(tag => ['severe', 'deadly'].includes(tag));
-  const needsWound = targetResult.survivor.hp <= 0 || severeIntent || damage >= 8;
-  let woundedTarget = targetResult;
-  if (needsWound) {
-    woundedTarget = applyWoundToMember(targetResult, {
-      severe: severeIntent,
-      damage,
-      injuryProtection: targetResult.injuryProtection > 0,
-      preventFatal: targetResult.traits?.includes('scarless') && !targetResult.scarlessUsed
-    });
-    if (targetResult.injuryProtection > 0) {
-      woundedTarget.injuryProtection = Math.max(0, targetResult.injuryProtection - 1);
-    }
-    if (woundedTarget.survivor.hp === 1 &&
-      woundedTarget.fightingArts?.includes('woundLaugh') &&
-      !woundedTarget.woundLaughUsed) {
-      woundedTarget.survivor.survival = Math.min(
-        woundedTarget.survivor.maxSurvival,
-        woundedTarget.survivor.survival + 1
-      );
-      woundedTarget.woundLaughUsed = true;
-    }
-  }
-  let members = state.members.map((member, index) =>
-    index === targetIndex ? woundedTarget : member
+function killZeroHpMembers(members, source) {
+  return members.map(member =>
+    member.survivor.hp <= 0 && member.status !== 'dead'
+      ? killSurvivorImmediately(member, source)
+      : member
   );
-  const monster = targetResult.monster;
+}
+
+function removeTransientTargetFields(value = {}) {
+  const {
+    selectedTargetIds,
+    targetId,
+    currentTargetId,
+    focusedTargetId,
+    forcedMonsterTargetId,
+    lastSelectedTargetId,
+    pendingMonsterTargets,
+    pendingTarget,
+    targetMemory,
+    markedTarget,
+    lockTarget,
+    targetQueue,
+    ...rest
+  } = value;
+  return rest;
+}
+
+function clearMonsterTargetState(monster) {
+  const clearedMonster = removeTransientTargetFields(monster);
+  return {
+    ...clearedMonster,
+    currentIntent: null,
+    intents: (clearedMonster.intents || []).map(removeTransientTargetFields)
+  };
+}
+
+function clearCombatTargetState(state) {
+  return {
+    ...removeTransientTargetFields(state),
+    monster: clearMonsterTargetState(state.monster),
+    lastTargetId: null,
+    lastTargetIds: [],
+    lastTargetRule: null
+  };
+}
+
+function formatTargetingLog(monster, intent, selection, members) {
+  const names = selection.targets.map(targetId =>
+    members.find(member => member.survivor.id === targetId)?.survivor.name
+  ).filter(Boolean);
+  if (selection.targetRule === 'all') {
+    return `${monster.name} hits all living survivors.`;
+  }
+  if (!names.length) return `${monster.name} uses ${intent.name} without choosing a survivor.`;
+  return `${monster.name} randomly targets ${names.join(' and ')}.`;
+}
+
+export function resolveMonsterTurn(state, { random = Math.random } = {}) {
+  const previousTargetIds = [
+    ...(state.lastTargetIds || []),
+    ...(state.monster?.currentIntent?.selectedTargetIds || [])
+  ];
+  state = clearCombatTargetState(state);
+  const intent = getMonsterIntentForResolution(state.monster, state.intentIndex);
+  let selection = selectMonsterTargets({
+    intent,
+    monster: state.monster,
+    party: state.members,
+    combatState: state,
+    random
+  });
+  if (!livingIndexes(state.members).length) {
+    return { ...state, status: 'lost', activeCombatant: 'monster' };
+  }
+  const validTargetIds = selection.targets.filter(targetId =>
+    state.members.some(member =>
+      member.survivor.id === targetId && isLivingPartyMember(member)
+    )
+  );
+  if (validTargetIds.length !== selection.targets.length) {
+    selection = selectMonsterTargets({
+      intent,
+      monster: state.monster,
+      party: state.members,
+      combatState: state,
+      random
+    });
+  } else {
+    selection = { ...selection, targets: validTargetIds };
+  }
+  if (import.meta.env?.DEV) {
+    const livingIds = state.members
+      .filter(isLivingPartyMember)
+      .map(member => member.survivor.id);
+    console.debug(
+      `Monster target roll: turn=${state.round + 1} ` +
+      `living=[${livingIds.join(',')}] selected=[${selection.targets.join(',')}] ` +
+      `previous=[${previousTargetIds.join(',')}] freshlyRolled=true`
+    );
+  }
+
+  const selectedIntent = {
+    ...intent,
+    selectedTargetIds: [...selection.targets],
+    selectedTargetRule: selection.targetRule,
+    targetExplanation: selection.targetExplanation
+  };
+  let monster = {
+    ...state.monster,
+    currentIntent: selectedIntent
+  };
+  const targetIds = selection.targets;
+  const resolutionIds = targetIds.length
+    ? targetIds
+    : [state.members[livingIndexes(state.members)[0]].survivor.id];
+  let members = [...state.members];
+  const intentMonster = monster;
+  let resolvedMonster = monster;
+  const resolutionLog = [];
+  resolutionIds.forEach((targetId, resolutionIndex) => {
+    const targetIndex = members.findIndex(member => member.survivor.id === targetId);
+    if (targetIndex < 0) return;
+    const targetResult = applyMonsterIntent(intentMonster, {
+      ...members[targetIndex],
+      monster: intentMonster,
+      intentIndex: state.intentIndex,
+      resolvedIntent: selectedIntent,
+      status: 'playing'
+    });
+    if (resolutionIndex === 0) resolvedMonster = targetResult.monster;
+    if (!targetIds.includes(targetId)) return;
+    let resolvedTarget = targetResult;
+    if (targetResult.survivor.hp <= 0) {
+      resolvedTarget = killSurvivorImmediately(
+        targetResult,
+        `${state.monster.name}: ${intent.name}`
+      );
+      resolutionLog.push(`${targetResult.survivor.name} is killed by ${state.monster.name}.`);
+    }
+    members[targetIndex] = resolvedTarget;
+  });
+  monster = clearMonsterTargetState(resolvedMonster);
   members = syncMonster(members, monster);
   const living = livingIndexes(members);
+  const targetingLog = formatTargetingLog(state.monster, intent, selection, state.members);
 
   if (!living.length) {
     return {
@@ -176,7 +294,10 @@ function resolveMonsterTurn(state) {
       intentIndex: (state.intentIndex + 1) % monster.intents.length,
       activeCombatant: 'monster',
       status: 'lost',
-      lastTargetId: members[targetIndex].survivor.id
+      lastTargetId: null,
+      lastTargetIds: [],
+      lastTargetRule: null,
+      combatLog: [...(state.combatLog || []), targetingLog, ...resolutionLog]
     };
   }
 
@@ -194,15 +315,17 @@ function resolveMonsterTurn(state) {
     activePartyIndex: firstIndex,
     activeCombatant: members[firstIndex].survivor.id,
     status: monster.hp <= 0 ? 'won' : 'playing',
-    lastTargetId: members[targetIndex].survivor.id,
+    lastTargetId: null,
+    lastTargetIds: [],
+    lastTargetRule: null,
+    combatLog: [...(state.combatLog || []), targetingLog, ...resolutionLog],
     round: state.round + 1,
     selectedCombatTarget: state.selectedCombatTarget?.type === 'weakPoint' &&
       monster.weakPoints?.some(point =>
         point.id === state.selectedCombatTarget.id && !point.broken
       )
       ? state.selectedCombatTarget
-      : { type: 'monster', id: monster.id || 'monster' },
-    forcedMonsterTargetId: null
+      : { type: 'monster', id: monster.id || 'monster' }
   };
 }
 
@@ -210,21 +333,37 @@ export function createPartyCombatState(monster, partyBonuses, pendingPartyEffect
   const members = partyBonuses.map(bonus => {
     const member = createCombatState(monster, bonus);
     member.survivor.id = bonus.survivor.id;
+    if (
+      member.survivor.hp <= 0 ||
+      bonus.survivor.alive === false ||
+      bonus.survivor.isAlive === false
+    ) {
+      return killSurvivorImmediately(
+        member,
+        bonus.survivor.causeOfDeath || 'Previous combat damage'
+      );
+    }
     return member;
   });
+  const combatMonster = members[0]?.monster || monster;
+  const firstIndex = livingIndexes(members)[0] ?? -1;
   const state = {
-    monster,
-    members: syncMonster(members, monster),
+    monster: combatMonster,
+    members: syncMonster(members, combatMonster),
     combatTurnOrder: buildTurnOrder(members),
-    activeCombatant: members[0]?.survivor.id || 'monster',
-    activePartyIndex: members.length ? 0 : -1,
+    activeCombatant: firstIndex >= 0 ? members[firstIndex].survivor.id : 'monster',
+    activePartyIndex: firstIndex,
     intentIndex: 0,
     round: 0,
     pendingPartyEffects,
-    status: 'playing',
+    status: firstIndex >= 0 ? 'playing' : 'lost',
     lastTargetId: null,
     selectedCombatTarget: { type: 'monster', id: monster.id || 'monster' },
-    forcedMonsterTargetId: null,
+    lastAttackerId: null,
+    lastWeakPointBreakerId: null,
+    lastSupportUserId: null,
+    lastTargetIds: [],
+    lastTargetRule: null,
     combatLog: [`${monster.name} reveals a tell. The party acts first.`]
   };
   return state;
@@ -232,6 +371,7 @@ export function createPartyCombatState(monster, partyBonuses, pendingPartyEffect
 
 export function playPartyCard(cardIndex, state) {
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
+  if (!livingIndexes(state.members).includes(state.activePartyIndex)) return endPartyTurn(state);
   const partyHasMonsterBane = state.members.some(member =>
     member.survivor.hp > 0 && (
       member.hasMonsterBane ||
@@ -245,6 +385,8 @@ export function playPartyCard(cardIndex, state) {
     (state.monster.weakPoints || []).map(point => [point.id, point.broken])
   );
   const monsterHpBefore = state.monster.hp;
+  const activeBefore = state.members[state.activePartyIndex];
+  const playedCard = activeBefore.hand[cardIndex];
   const active = playCard(cardIndex, {
     ...state.members[state.activePartyIndex],
     monster: state.monster,
@@ -260,28 +402,78 @@ export function playPartyCard(cardIndex, state) {
     brokeWeakPointThisHunt: state.members[state.activePartyIndex].brokeWeakPointThisHunt ||
       (active.monster.weakPoints || []).some(point => point.broken && !beforeWeakPoints.get(point.id)),
     dealtFinalBlowThisHunt: state.members[state.activePartyIndex].dealtFinalBlowThisHunt ||
-      (monsterHpBefore > 0 && active.monster.hp <= 0)
+      (monsterHpBefore > 0 && active.monster.hp <= 0),
+    damageDealtThisCombat: (activeBefore.damageDealtThisCombat || 0) +
+      Math.max(0, monsterHpBefore - active.monster.hp),
+    weakPointsBrokenThisCombat: (activeBefore.weakPointsBrokenThisCombat || 0) +
+      (active.monster.weakPoints || []).filter(point =>
+        point.broken && !beforeWeakPoints.get(point.id)
+      ).length,
+    usedSupportThisCombat: activeBefore.usedSupportThisCombat ||
+      playedCard?.type === 'skill' ||
+      playedCard?.effects?.some(effect => effect.type === 'partyEffect')
   };
-  const members = syncMonster(
+  const brokeWeakPoint = cleanedActive.weakPointsBrokenThisCombat >
+    (activeBefore.weakPointsBrokenThisCombat || 0);
+  const usedSupport = cleanedActive.usedSupportThisCombat && !activeBefore.usedSupportThisCombat;
+  let members = syncMonster(
     state.members.map((member, index) => index === state.activePartyIndex ? cleanedActive : member),
     active.monster
   );
-  return {
+  members = killZeroHpMembers(members, `${active.survivor.name}: self-inflicted damage`);
+  const living = livingIndexes(members);
+  const activeDied = members[state.activePartyIndex]?.status === 'dead';
+  const deathLog = activeDied
+    ? [`${active.survivor.name} is killed by self-inflicted damage.`]
+    : [];
+  const nextLivingIndex = activeDied
+    ? living.find(index => index > state.activePartyIndex)
+    : state.activePartyIndex;
+  const nextState = {
     ...state,
     members,
     monster: active.monster,
     combatTurnOrder: buildTurnOrder(members),
     pendingPartyEffects: [...(state.pendingPartyEffects || []), ...emitted],
-    forcedMonsterTargetId: active.forceNextMonsterTarget
+    lastAttackerId: playedCard?.type === 'attack'
       ? active.survivor.id
-      : state.forcedMonsterTargetId,
-    combatLog: [...(state.combatLog || []), ...(active.combatLogEntries || [])],
-    status: active.monster.hp <= 0 ? 'won' : 'playing',
+      : state.lastAttackerId,
+    lastWeakPointBreakerId: brokeWeakPoint
+      ? active.survivor.id
+      : state.lastWeakPointBreakerId,
+    lastSupportUserId: usedSupport
+      ? active.survivor.id
+      : state.lastSupportUserId,
+    combatLog: [
+      ...(state.combatLog || []),
+      ...(active.combatLogEntries || []),
+      ...deathLog
+    ],
+    activePartyIndex: activeDied ? (nextLivingIndex ?? -1) : state.activePartyIndex,
+    activeCombatant: activeDied
+      ? (nextLivingIndex !== undefined ? members[nextLivingIndex].survivor.id : 'monster')
+      : state.activeCombatant,
+    status: living.length
+      ? (active.monster.hp <= 0 ? 'won' : 'playing')
+      : 'lost',
     selectedCombatTarget: selectedWeakPointId &&
       active.monster.weakPoints?.some(point => point.id === selectedWeakPointId && !point.broken)
       ? state.selectedCombatTarget
       : { type: 'monster', id: active.monster.id || 'monster' }
   };
+  if (
+    activeDied &&
+    living.length &&
+    nextLivingIndex === undefined &&
+    active.monster.hp > 0
+  ) {
+    return resolveMonsterTurn({
+      ...nextState,
+      activePartyIndex: -1,
+      activeCombatant: 'monster'
+    });
+  }
+  return nextState;
 }
 
 export function selectPartyCombatTarget(target, state) {
@@ -397,6 +589,7 @@ export function treatPartyWound(memberIndex, location, treatmentType, state) {
 
 export function usePartySurvivalAction(actionId, state) {
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
+  if (!livingIndexes(state.members).includes(state.activePartyIndex)) return endPartyTurn(state);
   const partyHasMonsterBane = state.members.some(member =>
     member.survivor.hp > 0 && (
       member.hasMonsterBane ||
@@ -423,8 +616,17 @@ export function usePartySurvivalAction(actionId, state) {
     brokeWeakPointThisHunt: state.members[state.activePartyIndex].brokeWeakPointThisHunt ||
       (active.monster.weakPoints || []).some(point => point.broken && !beforeWeakPoints.get(point.id)),
     dealtFinalBlowThisHunt: state.members[state.activePartyIndex].dealtFinalBlowThisHunt ||
-      (monsterHpBefore > 0 && active.monster.hp <= 0)
+      (monsterHpBefore > 0 && active.monster.hp <= 0),
+    damageDealtThisCombat: (state.members[state.activePartyIndex].damageDealtThisCombat || 0) +
+      Math.max(0, monsterHpBefore - active.monster.hp),
+    weakPointsBrokenThisCombat:
+      (state.members[state.activePartyIndex].weakPointsBrokenThisCombat || 0) +
+      (active.monster.weakPoints || []).filter(point =>
+        point.broken && !beforeWeakPoints.get(point.id)
+      ).length
   };
+  const brokeWeakPoint = trackedActive.weakPointsBrokenThisCombat >
+    (state.members[state.activePartyIndex].weakPointsBrokenThisCombat || 0);
   const members = syncMonster(
     state.members.map((member, index) => index === state.activePartyIndex ? trackedActive : member),
     active.monster
@@ -433,9 +635,12 @@ export function usePartySurvivalAction(actionId, state) {
     ...state,
     members,
     monster: active.monster,
-    forcedMonsterTargetId: active.forceNextMonsterTarget
+    lastAttackerId: actionId === 'counter'
       ? active.survivor.id
-      : state.forcedMonsterTargetId,
+      : state.lastAttackerId,
+    lastWeakPointBreakerId: brokeWeakPoint
+      ? active.survivor.id
+      : state.lastWeakPointBreakerId,
     combatLog: [...(state.combatLog || []), ...(active.combatLogEntries || [])],
     status: active.monster.hp <= 0 ? 'won' : 'playing',
     selectedCombatTarget: selectedWeakPointId &&
@@ -447,6 +652,24 @@ export function usePartySurvivalAction(actionId, state) {
 
 export function endPartyTurn(state) {
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
+  if (!livingIndexes(state.members).includes(state.activePartyIndex)) {
+    const nextIndex = livingIndexes(state.members)[0];
+    if (nextIndex === undefined) {
+      return {
+        ...state,
+        status: 'lost',
+        activePartyIndex: -1,
+        activeCombatant: 'monster',
+        combatTurnOrder: buildTurnOrder(state.members)
+      };
+    }
+    return {
+      ...state,
+      activePartyIndex: nextIndex,
+      activeCombatant: state.members[nextIndex].survivor.id,
+      combatTurnOrder: buildTurnOrder(state.members)
+    };
+  }
   const quietMadness = state.members[state.activePartyIndex].disorders?.includes('quietMadness');
   const noAttackSurvival = quietMadness &&
     state.members[state.activePartyIndex].attacksPlayedThisTurn === 0 ? 1 : 0;

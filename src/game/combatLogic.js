@@ -11,6 +11,7 @@ import {
   getWeaponSuitability,
   rollHarvestQuality
 } from '../data/weakPoints.js';
+import { getIntentTargetRule } from './monsterTargeting.js';
 
 const HAND_SIZE = 5;
 const ENERGY_PER_TURN = 3;
@@ -19,14 +20,33 @@ function getArtPassiveEffects(artIds = []) {
   return artIds.flatMap(id => fightingArts[id]?.passiveEffects || []);
 }
 
-function applyDamage(target, amount) {
-  const absorbed = Math.min(target.block, amount);
+export function applyDamageToSurvivor({
+  survivor,
+  amount,
+  ignoreBlock = false
+}) {
+  const incoming = Math.max(0, Number(amount) || 0);
+  const availableBlock = Math.max(0, Number(survivor.block) || 0);
+  const absorbed = ignoreBlock ? 0 : Math.min(availableBlock, incoming);
+  const damage = incoming - absorbed;
+  const nextHp = Math.max(0, survivor.hp - damage);
+  const lethal = survivor.hp > 0 && nextHp <= 0;
 
   return {
-    ...target,
-    block: target.block - absorbed,
-    hp: Math.max(0, target.hp - (amount - absorbed))
+    survivor: {
+      ...survivor,
+      block: ignoreBlock ? availableBlock : availableBlock - absorbed,
+      hp: nextHp,
+      ...(lethal ? { alive: false, isAlive: false } : {})
+    },
+    absorbed,
+    damage,
+    lethal
   };
+}
+
+function applyDamage(target, amount) {
+  return applyDamageToSurvivor({ survivor: target, amount }).survivor;
 }
 
 function applyDirectDamage(target, amount) {
@@ -73,6 +93,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     maxHp: maxHp + extraMaxHp,
     block:
       (runBonus.startingBlock || 0) +
+      (traits.includes('scarless') ? 1 : 0) +
       (arts.includes('tumble') ? 3 : 0) +
       (arts.includes('scarTissue') ? 2 : 0) +
       artPassives
@@ -107,6 +128,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     maxHp: (monsterOverride.maxHp ?? monsterOverride.hp) + (runBonus.monsterBonusHp || 0),
     intents: monsterOverride.intents.map(intent => ({
       ...intent,
+      targetingRule: getIntentTargetRule(intent, monsterOverride),
       effects: intent.effects.map(effect =>
         effect.type === 'dealDamage'
           ? { ...effect, amount: effect.amount + (runBonus.monsterEnrage || 0) }
@@ -153,7 +175,6 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     damageTakenLastTurn: 0,
     damageTakenThisTurn: 0,
     nextMonsterDamageReduction: 0,
-    scarlessUsed: false,
     lanternPanicIgnored: false,
     firstAttackBonus: runBonus.firstAttackBonus || 0,
     firstAttackPlayed: false,
@@ -311,7 +332,7 @@ export function playCard(cardIndex, state) {
     if (isAttack && ['axe', 'hammer'].includes(weaponType)) monster.marked = true;
     if (isAttack && weaponType === 'club') proficiencyDamageBonus += 5;
     if (isAttack && weaponType === 'shield') {
-      proficiencyDamageBonus += Math.min(8, survivor.block);
+      proficiencyDamageBonus += Math.min(20, survivor.block);
       weaponMasteryUsed.shield = true;
     }
     if (isAttack && weaponType === 'scythe' &&
@@ -639,23 +660,35 @@ export function playCard(cardIndex, state) {
         }
         break;
       case 'heal':
-        survivor.hp = Math.min(survivor.maxHp, survivor.hp + effect.amount);
+        if (survivor.hp > 0) {
+          survivor.hp = Math.min(survivor.maxHp, survivor.hp + effect.amount);
+        }
         break;
       case 'healIfBelowHalf':
-        if (survivor.hp < survivor.maxHp / 2) survivor.hp = Math.min(survivor.maxHp, survivor.hp + effect.amount);
+        if (survivor.hp > 0 && survivor.hp < survivor.maxHp / 2) {
+          survivor.hp = Math.min(survivor.maxHp, survivor.hp + effect.amount);
+        }
         break;
       case 'healIfWounded':
-        if (survivor.hp < survivor.maxHp) survivor.hp = Math.min(survivor.maxHp, survivor.hp + effect.amount);
+        if (survivor.hp > 0 && survivor.hp < survivor.maxHp) {
+          survivor.hp = Math.min(survivor.maxHp, survivor.hp + effect.amount);
+        }
         break;
       case 'healIfWoundedOrBlock':
-        if (survivor.hp < survivor.maxHp) survivor.hp = Math.min(survivor.maxHp, survivor.hp + effect.heal);
-        else {
+        if (survivor.hp > 0 && survivor.hp < survivor.maxHp) {
+          survivor.hp = Math.min(survivor.maxHp, survivor.hp + effect.heal);
+        }
+        else if (survivor.hp > 0) {
           survivor.block += effect.block;
           blockGainedThisTurn += effect.block;
         }
         break;
       case 'loseHp':
-        survivor.hp = Math.max(1, survivor.hp - effect.amount);
+        survivor = applyDamageToSurvivor({
+          survivor,
+          amount: effect.amount,
+          ignoreBlock: true
+        }).survivor;
         break;
       case 'draw': {
         drawAmount(effect.amount);
@@ -1301,8 +1334,8 @@ export function useSurvivalAction(actionId, state, options = {}) {
   };
 }
 
-export function applyMonsterIntent(monster, state) {
-  let intent = monster.intents[state.intentIndex];
+export function getMonsterIntentForResolution(monster, intentIndex) {
+  let intent = monster.intents[intentIndex];
   const brokenEffects = (monster.weakPoints || [])
     .filter(weakPoint => weakPoint.broken && weakPoint.effect)
     .map(weakPoint => weakPoint.effect);
@@ -1317,6 +1350,15 @@ export function applyMonsterIntent(monster, state) {
     ));
     if (fallbackIntent) intent = fallbackIntent;
   }
+  return intent;
+}
+
+export function applyMonsterIntent(monster, state) {
+  const intent = state.resolvedIntent ||
+    getMonsterIntentForResolution(monster, state.intentIndex);
+  const brokenEffects = (monster.weakPoints || [])
+    .filter(weakPoint => weakPoint.broken && weakPoint.effect)
+    .map(weakPoint => weakPoint.effect);
   let survivor = { ...state.survivor };
   const hpBeforeIntent = survivor.hp;
   let nextMonster = { ...monster, block: 0 };
@@ -1345,7 +1387,6 @@ export function applyMonsterIntent(monster, state) {
     woundedAttackBonus;
   let attackBonusConsumed = false;
   let monsterAttackCount = 0;
-
   const damageSurvivor = amount => {
     const partReduction = brokenEffects
       .filter(effect =>
@@ -1366,10 +1407,11 @@ export function applyMonsterIntent(monster, state) {
     const proficiencyReduction = monsterAttackCount === 0
       ? state.nextMonsterDamageReduction || 0
       : 0;
-    survivor = applyDamage(
+    const result = applyDamageToSurvivor({
       survivor,
-      Math.max(0, amount + bonus - reduction - proficiencyReduction - partReduction)
-    );
+      amount: Math.max(0, amount + bonus - reduction - proficiencyReduction - partReduction)
+    });
+    survivor = result.survivor;
     monsterAttackCount += 1;
     attackBonusConsumed = true;
   };
@@ -1432,7 +1474,8 @@ export function applyMonsterIntent(monster, state) {
   });
 
   if (survivor.bleed > 0) {
-    survivor = applyDamage(survivor, 1);
+    const result = applyDamageToSurvivor({ survivor, amount: 1 });
+    survivor = result.survivor;
     survivor.bleed = Math.max(0, survivor.bleed - 1);
   }
   const shieldGuardSurvived = survivor.block > 0 &&
@@ -1454,28 +1497,7 @@ export function applyMonsterIntent(monster, state) {
       nextMonster.hp = Math.min(nextMonster.maxHp, nextMonster.hp + rule.amount);
     }
   });
-  let scarlessUsed = state.scarlessUsed;
-  if (
-    survivor.hp <= 0 &&
-    state.traits?.includes('scarless') &&
-    !state.scarlessUsed
-  ) {
-    survivor.hp = 1;
-    scarlessUsed = true;
-  }
-  let artTriggers = { ...(state.artTriggers || {}) };
-  if (
-    survivor.hp <= 0 &&
-    !artTriggers.preventDeathWithWound &&
-    (state.artPassives || []).some(effect => effect.type === 'preventDeathWithWound')
-  ) {
-    survivor.hp = 1;
-    artTriggers.preventDeathWithWound = true;
-    survivor.treatmentNotes = [
-      ...(survivor.treatmentNotes || []),
-      'Impossible Refusal prevented death; a serious wound must be resolved after combat.'
-    ];
-  }
+  const artTriggers = { ...(state.artTriggers || {}) };
 
   return {
     ...state,
@@ -1484,7 +1506,7 @@ export function applyMonsterIntent(monster, state) {
     drawPile,
     discardPile,
     lanternPanicIgnored,
-    scarlessUsed,
+    combatLogEntries: state.combatLogEntries,
     artTriggers,
     pendingEnergyPenalty,
     monsterTurnCount,
