@@ -206,6 +206,7 @@ export function getCardPreview({
         suitability = { ...suitability, modifier: 0, label: 'Neutral' };
       }
       preview.weaponMatch = suitability.label;
+      preview.weakPointName = beforePoint.name;
       preview.tellState = source.hasMonsterBane
         ? getWeakPointTellState(
             beforePoint,

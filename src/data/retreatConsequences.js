@@ -32,7 +32,7 @@ export const retreatConsequences = [
     'A random survivor gains Quiet Madness or Paranoia.'),
   consequence(10, 'emptyHands', 'Empty Hands',
     'What they carried was dropped in panic.',
-    'Lose half the gathered hunt resources, rounded down; lose at least 1 if any were gathered.'),
+    'Lose half the gathered hunt resources, rounded down.'),
   consequence(11, 'feveredReturn', 'Fevered Return',
     'Their sweat smells like the monster.',
     'A hunting party survivor gains Deep Cut.'),

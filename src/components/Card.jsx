@@ -26,12 +26,14 @@ export default function Card({ card, disabled, onPlay, preview }) {
       )}
       {preview?.willBreakWeakPoint && (
         <small className="card-preview-detail">
-          Will break target. {formatValueForDisplay(preview.breakEffect)}
+          Will break {formatValueForDisplay(preview.weakPointName || 'target')}.{' '}
+          {formatValueForDisplay(preview.breakEffect)}
         </small>
       )}
       {preview?.failedBreakRisk && !preview?.willBreakWeakPoint && (
         <small className="card-preview-detail">
-          Will not break. {formatValueForDisplay(preview.failedBreakRisk)}
+          Will not break {formatValueForDisplay(preview.weakPointName || 'target')}.{' '}
+          {formatValueForDisplay(preview.failedBreakRisk)}
         </small>
       )}
       {preview?.harvestWarning && (

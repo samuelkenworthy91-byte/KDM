@@ -1,4 +1,5 @@
 import { getRetreatConsequence } from '../data/retreatConsequences.js';
+import { quarries } from '../data/quarries.js';
 import { resources } from '../data/resources.js';
 import { addResources } from './craftingLogic.js';
 
@@ -50,8 +51,15 @@ function mergePartyConditions(settlementSurvivors, party) {
   return settlementSurvivors.map(survivor => {
     const returning = party.find(member => member.id === survivor.id);
     if (!returning || survivor.alive === false) return survivor;
+    const alive = returning.hp > 0 &&
+      returning.alive !== false &&
+      returning.isAlive !== false;
     return {
       ...survivor,
+      hp: alive ? returning.hp : 0,
+      alive,
+      isAlive: alive,
+      boundGear: alive ? [...(returning.boundGear || survivor.boundGear || [])] : [],
       injuries: [...new Set([...(survivor.injuries || []), ...(returning.injuries || [])])],
       scars: [...new Set([...(survivor.scars || []), ...(returning.scars || [])])],
       disorders: [...new Set([...(survivor.disorders || []), ...(returning.disorders || [])])],
@@ -59,7 +67,8 @@ function mergePartyConditions(settlementSurvivors, party) {
       treatmentNotes: returning.treatmentNotes || survivor.treatmentNotes,
       woundHistory: returning.woundHistory || survivor.woundHistory,
       personalDeckAdditions: returning.personalDeckAdditions || survivor.personalDeckAdditions,
-      survival: returning.survival ?? survivor.survival
+      survival: returning.survival ?? survivor.survival,
+      causeOfDeath: alive ? survivor.causeOfDeath : returning.causeOfDeath || survivor.causeOfDeath
     };
   });
 }
@@ -90,15 +99,30 @@ export function resolveHuntRetreat({
     d20Roll = Math.min(d20Roll, Math.floor(random() * 20) + 1);
   }
   const consequence = getRetreatConsequence(d20Roll);
+  const newlyDeadParty = party.filter(member =>
+    (member.hp <= 0 || member.alive === false || member.isAlive === false) &&
+    settlement.survivors?.some(survivor => survivor.id === member.id && survivor.alive !== false)
+  );
   let survivors = mergePartyConditions(settlement.survivors || [], party);
   let stash = { ...(settlement.stash || {}) };
-  let population = settlement.population || 0;
+  let population = Math.max(0, (settlement.population || 0) - newlyDeadParty.length);
   let settlementMemory = settlement.settlementMemory || 0;
   let armory = [...(settlement.armory || [])];
   let keptResources = [...gatheredResources];
   const resourcesLost = [];
   const affectedSurvivorIds = [];
-  const graveEntries = [];
+  const affectedDetails = [];
+  const graveEntries = newlyDeadParty.map(survivor => ({
+    survivorName: survivor.name,
+    survivorId: survivor.id,
+    killedBy: survivor.causeOfDeath || 'Injuries sustained during the hunt',
+    quarryId,
+    quarryLevel,
+    lanternYear: settlement.lanternYear,
+    gearLostCount: survivor.boundGear?.length || 0,
+    gearLostNames: (survivor.boundGear || []).map(gear => gear.equipmentId),
+    timestamp: new Date().toISOString()
+  }));
   let temporarySettlementModifiers = {
     ...(settlement.temporarySettlementModifiers || {}),
     nextRetreatWorse: false
@@ -137,14 +161,17 @@ export function resolveHuntRetreat({
           gearLostNames: lostGear.map(gear => gear.equipmentId),
           timestamp: new Date().toISOString()
         });
+        affectedDetails.push(`${victim.name} died from starvation after the retreat.`);
       } else {
         population = Math.max(0, population - 2);
+        affectedDetails.push('Population decreased by 2.');
       }
       break;
     }
     case 'theFireGoesLow':
       if (settlementMemory < 2) population = Math.max(0, population - 1);
       settlementMemory = Math.max(0, settlementMemory - 2);
+      affectedDetails.push('Settlement Memory decreased by up to 2.');
       break;
     case 'brokenNerve': {
       const target = chooseLiving(living());
@@ -161,6 +188,9 @@ export function resolveHuntRetreat({
       );
       stash = removal.stash;
       resourcesLost.push(...removal.removed);
+      if (removal.removed.length) {
+        affectedDetails.push(`Resources spoiled: ${removal.removed.join(', ')}.`);
+      }
       break;
     }
     case 'theWoundedAreHeavy': {
@@ -171,15 +201,18 @@ export function resolveHuntRetreat({
     case 'somethingFollowed':
       temporarySettlementModifiers.followedBySomething =
         (temporarySettlementModifiers.followedBySomething || 0) + 1;
+      affectedDetails.push('The next hunt starts with +1 monster aggression.');
       break;
     case 'childrenHeardIt':
       population = Math.max(0, population - 1);
       settlementMemory += 1;
+      affectedDetails.push('Population decreased by 1; Settlement Memory increased by 1.');
       break;
     case 'lostTools':
       if (armory.length) {
         const gear = pick(armory, random);
         armory = armory.filter(item => item.instanceId !== gear.instanceId);
+        affectedDetails.push(`Armory item destroyed: ${gear.equipmentId || gear.instanceId}.`);
       } else {
         const removal = removeRandomResources(
           stash,
@@ -189,6 +222,9 @@ export function resolveHuntRetreat({
         );
         stash = removal.stash;
         resourcesLost.push(...removal.removed);
+        if (removal.removed.length) {
+          affectedDetails.push(`Tools lost: ${removal.removed.join(', ')}.`);
+        }
       }
       break;
     case 'bitterBlame': {
@@ -198,9 +234,7 @@ export function resolveHuntRetreat({
       break;
     }
     case 'emptyHands': {
-      const lossCount = keptResources.length
-        ? Math.max(1, Math.floor(keptResources.length / 2))
-        : 0;
+      const lossCount = Math.floor(keptResources.length / 2);
       for (let index = 0; index < lossCount; index += 1) {
         const resourceId = pick(keptResources, random);
         keptResources.splice(keptResources.indexOf(resourceId), 1);
@@ -215,9 +249,11 @@ export function resolveHuntRetreat({
     }
     case 'theSettlementWaitedTooLong':
       temporarySettlementModifiers.delayedWork = true;
+      affectedDetails.push('The next innovation costs 1 extra basic resource.');
       break;
     case 'badOmen':
       settlementMemory = Math.max(0, settlementMemory - 1);
+      affectedDetails.push('Settlement Memory decreased by 1.');
       break;
     case 'stolenInTheNight': {
       let removal = removeRandomResources(
@@ -231,6 +267,9 @@ export function resolveHuntRetreat({
       }
       stash = removal.stash;
       resourcesLost.push(...removal.removed);
+      if (removal.removed.length) {
+        affectedDetails.push(`Resources stolen: ${removal.removed.join(', ')}.`);
+      }
       break;
     }
     case 'cowardsMark': {
@@ -243,12 +282,14 @@ export function resolveHuntRetreat({
     }
     case 'graveDebt':
       temporarySettlementModifiers.graveDebt = true;
+      affectedDetails.push('Grave unrest will increase the cost of the next death.');
       break;
     case 'theBeastLearns':
       quarryRetreatModifiers[quarryId] = {
         ...(quarryRetreatModifiers[quarryId] || {}),
         aggression: (quarryRetreatModifiers[quarryId]?.aggression || 0) + 1
       };
+      affectedDetails.push(`${quarries[quarryId]?.name || quarryId} gains +1 aggression next fight.`);
       break;
     case 'fracturedGear': {
       const carriers = livingParty().filter(member => member.boundGear?.length);
@@ -259,6 +300,7 @@ export function resolveHuntRetreat({
           ...survivor,
           boundGear: (survivor.boundGear || []).filter(item => item.instanceId !== gear.instanceId)
         }));
+        affectedDetails.push(`${target.name}'s ${gear.equipmentId || gear.instanceId} was destroyed.`);
       } else {
         const fallback = chooseLiving(livingParty());
         if (fallback) changeSurvivor(fallback.id, survivor => addInjury(survivor, 'brokenFingers'));
@@ -267,9 +309,11 @@ export function resolveHuntRetreat({
     }
     case 'darkMercy':
       temporarySettlementModifiers.nextRetreatWorse = true;
+      affectedDetails.push('The next retreat rolls twice and takes the worse result.');
       break;
     case 'hardLesson': {
       settlementMemory += 1;
+      affectedDetails.push('Settlement Memory increased by 1.');
       const target = chooseLiving(livingParty());
       if (target) {
         changeSurvivor(target.id, survivor => ({
@@ -284,6 +328,8 @@ export function resolveHuntRetreat({
   }
 
   stash = addResources(stash, keptResources);
+  const affectedSurvivorNames = [...new Set(affectedSurvivorIds)]
+    .map(survivorId => survivors.find(survivor => survivor.id === survivorId)?.name || survivorId);
   const result = {
     huntResultId,
     roll: d20Roll,
@@ -294,6 +340,8 @@ export function resolveHuntRetreat({
     gatheredResourcesKept: keptResources,
     resourcesLost,
     affectedSurvivorIds: [...new Set(affectedSurvivorIds)],
+    affectedSurvivorNames,
+    affectedDetails,
     quarryId,
     quarryLevel
   };
@@ -301,13 +349,26 @@ export function resolveHuntRetreat({
     type: 'retreat',
     lanternYear: settlement.lanternYear,
     quarryId,
+    quarry: quarries[quarryId]?.name || quarryId,
     quarryLevel,
     partySurvivorIds: party.map(survivor => survivor.id),
+    partyMembers: party.map(survivor => survivor.name),
     gatheredResourcesKept: keptResources,
     d20Roll,
     consequenceId: consequence.id,
     consequenceText: consequence.effectText,
     affectedSurvivorIds: result.affectedSurvivorIds,
+    affectedSurvivors: affectedSurvivorNames,
+    affectedResources: resourcesLost,
+    affectedDetails,
+    details: [
+      `Quarry: ${quarries[quarryId]?.name || quarryId} Level ${quarryLevel}`,
+      `Party: ${party.map(survivor => survivor.name).join(', ') || 'None'}`,
+      `Resources kept: ${keptResources.join(', ') || 'None'}`,
+      `D20 roll: ${d20Roll}`,
+      `Consequence: ${consequence.effectText}`,
+      ...affectedDetails
+    ],
     message: `The hunting party retreated. ${consequence.title}.`,
     timestamp: new Date().toISOString()
   };

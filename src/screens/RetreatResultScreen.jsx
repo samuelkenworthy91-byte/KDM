@@ -28,6 +28,9 @@ export default function RetreatResultScreen({ result, settlement, onContinue }) 
       {!!affectedNames.length && (
         <p><strong>Affected survivors:</strong> {affectedNames.join(', ')}</p>
       )}
+      {!!result.affectedDetails?.length && (
+        <p><strong>Result:</strong> {formatHistoryDetail(result.affectedDetails)}</p>
+      )}
       <button type="button" onClick={onContinue}>Return to Settlement</button>
     </section>
   );

@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "desktop": "npm run build && electron .",
     "desktop:dev": "concurrently --kill-others-on-fail \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
-    "dist:linux": "npm run build && electron-builder --linux AppImage"
+    "dist:linux": "npm run build && electron-builder --linux AppImage",
+    "desktop:linux": "npm run dist:linux",
+    "package:steamos": "npm run desktop:linux"
   },
   "dependencies": {
     "react": "^18.0.0",
