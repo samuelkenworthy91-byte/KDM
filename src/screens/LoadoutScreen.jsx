@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { cards } from '../data/cards.js';
 import { disorders } from '../data/disorders.js';
-import { equipment } from '../data/equipment.js';
+import {
+  equipment,
+  getEquipment,
+  getEquipmentDisplayName
+} from '../data/equipment.js';
 import { injuries } from '../data/injuries.js';
 import {
   getActiveProficiencyPassive,
@@ -15,11 +19,15 @@ import { formatValueForDisplay } from '../utils/formatters.js';
 import { getSurvivorDisplayName } from '../game/survivorIdentity.js';
 
 function GearCards({ gear }) {
-  const item = equipment[gear.equipmentId];
+  const item = getEquipment(gear.equipmentId);
+  const knownItem = equipment[gear.equipmentId];
   return (
     <article className="item-card">
-      <h4>{getLegacyDisplayName(equipment, gear.equipmentId, 'gear')}</h4>
-      {!item && <small>Legacy id: {gear.equipmentId}</small>}
+      <h4>{item.name}</h4>
+      {!knownItem && <small>Legacy id: {gear.equipmentId}</small>}
+      {(item.deprecated || item.hiddenFromCrafting) && (
+        <p className="locked-badge">Legacy gear retained from an older save.</p>
+      )}
       <p>
         Type: {item?.weaponType || 'Non-weapon'} | Hands: {item?.hands ?? 0} | Slot: {item?.slot}
       </p>
@@ -83,8 +91,7 @@ export default function LoadoutScreen({
   };
 
   const destroyBoundGear = gear => {
-    const item = equipment[gear.equipmentId];
-    if (window.confirm(`Removing ${item?.name || gear.equipmentId} will destroy it. Continue?`)) {
+    if (window.confirm(`Removing ${getEquipmentDisplayName(gear.equipmentId)} will destroy it. Continue?`)) {
       onDestroyBoundGear(gear.instanceId);
     }
   };
@@ -131,26 +138,30 @@ export default function LoadoutScreen({
       <div className="item-grid">
         {armory.map(gear => {
           const selected = selectedInstanceIds.includes(gear.instanceId);
+          const item = getEquipment(gear.equipmentId);
           return (
             <article className={`item-card ${selected ? 'built' : ''}`} key={gear.instanceId}>
-              <h4>{getLegacyDisplayName(equipment, gear.equipmentId, 'gear')}</h4>
+              <h4>{item.name}</h4>
               {!equipment[gear.equipmentId] && <small>Legacy id: {gear.equipmentId}</small>}
+              {(item.deprecated || item.hiddenFromCrafting) && (
+                <p className="locked-badge">Legacy gear retained from an older save.</p>
+              )}
               <p>
-                Type: {equipment[gear.equipmentId]?.weaponType || 'Non-weapon'} |{' '}
-                Hands: {equipment[gear.equipmentId]?.hands ?? 0} | Slot: {equipment[gear.equipmentId]?.slot}
+                Type: {item.weaponType || 'Non-weapon'} |{' '}
+                Hands: {item.hands ?? 0} | Slot: {item.slot}
               </p>
-              <p>Keywords: {equipment[gear.equipmentId]?.keywords?.join(', ') || 'Survival'}</p>
-              <p>{formatValueForDisplay(equipment[gear.equipmentId]?.passiveText)}</p>
-              {equipment[gear.equipmentId]?.affectsOtherSurvivors && (
+              <p>Keywords: {item.keywords?.join(', ') || 'Survival'}</p>
+              <p>{formatValueForDisplay(item.passiveText)}</p>
+              {item.affectsOtherSurvivors && (
                 <p className="effect-text">Affects other survivors.</p>
               )}
-              {equipment[gear.equipmentId]?.deckIdentity && (
+              {item.deckIdentity && (
                 <p className="effect-text">
-                  This gear adds a {equipment[gear.equipmentId].deckIdentity} package.
+                  This gear adds a {item.deckIdentity} package.
                 </p>
               )}
               <ul>
-                {(equipment[gear.equipmentId]?.cardPackage || []).map(cardId => (
+                {(item.cardPackage || []).map(cardId => (
                   <li key={cardId}>
                     <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
                     {getLegacyDescription(cards, cardId)}
@@ -173,10 +184,10 @@ export default function LoadoutScreen({
       <section className="gear-card-summary">
         <h3>Cards Added by Gear</h3>
         {allRunGear.length ? allRunGear.map(gear => {
-          const item = equipment[gear.equipmentId];
+          const item = getEquipment(gear.equipmentId);
           return (
             <div key={gear.instanceId}>
-              <strong>{item?.name || gear.equipmentId} adds:</strong>
+              <strong>{item.name} adds:</strong>
               <ul>
                 {(item?.cardPackage || []).map((cardId, cardIndex) => (
                   <li key={`${cardId}-${cardIndex}`}>

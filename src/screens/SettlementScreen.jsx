@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { cards, starterCardIds, trainingCardIds } from '../data/cards.js';
 import { childTraits, normalizeChildTraitId } from '../data/childTraits.js';
-import { equipmentList, getEquipment } from '../data/equipment.js';
+import {
+  equipmentCatalogList,
+  equipmentList,
+  getEquipment
+} from '../data/equipment.js';
 import { fightingArts } from '../data/fightingArts.js';
 import { innovationCards } from '../data/innovationCards.js';
 import { injuries } from '../data/injuries.js';
@@ -617,7 +621,8 @@ export default function SettlementScreen({
 }) {
   const [tab, setTab] = useState('overview');
   const [showLockedGear, setShowLockedGear] = useState(false);
-  const [activeArmouryTab, setActiveArmouryTab] = useState(null);
+  const [showLegacyGear, setShowLegacyGear] = useState(false);
+  const [activeArmouryTab, setActiveArmouryTab] = useState('Stored Gear');
   const [survivorName, setSurvivorName] = useState('');
   const [survivorGender, setSurvivorGender] = useState('other');
   const [survivorAppearance, setSurvivorAppearance] = useState('');
@@ -655,12 +660,13 @@ export default function SettlementScreen({
     drawableInnovationIds.length > 0;
   const nextTimelineMilestone = getNextTimelineMilestone(settlement.lanternYear);
   const armouryData = useMemo(() => {
-    return groupGearByArmouryTab(equipmentList, settlement, {
-      includeLocked: showLockedGear
+    return groupGearByArmouryTab(showLegacyGear ? equipmentCatalogList : equipmentList, settlement, {
+      includeLocked: showLockedGear,
+      includeHidden: showLegacyGear
     });
-  }, [settlement, showLockedGear]);
+  }, [settlement, showLockedGear, showLegacyGear]);
 
-  const armouryTabs = useMemo(() => Object.keys(armouryData).sort((a, b) => {
+  const recipeTabs = useMemo(() => Object.keys(armouryData).sort((a, b) => {
     const priority = ['Starting / Basic', 'Lantern Hoard', 'Bone Smith', 'Organ Grinder', 'Skinnery'];
     const aPriority = priority.indexOf(a);
     const bPriority = priority.indexOf(b);
@@ -671,6 +677,10 @@ export default function SettlementScreen({
     }
     return a.localeCompare(b);
   }), [armouryData]);
+  const armouryTabs = useMemo(
+    () => ['Stored Gear', 'Bound Gear', ...recipeTabs],
+    [recipeTabs]
+  );
 
   useEffect(() => {
     if (armouryTabs.length > 0 && (!activeArmouryTab || !armouryTabs.includes(activeArmouryTab))) {
@@ -679,6 +689,7 @@ export default function SettlementScreen({
   }, [armouryTabs, activeArmouryTab]);
 
   const visibleRecipes = useMemo(() => {
+    if (activeArmouryTab === 'Stored Gear' || activeArmouryTab === 'Bound Gear') return [];
     if (!activeArmouryTab || !armouryData[activeArmouryTab]) return [];
     return Object.values(armouryData[activeArmouryTab]).flat();
   }, [armouryData, activeArmouryTab]);
@@ -1073,42 +1084,26 @@ export default function SettlementScreen({
 
           <div className="armoury-header">
             <h3>Settlement Armoury</h3>
-            <label className="toggle-label">
-              <input
-                type="checkbox"
-                checked={showLockedGear}
-                onChange={e => setShowLockedGear(e.target.checked)}
-              />
-              Show locked gear
-            </label>
-          </div>
-
-          <div className="item-grid">
-            {settlement.armory.map(gear => {
-              const recipe = getEquipment(gear.equipmentId);
-              return (
-                <article className="item-card" key={gear.instanceId}>
-                  <h4>{recipe.name}</h4>
-                  <p>{formatValueForDisplay(recipe.passiveText)}</p>
-                  <p className="muted-text">Free gear. Assign it from the pre-hunt Loadout screen.</p>
-                </article>
-              );
-            })}
-          </div>
-          {!settlement.armory.length && <p>No unbound gear is stored in the armory.</p>}
-
-          <h3>{activeSurvivor?.name || 'Active survivor'} Bound Gear</h3>
-          <div className="item-grid">
-            {(activeSurvivor?.boundGear || []).map(gear => {
-              const recipe = getEquipment(gear.equipmentId);
-              return (
-                <article className="item-card built" key={gear.instanceId}>
-                  <h4>{recipe.name}</h4>
-                  <p>{formatValueForDisplay(recipe.passiveText)}</p>
-                  <p className="muted-text">Bound equipment can only be removed from the Loadout screen and will be destroyed.</p>
-                </article>
-              );
-            })}
+            <div className="button-row">
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={showLockedGear}
+                  onChange={e => setShowLockedGear(e.target.checked)}
+                />
+                Show locked gear
+              </label>
+              {import.meta.env.DEV && (
+                <label className="toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={showLegacyGear}
+                    onChange={e => setShowLegacyGear(e.target.checked)}
+                  />
+                  Show legacy / hidden review
+                </label>
+              )}
+            </div>
           </div>
 
           <div className="sub-tabs">
@@ -1124,8 +1119,55 @@ export default function SettlementScreen({
             ))}
           </div>
 
-          {activeArmouryTab && armouryData[activeArmouryTab] ? (
-            <div className="armoury-tab-content">
+          {activeArmouryTab === 'Stored Gear' && (
+            <>
+              <h3>Stored Gear</h3>
+              <div className="item-grid">
+                {settlement.armory.map(gear => {
+                  const recipe = getEquipment(gear.equipmentId);
+                  return (
+                    <article className="item-card" key={gear.instanceId}>
+                      <p className="eyebrow">{recipe.slot || 'gear'}</p>
+                      <h4>{recipe.name}</h4>
+                      {(recipe.deprecated || recipe.hiddenFromCrafting) && (
+                        <p className="locked-badge">Legacy gear retained from an older save.</p>
+                      )}
+                      <p>{formatValueForDisplay(recipe.passiveText)}</p>
+                      <p className="muted-text">Assign it from the pre-hunt Loadout screen.</p>
+                    </article>
+                  );
+                })}
+              </div>
+              {!settlement.armory.length && <p>No unbound gear is stored in the Armoury.</p>}
+            </>
+          )}
+
+          {activeArmouryTab === 'Bound Gear' && (
+            <>
+              <h3>{activeSurvivor?.name || 'Active survivor'} Bound Gear</h3>
+              <div className="item-grid">
+                {(activeSurvivor?.boundGear || []).map(gear => {
+                  const recipe = getEquipment(gear.equipmentId);
+                  return (
+                    <article className="item-card built" key={gear.instanceId}>
+                      <p className="eyebrow">{recipe.slot || 'gear'}</p>
+                      <h4>{recipe.name}</h4>
+                      {(recipe.deprecated || recipe.hiddenFromCrafting) && (
+                        <p className="locked-badge">Legacy gear retained from an older save.</p>
+                      )}
+                      <p>{formatValueForDisplay(recipe.passiveText)}</p>
+                      <p className="muted-text">Remove it from Loadout only; removal destroys it.</p>
+                    </article>
+                  );
+                })}
+              </div>
+              {!(activeSurvivor?.boundGear || []).length && <p>No gear is bound to this survivor.</p>}
+            </>
+          )}
+
+          {activeArmouryTab !== 'Stored Gear' && activeArmouryTab !== 'Bound Gear' && (
+            activeArmouryTab && armouryData[activeArmouryTab] ? (
+              <div className="armoury-tab-content">
               {Object.entries(armouryData[activeArmouryTab]).map(([source, recipes]) => (
                 <section className="recipe-group" key={source}>
                   <h3>{source === 'General' ? activeArmouryTab : `${quarries[source]?.name || source} craftables`}</h3>
@@ -1137,6 +1179,9 @@ export default function SettlementScreen({
                         <article className={`item-card ${isLocked ? 'locked' : ''}`} key={recipe.stableId || recipe.id}>
                           <p className="eyebrow">{recipe.slot}</p>
                           <h4>{getGearDisplayName(recipe)}</h4>
+                          {(recipe.deprecated || recipe.hiddenFromCrafting) && (
+                            <p className="locked-badge">Legacy / hidden. Review only; cannot be crafted.</p>
+                          )}
                           {isLocked && <p className="locked-badge">Locked: {unlockState.reason}</p>}
                           <p>
                             <strong>Type:</strong> {recipe.weaponType || 'Non-weapon'} |{' '}
@@ -1162,7 +1207,7 @@ export default function SettlementScreen({
                             </>
                           )}
                           <CostList cost={recipe.cost} stash={settlement.stash} />
-                          {!isLocked && (
+                          {!isLocked && !recipe.deprecated && !recipe.hiddenFromCrafting && (
                             <button
                               type="button"
                               disabled={!canAffordCost(recipe.cost, settlement.stash)}
@@ -1177,11 +1222,14 @@ export default function SettlementScreen({
                   </div>
                 </section>
               ))}
-            </div>
-          ) : (
-            <p>No crafting recipes available in this category.</p>
+              </div>
+            ) : (
+              <p>No crafting recipes available in this category.</p>
+            )
           )}
-          {!visibleRecipes.length && !showLockedGear && <p>Build a crafting location to reveal its recipes.</p>}
+          {recipeTabs.length === 0 && !showLockedGear && (
+            <p>Build a crafting location to reveal its recipes.</p>
+          )}
         </div>
       )}
 

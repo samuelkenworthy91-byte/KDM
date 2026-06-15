@@ -137,8 +137,8 @@ const exactSets = {
     attack('stalkingSpear', 'reachUnderTheMane', 'Reach Under the Mane', 1, 'Deal 5 damage with reduced weak-point risk.', [{ type: 'damage', amount: 5 }], ['reach', 'safeWeakPoint', 'limbHunter'])
   ],
   lionhideBuckler: [
-    skill('lionhideBuckler', 'aggressiveBuckle', 'Aggressive Buckle', 1, 'Gain 4 block and apply 1 Vulnerable.', [{ type: 'block', amount: 4 }, { type: 'vulnerableMonster', amount: 1 }], ['block', 'vulnerable']),
-    attack('lionhideBuckler', 'shieldBash', 'Shield Bash', 1, 'Deal 3 damage. If you have block, deal extra damage equal to your block (max 10).', [{ type: 'damage', amount: 3, bonusPerBlock: 1, maximumBonus: 10 }], ['block', 'breaker'])
+    skill('lionhideBuckler', 'aggressiveBuckle', 'Aggressive Buckle', 1, 'Gain 4 block, apply 1 Vulnerable, and improve the next Counter by 1.', [{ type: 'block', amount: 4 }, { type: 'vulnerableMonster', amount: 1 }, { type: 'nextCounterBonus', amount: 1 }], ['block', 'vulnerable', 'counter']),
+    attack('lionhideBuckler', 'shieldBash', 'Shield Bash', 1, 'Deal 3 damage. If you have block, deal extra damage equal to your block (max 10).', [{ type: 'damage', amount: 3, bonusPerBlock: 1, maximumBonus: 10 }], ['block', 'breaker', 'counter'])
   ],
   maneCloak: [
     skill('maneCloak', 'hideInTheMane', 'Hide in the Mane', 1, 'Gain 7 block.', [{ type: 'block', amount: 7 }], ['block']),
@@ -200,8 +200,8 @@ const exactSets = {
     skill('ashFeatherMantle', 'featheredMemory', 'Feathered Memory', 1, 'Draw 2, then discard another card if possible.', [{ type: 'draw', amount: 2 }, { type: 'discard', amount: 1 }], ['discard'])
   ],
   timeBoneBlade: [
-    attack('timeBoneBlade', 'delayedCut', 'Delayed Cut', 1, 'Deal 5 damage. Next turn, gain 1 energy and draw 1.', [{ type: 'damage', amount: 5 }, { type: 'delayedEnergy', amount: 1 }, { type: 'delayedDraw', amount: 1 }], ['strange', 'time']),
-    attack('timeBoneBlade', 'quickCut', 'Quick Cut', 0, 'Deal 2 damage twice. Exhaust.', [{ type: 'damage', amount: 2 }, { type: 'damage', amount: 2 }], ['quick', 'exhaust'])
+    attack('timeBoneBlade', 'delayedCut', 'Delayed Cut', 1, 'Deal 5 damage. Next turn, gain 1 energy and draw 1.', [{ type: 'damage', amount: 5 }, { type: 'delayedEnergy', amount: 1 }, { type: 'delayedDraw', amount: 1 }], ['strange', 'time', 'precise']),
+    attack('timeBoneBlade', 'quickCut', 'Quick Cut', 0, 'Deal 2 damage twice. Exhaust.', [{ type: 'multiHitDamage', amount: 2, hits: 2 }], ['quick', 'precise', 'multiHit', 'exhaust'])
   ],
   memoryGlassEye: [
     skill('memoryGlassEye', 'lookBack', 'Look Back', 0, 'Return the top card of discard to your hand, or draw 1. Exhaust.', [{ type: 'drawFromDiscardOrDeck', amount: 1 }], ['strange', 'exhaust'], true),
@@ -226,14 +226,12 @@ const profiles = {
   stormGutCharm: ['Storm Gut Charm', 'panicConversion'],
   swollenHideVest: ['Swollen Hide Vest', 'panicTank'],
   staticNeedle: ['Static Needle', 'markDraw'],
-  godlingDrum: ['Godling Drum', 'riskyDraw'],
   crimsonScaleShield: ['Crimson Scale Shield', 'shieldCounter'],
   riverToothBlade: ['River Tooth Blade', 'brokenGuard'],
   redLeatherCoat: ['Red Leather Coat', 'layeredDefense'],
   drowningHook: ['Drowning Hook', 'markControl'],
   bloodMudPaint: ['Blood-Mud Paint', 'woundedWeapon'],
   crocodileEyeCharm: ['Crocodile Eye Charm', 'revealPunish'],
-  frogdogTongueWhip: ['Frogdog Tongue Whip', 'markControl'],
   rubberyHideSuit: ['Rubbery Hide Suit', 'bounceDefense'],
   toxicGlandBomb: ['Toxic Gland Bomb', 'bombMark'],
   wetBoneClub: ['Wet Bone Club', 'unreliableHeavy'],
@@ -256,7 +254,6 @@ const profiles = {
   harmonyBoneBlade: ['Harmony Bone Blade', 'alternating'],
   tarFeatherCloak: ['Tar Feather Cloak', 'discardDefense'],
   chokingMask: ['Choking Mask', 'panicPower'],
-  chorusBell: ['Chorus Bell', 'riskyDraw'],
   chitinPlateArmor: ['Chitin Plate Armor', 'slowArmor'],
   beetleHornHammer: ['Beetle Horn Hammer', 'chargeAfterBlock'],
   resinBloodShield: ['Resin Blood Shield', 'blockDamage'],
@@ -267,7 +264,6 @@ const profiles = {
   crystalBoneBlade: ['Crystal Bone Blade', 'blockScale'],
   fireGlandBomb: ['Fire Gland Bomb', 'bombPanic'],
   imperialHornHelm: ['Imperial Horn Helm', 'roarSurvival'],
-  moltenEyeCharm: ['Molten Eye Charm', 'revealMark'],
   emberCrown: ['Ember Crown', 'crownRisk'],
   sunShellShield: ['Sun Shell Shield', 'radiantBlock'],
   radiantEyeCharm: ['Radiant Eye Charm', 'revealBlind'],
@@ -357,6 +353,63 @@ Object.entries(expandedWeaponSpecs).forEach(([gearId, spec]) => {
 exactSets.paleFangSpear = [
   attack('paleFangSpear', 'paleFangSpearPin', 'Elder Fang Pin', 2, 'Deal 6 damage, Mark the monster, and press hard against limb weak points.', [{ type: 'damage', amount: 6 }, { type: 'markMonster' }], ['reach', 'limbHunter', 'breaker', 'marked']),
   skill('paleFangSpear', 'paleFangSpearBrace', 'Long-Hunt Brace', 1, 'Gain 6 block and draw 1.', [{ type: 'block', amount: 6 }, { type: 'draw', amount: 1 }], ['reach', 'block', 'safeWeakPoint'])
+];
+
+exactSets.ashCurveBlade = [
+  attack('ashCurveBlade', 'ashCurveCoolingDraw', 'Cooling Draw', 1, 'Deal 5 damage, +3 if this is your first attack this turn. Next turn, draw 1.', [{ type: 'damage', amount: 5, bonusIfFirstAttack: 3 }, { type: 'delayedDraw', amount: 1 }], ['precise', 'firstStrike', 'time']),
+  attack('ashCurveBlade', 'ashCurveLineCut', 'Ash-Line Cut', 2, 'Deal 7 damage, add 1 Panic, and return this card to the discard next turn.', [{ type: 'damage', amount: 7 }, { type: 'addPanic', amount: 1 }, { type: 'delayedReturnToDiscard' }], ['precise', 'firstStrike', 'risk', 'time'])
+];
+exactSets.petalEdgeKatana = [
+  attack('petalEdgeKatana', 'petalEdgeDraw', 'Petal Draw', 1, 'Deal 4 damage, +4 if this is your first attack this turn. Gain 1 survival if the monster is Marked.', [{ type: 'damage', amount: 4, bonusIfFirstAttack: 4 }, { type: 'survivalIfMonsterMarked', amount: 1 }], ['precise', 'firstStrike', 'marked']),
+  attack('petalEdgeKatana', 'petalEdgeLine', 'One Falling Line', 2, 'Deal 8 damage. This measured cut is safer for fragile harvests.', [{ type: 'damage', amount: 8 }], ['precise', 'firstStrike', 'safeWeakPoint'])
+];
+exactSets.mirrorCuttingBlade = [
+  attack('mirrorCuttingBlade', 'mirrorHiddenDraw', 'Hidden Draw', 1, 'Deal 5 damage, +3 if this is your first attack this turn. Gain 2 block.', [{ type: 'damage', amount: 5, bonusIfFirstAttack: 3 }, { type: 'block', amount: 2 }], ['precise', 'firstStrike', 'radiant', 'block']),
+  attack('mirrorCuttingBlade', 'mirrorReflectedCut', 'Reflected Cut', 2, 'Deal 6 damage plus half your block, up to 6 bonus damage.', [{ type: 'damage', amount: 6 }, { type: 'damageFromBlock', divisor: 2, maximum: 6 }], ['precise', 'firstStrike', 'radiant', 'counter'])
+];
+exactSets.ashHookScythe = [
+  attack('ashHookScythe', 'ashHookMemory', 'Hook the Memory', 1, 'Deal 3 damage, apply 2 Bleed, then discard another card if possible.', [{ type: 'damage', amount: 3 }, { type: 'bleedMonster', amount: 2 }, { type: 'discard', amount: 1 }], ['bleed', 'panic', 'heavy', 'memory']),
+  attack('ashHookScythe', 'ashHookReap', 'Reap the Ash', 2, 'Deal 7 damage, add 1 Panic, and draw from discard if the monster is Bleeding.', [{ type: 'damage', amount: 7 }, { type: 'addPanic', amount: 1 }, { type: 'drawFromDiscardIfMonsterBleeding', amount: 1 }], ['bleed', 'panic', 'heavy', 'time'])
+];
+exactSets.bloomReaper = [
+  attack('bloomReaper', 'bloomThornHarvest', 'Thorn Harvest', 1, 'Deal 3 damage, apply 1 Bleed, and Mark the monster.', [{ type: 'damage', amount: 3 }, { type: 'bleedMonster', amount: 1 }, { type: 'markMonster' }], ['bleed', 'panic', 'heavy', 'marked', 'precise']),
+  attack('bloomReaper', 'bloomFinal', 'Final Bloom', 2, 'Deal 8 damage, +3 if the monster is Marked, then add 1 Panic.', [{ type: 'damage', amount: 8, bonusIfMonsterMarked: 3 }, { type: 'addPanic', amount: 1 }], ['bleed', 'panic', 'heavy', 'finisher', 'duelist'])
+];
+exactSets.smogReedScythe = [
+  attack('smogReedScythe', 'smogSootHook', 'Soot Hook', 1, 'Deal 3 damage, apply 2 Bleed, and add 1 Panic.', [{ type: 'damage', amount: 3 }, { type: 'bleedMonster', amount: 2 }, { type: 'addPanic', amount: 1 }], ['bleed', 'panic', 'heavy', 'smoke']),
+  attack('smogReedScythe', 'smogChorusReap', 'Chorus Reap', 2, 'Deal 7 damage, +1 per Panic in discard, maximum +4.', [{ type: 'damage', amount: 7, bonusPerPanicInDiscard: 1, maximumBonus: 4 }], ['bleed', 'panic', 'heavy', 'song'])
+];
+exactSets.crimsonRiverAxe = [
+  attack('crimsonRiverAxe', 'crimsonScaleCleft', 'Scale Cleft', 1, 'Remove all monster block and deal 2 damage.', [{ type: 'removeAllMonsterBlock' }, { type: 'damage', amount: 2 }], ['heavy', 'breaker', 'crush']),
+  attack('crimsonRiverAxe', 'crimsonExecution', 'River Execution', 2, 'Deal 8 damage, +4 while the monster is Bleeding.', [{ type: 'damage', amount: 8, bonusIfMonsterBleeding: 4 }], ['heavy', 'breaker', 'bleed', 'brutal'])
+];
+exactSets.chitinHookAxe = [
+  attack('chitinHookAxe', 'chitinPeelPlate', 'Peel the Plate', 1, 'Remove 4 monster block, deal 3 damage, and apply 1 Vulnerable.', [{ type: 'removeMonsterBlock', amount: 4 }, { type: 'damage', amount: 3 }, { type: 'vulnerableMonster', amount: 1 }], ['heavy', 'breaker', 'shell']),
+  skill('chitinHookAxe', 'chitinAdvance', 'Shell-Cracking Advance', 1, 'Gain 5 block. Your next attack removes 2 additional block.', [{ type: 'block', amount: 5 }, { type: 'nextAttackBlockBreak', amount: 2 }], ['heavy', 'breaker', 'block', 'shell'])
+];
+exactSets.frogdogTongueWhip = [
+  attack('frogdogTongueWhip', 'frogdogAdhesiveLash', 'Adhesive Lash', 1, 'Deal 3 damage, Mark the monster, and apply 1 Poison.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }, { type: 'poisonMonster', amount: 1 }], ['reach', 'marked', 'poison', 'adhesive']),
+  skill('frogdogTongueWhip', 'frogdogTongueSnap', 'Tongue Snap', 0, 'Remove 2 monster block and draw 1. Exhaust.', [{ type: 'removeMonsterBlock', amount: 2 }, { type: 'draw', amount: 1 }], ['reach', 'marked', 'quick', 'exhaust'], true)
+];
+exactSets.frogdogBiteGloves = [
+  attack('frogdogBiteGloves', 'frogdogBitingPair', 'Biting Pair', 1, 'Deal 2 damage twice and apply 1 Poison.', [{ type: 'multiHitDamage', amount: 2, hits: 2 }, { type: 'poisonMonster', amount: 1 }], ['quick', 'multiHit', 'counter', 'poison']),
+  skill('frogdogBiteGloves', 'frogdogBounceCounter', 'Bounce Counter', 0, 'Gain 2 block and improve the next Counter by 2. Heal 1 if wounded. Exhaust.', [{ type: 'block', amount: 2 }, { type: 'nextCounterBonus', amount: 2 }, { type: 'healIfWounded', amount: 1 }], ['quick', 'counter', 'block', 'recovery', 'exhaust'], true)
+];
+exactSets.kingClawGauntletPair = [
+  attack('kingClawGauntletPair', 'kingClawRoyalChain', 'Royal Raking Chain', 1, 'Deal 2 damage three times. Gain 1 survival if the monster is Marked.', [{ type: 'multiHitDamage', amount: 2, hits: 3 }, { type: 'survivalIfMonsterMarked', amount: 1 }], ['quick', 'multiHit', 'counter', 'regal']),
+  skill('kingClawGauntletPair', 'kingClawAnswer', 'Answer the Challenge', 0, 'Gain 3 block, Mark the monster, and improve the next Counter by 1. Exhaust.', [{ type: 'block', amount: 3 }, { type: 'markMonster' }, { type: 'nextCounterBonus', amount: 1 }], ['quick', 'counter', 'block', 'command', 'exhaust'], true)
+];
+exactSets.godlingDrum = [
+  skill('godlingDrum', 'godlingThunderPulse', 'Thunder Pulse', 0, 'Gain 1 energy, add 1 Panic, and gain 2 block. Exhaust.', [{ type: 'energy', amount: 1 }, { type: 'addPanic', amount: 1 }, { type: 'block', amount: 2 }], ['thunder', 'panic', 'instability', 'exhaust'], true),
+  attack('godlingDrum', 'godlingSwollenBeat', 'Swollen Beat', 1, 'Deal 3 damage, +2 per Panic in discard, maximum +6.', [{ type: 'damage', amount: 3, bonusPerPanicInDiscard: 2, maximumBonus: 6 }], ['thunder', 'panic', 'heavy'])
+];
+exactSets.chorusBell = [
+  skill('chorusBell', 'chorusResonance', 'Impossible Resonance', 0, 'Draw 1 and clarify the tell. Add 1 Panic. Exhaust.', [{ type: 'draw', amount: 1 }, { type: 'revealIntentHint' }, { type: 'addPanic', amount: 1 }], ['song', 'vibration', 'panic', 'reveal', 'exhaust'], true),
+  skill('chorusBell', 'chorusHallucination', 'Chorus Hallucination', 1, 'Mark the monster and gain 4 block.', [{ type: 'markMonster' }, { type: 'block', amount: 4 }], ['song', 'smoke', 'marked', 'block'])
+];
+exactSets.moltenEyeCharm = [
+  skill('moltenEyeCharm', 'moltenSight', 'Molten Sight', 0, 'Clarify the tell, Mark the monster, and add 1 Panic. Exhaust.', [{ type: 'revealIntentHint' }, { type: 'markMonster' }, { type: 'addPanic', amount: 1 }], ['fire', 'reveal', 'marked', 'risk', 'exhaust'], true),
+  attack('moltenEyeCharm', 'moltenFlare', 'Imperial Flare', 1, 'Deal 4 damage, +3 if the monster is Marked. Remove 2 monster block.', [{ type: 'damage', amount: 4, bonusIfMonsterMarked: 3 }, { type: 'removeMonsterBlock', amount: 2 }], ['fire', 'marked', 'imperial'])
 ];
 
 function profileCards(gearId, name, profile) {

@@ -6,6 +6,10 @@ import {
   weaponStyleDefinitions
 } from './gearMetadata.js';
 import { gearById } from './overhaul/gearRegistry.js';
+import {
+  cleanGearDisplayName,
+  dedupeGearList
+} from '../utils/gearNormalization.js';
 
 const LOCATION_QUARRIES = {
   lionTrophyHall: 'paleHuntLion',
@@ -46,8 +50,21 @@ function recipe(id, name, buildingId, cost, description, cardPackage, passiveTex
   };
 }
 
+const legacyEquipment = Object.fromEntries(
+  Object.entries(gearById).map(([legacyId, item]) => [
+    legacyId,
+    {
+      ...item,
+      name: cleanGearDisplayName(item.name),
+      deprecated: true,
+      hiddenFromCrafting: true,
+      legacySource: 'importedGearRegistry'
+    }
+  ])
+);
+
 export const equipment = {
-  ...gearById,
+  ...legacyEquipment,
   boneBlade: recipe('boneBlade', 'Bone Blade', 'boneSmith', { bone: 1, sinew: 1 }, 'A reliable cutting weapon.', ['hack', 'hack', 'carve'], 'Adds direct attack cards.', 'weapon'),
   boneHammer: recipe('boneHammer', 'Bone Hammer', 'boneSmith', { bone: 2, hide: 1 }, 'A heavy weapon for cracking defenses.', ['skullCrack', 'skullCrack', 'guardBreak'], 'Heavy block-breaking package.', 'weapon'),
   boneDarts: recipe('boneDarts', 'Bone Darts', 'boneSmith', { bone: 1, sinew: 1 }, 'Light throwing weapons.', ['boneDart', 'boneDart', 'quickToss'], 'Fast ranged attack package.', 'weapon'),
@@ -195,7 +212,13 @@ const expandedWeaponRows = [
 
 expandedWeaponRows.forEach(row => monsterRecipeRows.push(row));
 
+export const resolvedDuplicateRecipeIds = [];
 monsterRecipeRows.forEach(row => {
+  const existing = equipment[row[0]];
+  if (existing && !existing.deprecated && !existing.hiddenFromCrafting) {
+    resolvedDuplicateRecipeIds.push(row[0]);
+    return;
+  }
   equipment[row[0]] = recipe(...row);
 });
 
@@ -215,6 +238,7 @@ monsterRecipeRows.forEach(row => {
 });
 
 Object.values(equipment).forEach(item => {
+  item.name = cleanGearDisplayName(item.name);
   const metadata = getGearMetadata(item);
   item.weaponType = metadata.weaponType;
   item.slot = metadata.slot;
@@ -239,21 +263,52 @@ Object.values(equipment).forEach(item => {
     ].includes(tag))
     .slice(0, 3)
     .join(', ') || explicitGearKeywords[item.id]?.join(', ') || 'survival support';
-  item.proficiencyXpGranted = Boolean(item.weaponType);
+  item.proficiencyXpGranted = Boolean(item.weaponType) &&
+    !item.deprecated &&
+    !item.hiddenFromCrafting;
 });
 
-import { dedupeGearList } from '../utils/gearNormalization.js';
-
 export const equipmentList = dedupeGearList(Object.values(equipment));
+export const equipmentCatalogList = dedupeGearList(Object.values(equipment), {
+  includeHidden: true
+});
 
 export function getEquipment(id) {
-  return equipment[id] || {
+  const item = equipment[id];
+  if (item) {
+    return {
+      ...item,
+      name: item.deprecated || item.hiddenFromCrafting
+        ? `${cleanGearDisplayName(item.name)} (Legacy gear)`
+        : cleanGearDisplayName(item.name)
+    };
+  }
+  return {
     id,
-    name: `Unknown Legacy Gear (${id})`,
+    name: 'Unknown / Legacy gear',
     passiveText: 'This item is from a legacy version of the game.',
     cardPackage: [],
     slot: 'gear',
+    deprecated: true,
+    hiddenFromCrafting: true,
     implemented: false
+  };
+}
+
+export function getEquipmentDisplayName(id) {
+  return getEquipment(id).name;
+}
+
+export function validateEquipmentIds() {
+  const seen = new Set();
+  const duplicateIds = [];
+  equipmentList.forEach(item => {
+    if (seen.has(item.id)) duplicateIds.push(item.id);
+    seen.add(item.id);
+  });
+  return {
+    duplicateIds,
+    resolvedDuplicateRecipeIds: [...resolvedDuplicateRecipeIds]
   };
 }
 
@@ -282,6 +337,8 @@ export function getMissingCardIdsFromEquipment() {
 
 export function validateGearVariety() {
   const warnings = [];
+  const globalPackages = new Map();
+  const globalEffectPackages = new Map();
   const monsterLocations = [...new Set(equipmentList.map(item => item.locationId).filter(locationId =>
     LOCATION_QUARRIES[locationId]
   ))];
@@ -310,6 +367,11 @@ export function validateGearVariety() {
       ));
       const effectOwners = effectPackages.get(effectKey) || [];
       effectPackages.set(effectKey, [...effectOwners, item.id]);
+      globalPackages.set(key, [...(globalPackages.get(key) || []), item.id]);
+      globalEffectPackages.set(effectKey, [
+        ...(globalEffectPackages.get(effectKey) || []),
+        item.id
+      ]);
       if (!item.weaponType && !item.keywords?.length) {
         warnings.push(`${item.id}: lacks weapon type and keywords`);
       }
@@ -366,6 +428,12 @@ export function validateGearVariety() {
     effectPackages.forEach(owners => {
       if (owners.length > 1) warnings.push(`${locationId}: mechanically identical package on ${owners.join(', ')}`);
     });
+  });
+  globalPackages.forEach(owners => {
+    if (owners.length > 1) warnings.push(`identical card package on ${owners.join(', ')}`);
+  });
+  globalEffectPackages.forEach(owners => {
+    if (owners.length > 1) warnings.push(`mechanically identical package on ${owners.join(', ')}`);
   });
   warnings.forEach(message => console.warn(`[Gear variety] ${message}`));
   return warnings;

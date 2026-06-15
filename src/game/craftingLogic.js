@@ -98,7 +98,12 @@ export function addResources(stash, resourceIds) {
 }
 
 export function canCraft(item, inventory) {
-  return canAffordCost(item.cost, inventory);
+  return Boolean(
+    item &&
+    !item.deprecated &&
+    !item.hiddenFromCrafting &&
+    canAffordCost(item.cost, inventory)
+  );
 }
 
 export function craft(item, inventory) {

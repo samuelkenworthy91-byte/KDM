@@ -3,7 +3,10 @@ import MapScreen from './components/MapScreen.jsx';
 import { cards, starterCardIds, trainingCardIds } from './data/cards.js';
 import { childTraitList, childTraits, normalizeChildTraitId } from './data/childTraits.js';
 import { getCreatureBehaviour } from './data/creatureBehaviours.js';
-import { equipment } from './data/equipment.js';
+import {
+  equipment,
+  getEquipmentDisplayName
+} from './data/equipment.js';
 import { events } from './data/events.js';
 import { disorders } from './data/disorders.js';
 import {
@@ -45,7 +48,12 @@ import { genericResourceIds, resources as resourceData } from './data/resources.
 import { getQuarryDiscoveryEvent } from './data/quarryDiscoveryEvents.js';
 import { createMonsterWeakPoints, getBrokenWeakPointRewards } from './data/weakPoints.js';
 import { treatWound } from './data/woundTables.js';
-import { addResources, canAffordCost, deductCost } from './game/craftingLogic.js';
+import {
+  addResources,
+  canAffordCost,
+  canCraft,
+  deductCost
+} from './game/craftingLogic.js';
 import { getGearUnlockState } from './utils/gearNormalization.js';
 import { validateOverhaulData } from './utils/overhaulValidation.js';
 import {
@@ -618,7 +626,7 @@ export default function App() {
             lanternYear: loaded.lanternYear,
             gearLostCount: survivor.boundGear?.length || 0,
             gearLostNames: (survivor.boundGear || []).map(gear =>
-              equipment[gear.equipmentId]?.name || gear.equipmentId),
+              getEquipmentDisplayName(gear.equipmentId)),
             timestamp: new Date().toISOString()
           })),
           ...(loaded.graveHistory || [])
@@ -1014,7 +1022,7 @@ export default function App() {
               finalWound: survivor.woundHistory?.at(-1) || null,
               gearLostCount: survivor.boundGear?.length || 0,
               gearLostNames: (survivor.boundGear || []).map(gear =>
-                equipment[gear.equipmentId]?.name || gear.equipmentId),
+                getEquipmentDisplayName(gear.equipmentId)),
               rewardsMissed: true,
               timestamp: new Date().toISOString()
             })),
@@ -1448,7 +1456,7 @@ export default function App() {
               finalWound: survivor.woundHistory?.at(-1) || null,
               gearLostCount: survivor.boundGear?.length || 0,
               gearLostNames: (survivor.boundGear || []).map(gear =>
-                equipment[gear.equipmentId]?.name || gear.equipmentId),
+                getEquipmentDisplayName(gear.equipmentId)),
               rewardsMissed: true,
               timestamp: new Date().toISOString()
             })),
@@ -1489,7 +1497,7 @@ export default function App() {
       survivorDisorders: fallenSurvivor?.disorders || [],
       survivorCompletedRuns: fallenSurvivor?.completedRuns || 0,
       gearLostCount: lostGear.length,
-      gearLostNames: lostGear.map(gear => equipment[gear.equipmentId]?.name || gear.equipmentId),
+      gearLostNames: lostGear.map(gear => getEquipmentDisplayName(gear.equipmentId)),
       killedBy: deathDetails?.killedBy || 'unknownMonster',
       killedById: deathDetails?.killedById || 'unknownMonster',
       nodesCompleted: progress.nodesCompleted,
@@ -1566,7 +1574,7 @@ export default function App() {
         disorders: fallenSurvivor.disorders || [],
         gearLostCount: lostGear.length,
         gearLostNames: lostGear.map(gear =>
-          equipment[gear.equipmentId]?.name || gear.equipmentId),
+          getEquipmentDisplayName(gear.equipmentId)),
         timestamp: new Date().toISOString()
       }, ...(current.graveHistory || [])] : current.graveHistory,
       settlementHistory: [
@@ -1653,7 +1661,7 @@ export default function App() {
 
   const handleCraft = recipe => {
     updateSettlement(current => {
-      if (!getGearUnlockState(recipe, current).unlocked || !canAffordCost(recipe.cost, current.stash)) {
+      if (!getGearUnlockState(recipe, current).unlocked || !canCraft(recipe, current.stash)) {
         return current;
       }
       return {
@@ -2648,7 +2656,7 @@ export default function App() {
       survivorDisorders: runSurvivor.disorders || [],
       survivorCompletedRuns: runSurvivor.completedRuns || 0,
       gearLostCount: lostGear.length,
-      gearLostNames: lostGear.map(gear => equipment[gear.equipmentId]?.name || gear.equipmentId),
+      gearLostNames: lostGear.map(gear => getEquipmentDisplayName(gear.equipmentId)),
       killedBy: encounter.displayName,
       killedById: encounter.id,
       nodesCompleted: 0,
@@ -3000,7 +3008,7 @@ export default function App() {
           scars: deathSurvivor.scars || [],
           disorders: deathSurvivor.disorders || [],
           gearLostCount: gearLost.length,
-          gearLostNames: gearLost.map(gear => equipment[gear.equipmentId]?.name || gear.equipmentId),
+          gearLostNames: gearLost.map(gear => getEquipmentDisplayName(gear.equipmentId)),
           timestamp: historyEntry.timestamp
         }, ...current.graveHistory] : current.graveHistory,
         lastIntimacyLanternYear: current.lanternYear,

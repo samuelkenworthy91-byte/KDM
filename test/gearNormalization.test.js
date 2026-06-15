@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   dedupeGearList,
+  cleanGearDisplayName,
   getGearStableId,
   getGearUnlockState,
   groupGearByArmouryTab,
@@ -22,6 +23,10 @@ function gear(overrides = {}) {
 
 test('stable ids prefer canonical gear ids', () => {
   assert.equal(getGearStableId(gear({ id: 'BoneBlade', name: 'Renamed Blade' })), 'boneblade');
+});
+
+test('display names remove source prefixes', () => {
+  assert.equal(cleanGearDisplayName('Imported - Bone Blade'), 'Bone Blade');
 });
 
 test('dedupe collapses aliases and cross-source copies without exposing deck cards', () => {

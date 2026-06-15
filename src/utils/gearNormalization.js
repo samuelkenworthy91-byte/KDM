@@ -57,6 +57,20 @@ function formatReadableLabel(value) {
     .trim();
 }
 
+export function cleanGearDisplayName(name) {
+  let cleaned = String(name || '').trim();
+  if (!cleaned) return '';
+
+  cleaned = cleaned
+    .replace(/^\s*\[(?:import(?:ed)?|source|user|username|owner|author)[^\]]*\]\s*/i, '')
+    .replace(/^\s*(?:import(?:ed)?|source|user|username|owner|author)\s*[:|/\\-]\s*/i, '')
+    .replace(/^\s*@[\w.-]+\s*[:|/\\-]\s*/i, '')
+    .replace(/^\s*[\w.-]+@[\w.-]+\s*[:|/\\-]\s*/i, '')
+    .trim();
+
+  return cleaned || 'Legacy gear';
+}
+
 function getGearIdentityKeys(item) {
   const id = item?.id || item?.gearId || item?.cardId || item?.ourGameId;
   const nameSlug = slugify(getGearDisplayName(item));
@@ -80,12 +94,13 @@ function getMetadataScore(item) {
 }
 
 export function getGearDisplayName(item = {}) {
-  return item.ourGameName ||
+  const name = item.ourGameName ||
     item.auditDisplayName ||
     item.originalKdmName ||
     item.name ||
     item.id ||
     'Unnamed gear';
+  return cleanGearDisplayName(name);
 }
 
 export function getGearStableId(item = {}) {
@@ -94,9 +109,10 @@ export function getGearStableId(item = {}) {
   return slugify(getGearDisplayName(item)) || 'unnamed_gear';
 }
 
-export function isCraftableGear(item) {
+export function isCraftableGear(item, { includeHidden = false } = {}) {
   return Boolean(
     item &&
+    (includeHidden || (!item.deprecated && !item.hiddenFromCrafting)) &&
     getGearStableId(item) &&
     item.cost &&
     typeof item.cost === 'object' &&
@@ -105,12 +121,12 @@ export function isCraftableGear(item) {
   );
 }
 
-export function dedupeGearList(items = []) {
+export function dedupeGearList(items = [], { includeHidden = false } = {}) {
   const deduped = [];
   const keyOwners = new Map();
 
   [...items]
-    .filter(isCraftableGear)
+    .filter(item => isCraftableGear(item, { includeHidden }))
     .sort((a, b) => getMetadataScore(b) - getMetadataScore(a))
     .forEach(item => {
       const keys = getGearIdentityKeys(item);
@@ -223,11 +239,18 @@ export function getGearUnlockState(item, settlement = {}) {
 export function groupGearByArmouryTab(
   items = [],
   settlementState = null,
-  { includeLocked = true } = {}
+  { includeLocked = true, includeHidden = false } = {}
 ) {
   const groups = {};
 
-  dedupeGearList(items).forEach(item => {
+  dedupeGearList(items, { includeHidden }).forEach(item => {
+    if ((item.deprecated || item.hiddenFromCrafting) && includeHidden) {
+      const location = 'Legacy / Hidden Review';
+      if (!groups[location]) groups[location] = {};
+      if (!groups[location].General) groups[location].General = [];
+      groups[location].General.push(item);
+      return;
+    }
     if (
       settlementState &&
       !includeLocked &&
