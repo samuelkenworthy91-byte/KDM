@@ -333,7 +333,47 @@ Object.assign(fightingArts, Object.fromEntries([
   art('harvestVow', 'Harvest Vow', 'The first intact weak point broken each hunt slightly improves harvest quality.', ['harvest', 'weakPoint'], [{ type: 'firstBreakHarvestBonus', value: 1 }]),
   art('lastBreathGift', 'Last Breath Gift', 'When reduced to 1 HP, another living party member gains 1 survival once per hunt.', ['wound', 'support', 'party'], [{ type: 'oneHpPartySurvival', value: 1 }], { rarity: 'uncommon', grantsCards: ['sharedBreath'] }),
   art('patientPredator', 'Patient Predator', 'If the first card played this combat is an attack, it applies Marked.', ['attack', 'marked', 'patience'], [{ type: 'firstCardAttackMarks' }], { rarity: 'uncommon', grantsCards: ['patientBlade'] }),
-  art('oathAgainstDeath', 'Oath Against Death', 'Once per hunt, a block card played at 1 HP gains +8 block.', ['rare', 'block', 'death'], [{ type: 'oneHpBlockBonus', value: 8 }], { rarity: 'rare', grantsCards: ['lanternOath'] })
+  art('oathAgainstDeath', 'Oath Against Death', 'Once per hunt, a block card played at 1 HP gains +8 block.', ['rare', 'block', 'death'], [{ type: 'oneHpBlockBonus', value: 8 }], { rarity: 'rare', grantsCards: ['lanternOath'] }),
+  art(
+    'measuredPayment',
+    'Measured Payment',
+    'The first block card each combat gains +3 block.',
+    ['nemesis', 'mirror', 'cruelCollector', 'block'],
+    [{ type: 'firstBlockBonus', value: 3 }],
+    { rarity: 'nemesis', source: 'Cruel Collector victory' }
+  ),
+  art(
+    'verdictWithoutVoice',
+    'Verdict Without Voice',
+    'When the first vague tell appears each combat, gain +2 block.',
+    ['nemesis', 'mirror', 'maskedJudge', 'tell'],
+    [{ type: 'firstVagueTellBlock', value: 2 }],
+    { rarity: 'nemesis', source: 'Masked Judge victory' }
+  ),
+  art(
+    'noFootstepsBehind',
+    'No Footsteps Behind',
+    'While wounded, the first attack each combat deals +3 damage.',
+    ['nemesis', 'mirror', 'wanderingKiller', 'wound', 'attack'],
+    [{ type: 'firstAttackIfWounded', value: 3 }],
+    { rarity: 'nemesis', source: 'Wandering Killer victory' }
+  ),
+  art(
+    'wearTheDark',
+    'Wear the Dark',
+    'Once per combat, the first Panic a card would add grants 1 block instead.',
+    ['nemesis', 'mirror', 'shadowStalker', 'panic', 'block'],
+    [{ type: 'panicToBlock', value: 1 }],
+    { rarity: 'nemesis', source: 'Shadow Stalker victory' }
+  ),
+  art(
+    'invertedStrength',
+    'Inverted Strength',
+    'After using Counter, the next attack deals +2 damage.',
+    ['nemesis', 'mirror', 'mirrorTyrant', 'counter', 'attack'],
+    [{ type: 'counterNextAttackBonus', value: 2 }],
+    { rarity: 'nemesis', source: 'Mirror Tyrant victory' }
+  )
 ].map(entry => [entry.id, entry])));
 
 quarryList.forEach(quarry => {
@@ -372,7 +412,7 @@ nemesisList.forEach(nemesis => {
 
 export const implementedFightingArts = Object.values(fightingArts).filter(art => art.implemented);
 export const generalFightingArts = implementedFightingArts.filter(
-  art => art.effect.type !== 'monsterBane'
+  art => art.effect.type !== 'monsterBane' && !art.tags?.includes('nemesis')
 );
 
 export function getFightingArtGrantedCards(artId) {

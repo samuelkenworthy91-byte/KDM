@@ -111,6 +111,9 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
       artPassives
         .filter(effect => effect.type === 'frontPositionBlock' && (runBonus.partyPosition || 0) === 0)
         .reduce((total, effect) => total + (effect.value || 0), 0) +
+      artPassives
+        .filter(effect => effect.type === 'firstVagueTellBlock' && !runBonus.hasMonsterBane)
+        .reduce((total, effect) => total + (effect.value || 0), 0) +
       (scars.includes('hornBruise') && quarryId === 'wailingAntelope' ? 2 : 0) +
       (disorders.includes('paranoia') && !runBonus.hasMonsterBane ? 3 : 0),
     energy: Math.max(0, ENERGY_PER_TURN - (runBonus.firstTurnEnergyPenalty || 0)),
@@ -908,9 +911,21 @@ export function playCard(cardIndex, state) {
         blockGainedThisTurn += amount;
         break;
       }
-      case 'addPanic':
-        discardPile = [...discardPile, ...Array(effect.amount).fill(cards.panic)];
+      case 'addPanic': {
+        const panicToBlock = !artTriggers.panicToBlock
+          ? artPassives
+            .filter(passive => passive.type === 'panicToBlock')
+            .reduce((total, passive) => total + (passive.value || passive.amount || 0), 0)
+          : 0;
+        const panicAmount = Math.max(0, effect.amount - (panicToBlock ? 1 : 0));
+        discardPile = [...discardPile, ...Array(panicAmount).fill(cards.panic)];
+        if (panicToBlock) {
+          survivor.block += panicToBlock;
+          blockGainedThisTurn += panicToBlock;
+          artTriggers.panicToBlock = true;
+        }
         break;
+      }
       case 'removePanic': {
         const panicIndex = discardPile.findIndex(item => item.id === 'panic');
         if (panicIndex >= 0) discardPile = discardPile.filter((_, index) => index !== panicIndex);
@@ -1386,6 +1401,7 @@ export function useSurvivalAction(actionId, state, options = {}) {
   let hand = [...state.hand];
   let discardPile = [...state.discardPile];
   let feedback = '';
+  const artPassives = state.artPassives || getArtPassiveEffects(state.fightingArts);
 
   if (actionId === 'dodge') {
     const katanaBonus = state.activeProficiencyType === 'katana' &&
@@ -1464,6 +1480,11 @@ export function useSurvivalAction(actionId, state, options = {}) {
     }
   }
   const blockGained = Math.max(0, survivor.block - state.survivor.block);
+  const counterAttackBonus = actionId === 'counter'
+    ? artPassives
+      .filter(passive => passive.type === 'counterNextAttackBonus')
+      .reduce((total, passive) => total + (passive.value || 0), 0)
+    : 0;
 
   return {
     ...state,
@@ -1474,6 +1495,7 @@ export function useSurvivalAction(actionId, state, options = {}) {
     discardPile,
     blockGainedThisTurn: (state.blockGainedThisTurn || 0) + blockGained,
     survivalSpentThisTurn: (state.survivalSpentThisTurn || 0) + cost,
+    nextAttackBonus: (state.nextAttackBonus || 0) + counterAttackBonus,
     nextCounterBonus: actionId === 'counter' ? 0 : state.nextCounterBonus,
     pendingCounterConfig: actionId === 'counter' ? null : state.pendingCounterConfig,
     weaponMasteryUsed: actionId === 'counter' &&

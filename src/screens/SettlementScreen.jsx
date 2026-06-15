@@ -264,7 +264,9 @@ function SurvivorCard({
   const monsterBanes = (survivor.fightingArts || [])
     .filter(id => id.startsWith('monsterBane_'))
     .map(id => ({ id, art: fightingArts[id], quarryId: id.replace('monsterBane_', '') }));
-  const regularArts = (survivor.fightingArts || []).filter(id => !id.startsWith('monsterBane_'));
+  const learnedArts = (survivor.fightingArts || []).filter(id => !id.startsWith('monsterBane_'));
+  const mirrorArts = learnedArts.filter(id => fightingArts[id]?.tags?.includes('nemesis'));
+  const regularArts = learnedArts.filter(id => !fightingArts[id]?.tags?.includes('nemesis'));
   const buildTags = [...new Set(regularArts.flatMap(id => fightingArts[id]?.tags || []))]
     .filter(tag => !['rare', 'party'].includes(tag))
     .slice(0, 4);
@@ -316,6 +318,7 @@ function SurvivorCard({
         <ModifierSection label="Traits" ids={survivor.traits} type="trait" />
         {survivor.appearance && <p><strong>Appearance:</strong> {survivor.appearance}</p>}
         <ModifierSection label="Fighting Arts" ids={regularArts} type="fightingArt" />
+        <ModifierSection label="Mirror Arts" ids={mirrorArts} type="fightingArt" />
         <ModifierSection label="Disorders" ids={survivor.disorders} type="disorder" />
         <ModifierSection label="Injuries" ids={survivor.injuries} type="injury" />
         <ModifierSection label="Scars" ids={survivor.scars} type="scar" />

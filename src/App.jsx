@@ -79,6 +79,10 @@ import {
 } from './game/cardForgetting.js';
 import { resolveRestStopChoice } from './game/restStopLogic.js';
 import {
+  createNemesisVictoryReward,
+  getNemesisRewardChoice
+} from './game/nemesisRewardLogic.js';
+import {
   applyInnovationChoice,
   drawInnovationCandidates,
   getDrawableInnovationIdsForSettlement
@@ -2620,66 +2624,45 @@ export default function App() {
     const pending = settlement.pendingNemesisEncounter;
     const encounter = nemesisEncounters[pending?.nemesisId];
     if (!encounter || !runSurvivor) return;
-    const rewards = encounter.rewards || {};
-    const details = [];
-    (rewards.resources || []).forEach(id => details.push(`+1 ${resourceData[id]?.name || id}`));
-    (rewards.innovationIds || []).forEach(id => details.push(`Innovation added: ${innovationCards[id]?.name || id}`));
-    if (rewards.survivorStrength) details.push(`${runSurvivor.name} gains +${rewards.survivorStrength} strength`);
-    if (rewards.fightingArt) details.push(`${runSurvivor.name} learns a fighting art`);
-    if (rewards.removePanic) details.push(`Remove ${rewards.removePanic} Panic from ${runSurvivor.name}`);
+    const uniqueReward = createNemesisVictoryReward(encounter, runSurvivor);
+    const details = uniqueReward.uniqueResourceId
+      ? [`+1 ${uniqueReward.uniqueResourceName}`]
+      : ['No unique trophy data was available.'];
     const result = {
       nemesisId: encounter.id,
       nemesisName: encounter.displayName,
       result: 'victory',
       survivorName: runSurvivor.name,
+      survivorId: runSurvivor.id,
       text: encounter.victoryText,
       details,
+      uniqueReward,
       deathSummary: null
     };
     updateSettlement(current => {
       const survivorAfter = combatResult?.survivor || runSurvivor;
-      const randomArt = generalFightingArts.find(art =>
-        !(runSurvivor.fightingArts || []).includes(art.id)
-      );
       return {
         ...current,
-        stash: addResources(current.stash, rewards.resources || []),
+        stash: uniqueReward.uniqueResourceId
+          ? addResources(current.stash, [uniqueReward.uniqueResourceId])
+          : current.stash,
         survivors: current.survivors.map(survivor => {
           if (survivor.id !== runSurvivor.id) return survivor;
-          let permanentNegativeCards = survivor.permanentNegativeCards || [];
-          if (rewards.removePanic) {
-            let remaining = rewards.removePanic;
-            permanentNegativeCards = permanentNegativeCards.filter(addition => {
-              if (remaining > 0 && getPersonalCardId(addition) === 'panic') {
-                remaining -= 1;
-                return false;
-              }
-              return true;
-            });
-          }
           return {
             ...survivor,
             hp: survivorAfter.hp,
             survival: survivorAfter.survival,
-            strength: (survivor.strength || 0) + (rewards.survivorStrength || 0),
-            fightingArts: rewards.fightingArt && randomArt
-              ? [...new Set([...survivor.fightingArts, randomArt.id])]
-              : survivor.fightingArts,
-            permanentNegativeCards
+            history: [
+              ...(survivor.history || []),
+              `Defeated ${encounter.displayName} and recovered ${uniqueReward.uniqueResourceName}.`
+            ]
           };
         }),
-        innovationDeckState: {
-          ...current.innovationDeckState,
-          availableInnovationPoolIds: [
-            ...new Set([
-              ...current.innovationDeckState.availableInnovationPoolIds,
-              ...(rewards.innovationIds || [])
-            ])
-          ]
-        },
         pendingNemesisEncounter: null,
         lastNemesisResult: result,
         settlementHistory: [...current.settlementHistory, {
+          id: uniqueReward.rewardEventId,
+          type: 'nemesis-victory',
           lanternYear: current.lanternYear,
           nemesisId: encounter.id,
           nemesisName: encounter.displayName,
@@ -2687,6 +2670,8 @@ export default function App() {
           survivorUsed: runSurvivor.name,
           consequences: [],
           rewards: details,
+          learningText: uniqueReward.learningText,
+          rewardClaimed: uniqueReward.rewardClaimed,
           deaths: [],
           timestamp: new Date().toISOString()
         }]
@@ -2694,6 +2679,96 @@ export default function App() {
     });
     setNemesisResult(result);
     setScreen('nemesisResult');
+  };
+
+  const handleNemesisRewardChoice = choiceId => {
+    if (!nemesisResult?.uniqueReward || nemesisResult.uniqueReward.rewardClaimed) return;
+    const choice = getNemesisRewardChoice(nemesisResult.uniqueReward, choiceId);
+    if (!choice) return;
+
+    const currentSurvivor = settlement.survivors.find(item =>
+      item.id === nemesisResult.survivorId
+    );
+    const artAlreadyOwned = choice.artId &&
+      currentSurvivor?.fightingArts?.includes(choice.artId);
+    const resolvedChoice = artAlreadyOwned
+      ? getNemesisRewardChoice(nemesisResult.uniqueReward, 'takeExtraTrophy')
+      : choice;
+    if (!resolvedChoice || !currentSurvivor) return;
+    const learnedArt = resolvedChoice.type === 'fightingArt';
+    const choiceText = learnedArt
+      ? `${currentSurvivor.name} learned ${fightingArts[resolvedChoice.artId]?.name || 'Unknown / Legacy'}.`
+      : `The settlement took another ${resourceData[resolvedChoice.resourceId]?.name || 'Unknown / Legacy'}.`;
+    const updatedResult = {
+      ...nemesisResult,
+      details: [
+        ...nemesisResult.details,
+        choiceText,
+        nemesisResult.uniqueReward.learningText
+      ],
+      uniqueReward: {
+        ...nemesisResult.uniqueReward,
+        rewardClaimed: true,
+        chosenRewardId: resolvedChoice.id
+      }
+    };
+
+    updateSettlement(current => {
+      const storedResult = current.lastNemesisResult?.uniqueReward?.rewardEventId ===
+        nemesisResult.uniqueReward.rewardEventId
+        ? current.lastNemesisResult
+        : nemesisResult;
+      if (storedResult.uniqueReward?.rewardClaimed) return current;
+      const reward = storedResult.uniqueReward;
+      const survivor = current.survivors.find(item => item.id === storedResult.survivorId);
+      if (!survivor) return current;
+
+      const safeChoice = resolvedChoice.artId && survivor.fightingArts.includes(resolvedChoice.artId)
+        ? getNemesisRewardChoice(reward, 'takeExtraTrophy')
+        : resolvedChoice;
+      if (!safeChoice) return current;
+      const safeLearnedArt = safeChoice.type === 'fightingArt';
+      const safeChoiceText = safeLearnedArt
+        ? `${survivor.name} learned ${fightingArts[safeChoice.artId]?.name || 'Unknown / Legacy'}.`
+        : `The settlement took another ${resourceData[safeChoice.resourceId]?.name || 'Unknown / Legacy'}.`;
+      const safeResult = {
+        ...storedResult,
+        details: [...storedResult.details, safeChoiceText, reward.learningText],
+        uniqueReward: {
+          ...reward,
+          rewardClaimed: true,
+          chosenRewardId: safeChoice.id
+        }
+      };
+
+      return {
+        ...current,
+        stash: safeChoice.type === 'resource'
+          ? addResources(current.stash, [safeChoice.resourceId])
+          : current.stash,
+        survivors: current.survivors.map(item => item.id === survivor.id
+          ? {
+            ...item,
+            fightingArts: safeLearnedArt
+              ? [...new Set([...item.fightingArts, safeChoice.artId])]
+              : item.fightingArts,
+            history: [...(item.history || []), reward.learningText, safeChoiceText]
+          }
+          : item),
+        lastNemesisResult: safeResult,
+        settlementHistory: current.settlementHistory.map(entry =>
+          entry.id === reward.rewardEventId
+            ? {
+              ...entry,
+              rewards: [...(entry.rewards || []), safeChoiceText],
+              learningText: reward.learningText,
+              rewardClaimed: true
+            }
+            : entry
+        )
+      };
+    });
+    setNemesisResult(updatedResult);
   };
 
   const finishNemesisDefeat = deathDetails => {
@@ -3312,6 +3387,7 @@ export default function App() {
         return nemesisResult ? (
           <NemesisResultScreen
             result={nemesisResult}
+            onChooseReward={handleNemesisRewardChoice}
             onContinue={() => {
               if (nemesisResult.deathSummary) setScreen('graveLegacy');
               else {

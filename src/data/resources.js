@@ -14,6 +14,36 @@ export const resources = {
   horn: resource('horn', 'Horn', 'monster', 'Dense horn suitable for tools and weapons.'),
   ichor: resource('ichor', 'Ichor', 'rare', 'Potent fluid taken from an advanced quarry.'),
   monsterTooth: resource('monsterTooth', 'Monster Tooth', 'rare', 'A trophy from a dangerous quarry.'),
+  collectorsDue: resource(
+    'collectorsDue',
+    "Collector's Due",
+    'nemesis',
+    'A hooked tally-token taken from the Cruel Collector.'
+  ),
+  silentVerdictShard: resource(
+    'silentVerdictShard',
+    'Silent Verdict Shard',
+    'nemesis',
+    'A mask fragment that grows cold near a broken promise.'
+  ),
+  roadlessToken: resource(
+    'roadlessToken',
+    'Roadless Token',
+    'nemesis',
+    'A worn marker carried by the Wandering Killer between ambushes.'
+  ),
+  captiveShadow: resource(
+    'captiveShadow',
+    'Captive Shadow',
+    'nemesis',
+    'A strip of darkness that no longer follows its former owner.'
+  ),
+  tyrantMirrorSplinter: resource(
+    'tyrantMirrorSplinter',
+    'Tyrant Mirror Splinter',
+    'nemesis',
+    'Dark glass that reflects strength as weakness.'
+  ),
 
   paleLionHide: resource('paleLionHide', 'Pale Lion Hide', 'creature', 'Moon-pale hide from the Pale Hunt Lion.', 'paleHuntLion'),
   paleLionClaw: resource('paleLionClaw', 'Pale Lion Claw', 'creature', 'A hooked claw made for sudden violence.', 'paleHuntLion'),
@@ -144,5 +174,8 @@ additionalFamilies.forEach(([creatureId, ...names]) => {
 });
 
 export const genericResourceIds = Object.values(resources)
-  .filter(item => !item.creatureId && item.type !== 'rare' && item.type !== 'strange')
+  .filter(item =>
+    !item.creatureId &&
+    !['rare', 'strange', 'nemesis'].includes(item.type)
+  )
   .map(item => item.id);

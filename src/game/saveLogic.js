@@ -559,7 +559,35 @@ export function normalizeSettlement(data = {}) {
       data.quarryRetreatModifiers && typeof data.quarryRetreatModifiers === 'object'
         ? data.quarryRetreatModifiers
         : {},
-    lastNemesisResult: data.lastNemesisResult || null,
+    lastNemesisResult: data.lastNemesisResult && typeof data.lastNemesisResult === 'object'
+      ? {
+        ...data.lastNemesisResult,
+        details: Array.isArray(data.lastNemesisResult.details)
+          ? data.lastNemesisResult.details
+          : [],
+        uniqueReward: data.lastNemesisResult.uniqueReward &&
+          typeof data.lastNemesisResult.uniqueReward === 'object'
+          ? {
+            rewardEventId: data.lastNemesisResult.uniqueReward.rewardEventId || null,
+            uniqueResourceId: data.lastNemesisResult.uniqueReward.uniqueResourceId || null,
+            uniqueResourceName:
+              data.lastNemesisResult.uniqueReward.uniqueResourceName || 'Unknown / Legacy',
+            artId: data.lastNemesisResult.uniqueReward.artId || null,
+            artName: data.lastNemesisResult.uniqueReward.artName || 'Unknown / Legacy',
+            artDescription: data.lastNemesisResult.uniqueReward.artDescription ||
+              'This older reward has no current description.',
+            artOwned: Boolean(data.lastNemesisResult.uniqueReward.artOwned),
+            rewardChoices: Array.isArray(data.lastNemesisResult.uniqueReward.rewardChoices)
+              ? data.lastNemesisResult.uniqueReward.rewardChoices
+              : [],
+            rewardClaimed: Boolean(data.lastNemesisResult.uniqueReward.rewardClaimed),
+            chosenRewardId: data.lastNemesisResult.uniqueReward.chosenRewardId || null,
+            learningText: data.lastNemesisResult.uniqueReward.learningText ||
+              'The survivor carried an unnamed lesson home.'
+          }
+          : null
+      }
+      : null,
     rumouredInnovations: Array.isArray(data.rumouredInnovations) ? data.rumouredInnovations : [],
     unlockedRecipeFamilies: [...new Set([
       'paleHuntLion',

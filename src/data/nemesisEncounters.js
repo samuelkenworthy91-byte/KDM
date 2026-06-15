@@ -29,7 +29,11 @@ export const nemesisEncounters = {
     victoryText: 'The Collector withdraws without its chosen trophies.',
     defeatText: 'The Collector leaves carrying proof that the settlement could not protect its own.',
     behaviourId: 'cruelCollector',
-    rewards: { resources: ['scrap'], innovationIds: ['trophyRites'] },
+    rewards: {
+      uniqueResourceId: 'collectorsDue',
+      mirrorArtId: 'measuredPayment',
+      learningText: 'The defender learned that every demand can be measured, delayed, and paid in guard instead of flesh.'
+    },
     defeatConsequences: { populationLoss: 1, randomResourceLoss: 2, disorderId: 'nightTerrors' },
     implemented: true
   },
@@ -50,7 +54,11 @@ export const nemesisEncounters = {
     victoryText: 'The mask lowers. For this year, the settlement is permitted to endure.',
     defeatText: 'The verdict is delivered without a voice.',
     behaviourId: 'maskedJudge',
-    rewards: { innovationIds: ['settlementLaw'] },
+    rewards: {
+      uniqueResourceId: 'silentVerdictShard',
+      mirrorArtId: 'verdictWithoutVoice',
+      learningText: 'The defender learned to read judgement before it is spoken.'
+    },
     defeatConsequences: { settlementMemoryLoss: 2, disorderId: 'paranoia', populationLossIfNoMemory: 1 },
     implemented: true
   },
@@ -71,7 +79,11 @@ export const nemesisEncounters = {
     victoryText: 'The footsteps turn away from the lantern ring.',
     defeatText: 'The Killer leaves one final track inside the settlement.',
     behaviourId: 'wanderingKiller',
-    rewards: { survivorStrength: 1, fightingArt: true },
+    rewards: {
+      uniqueResourceId: 'roadlessToken',
+      mirrorArtId: 'noFootstepsBehind',
+      learningText: 'The defender learned to turn pursuit into the instant of ambush.'
+    },
     defeatConsequences: { selectedSurvivorDies: true, deepCutIfSurvives: true },
     implemented: true
   },
@@ -92,7 +104,11 @@ export const nemesisEncounters = {
     victoryText: 'The lanternlight contracts. Every shadow belongs to a living body again.',
     defeatText: 'The settlement wakes with fear already inside its walls.',
     behaviourId: 'shadowStalker',
-    rewards: { removePanic: 1, resources: ['strangeEye'] },
+    rewards: {
+      uniqueResourceId: 'captiveShadow',
+      mirrorArtId: 'wearTheDark',
+      learningText: 'The defender learned to hold fear against the skin until it became protection.'
+    },
     defeatConsequences: { panic: 2, populationLossIfNoSurvivor: 1 },
     implemented: true
   },
@@ -113,7 +129,11 @@ export const nemesisEncounters = {
     victoryText: 'The throne fractures. The settlement sees only itself again.',
     defeatText: 'The Tyrant takes a piece of the settlement into the dark glass.',
     behaviourId: 'mirrorTyrant',
-    rewards: { innovationIds: ['mirrorDoctrine'] },
+    rewards: {
+      uniqueResourceId: 'tyrantMirrorSplinter',
+      mirrorArtId: 'invertedStrength',
+      learningText: 'The defender learned that a reflected weakness can become a deliberate opening.'
+    },
     defeatConsequences: { loseBuiltInnovation: 1, settlementMemoryLossFallback: 3 },
     implemented: true
   }
