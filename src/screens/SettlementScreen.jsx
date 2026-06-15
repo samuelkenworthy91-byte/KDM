@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import QuarryPortrait from '../components/QuarryPortrait.jsx';
 import { cards, starterCardIds, trainingCardIds } from '../data/cards.js';
 import {
   birthTraitOptions,
@@ -2144,6 +2145,7 @@ export default function SettlementScreen({
               );
               return (
                 <article className="quarry-card" key={quarry.id}>
+                  <QuarryPortrait quarry={quarry} />
                   <button
                     type="button"
                     disabled={!unlocked}
@@ -2172,6 +2174,7 @@ export default function SettlementScreen({
           <div className="quarry-list">
             {rumouredQuarries.map(quarry => (
               <article className="quarry-card" key={quarry.id}>
+                <QuarryPortrait quarry={quarry} locked />
                 <h4>{quarry.displayName}</h4>
                 <p>{quarry.role} | {quarry.designTags.join(', ')}</p>
                 <p>{quarry.unlockHint}</p>

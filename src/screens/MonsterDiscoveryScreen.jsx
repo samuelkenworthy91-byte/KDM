@@ -1,4 +1,5 @@
 import React from 'react';
+import QuarryPortrait from '../components/QuarryPortrait.jsx';
 import { formatValueForDisplay } from '../utils/formatters.js';
 import { resources } from '../data/resources.js';
 import { getQuarryBehaviourLabel, getQuarryBehaviourNote } from '../data/quarries.js';
@@ -14,6 +15,7 @@ export default function MonsterDiscoveryScreen({ quarries, storyText, onChoose, 
       <div className="progress-choice-grid">
         {visible.map(quarry => (
           <button type="button" key={quarry.id} onClick={() => onChoose(quarry.id)}>
+            <QuarryPortrait quarry={quarry} size="discovery" />
             <strong>{quarry.name}</strong>
             <span>{formatValueForDisplay(quarry.description)}</span>
             <span>{getQuarryBehaviourLabel(quarry)}</span>

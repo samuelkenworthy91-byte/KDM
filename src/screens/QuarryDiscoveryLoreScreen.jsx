@@ -1,14 +1,18 @@
 import React from 'react';
+import QuarryPortrait from '../components/QuarryPortrait.jsx';
 import { innovationCards } from '../data/innovationCards.js';
 import { innovations } from '../data/innovations.js';
+import { quarries } from '../data/quarries.js';
 import { formatEffectForDisplay, formatValueForDisplay } from '../utils/formatters.js';
 
 export default function QuarryDiscoveryLoreScreen({ event, onContinue }) {
   if (!event) return null;
+  const quarry = quarries[event.quarryId];
   return (
     <section className="survivor-progress-screen">
       <p className="eyebrow">Quarry Discovery</p>
       <h2>{event.title}</h2>
+      <QuarryPortrait quarry={quarry} size="lore" />
       {event.loreParagraphs.map((paragraph, index) => (
         <p key={`lore-${index}`}>{formatValueForDisplay(paragraph)}</p>
       ))}

@@ -67,6 +67,10 @@ const coreMonsterIds = {
   ashPhoenix: 'ashPhoenix'
 };
 
+function portraitFileName(id) {
+  return id.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+}
+
 function makeQuarry([id, displayName, role, implemented, designTags, buildingUnlocks, huntable = true]) {
   const uniqueResources = Object.values(resources)
     .filter(resource => resource.creatureId === id)
@@ -83,6 +87,10 @@ function makeQuarry([id, displayName, role, implemented, designTags, buildingUnl
     id,
     name: displayName,
     displayName,
+    portraitPath: role === 'quarry'
+      ? `./assets/quarries/portraits/${portraitFileName(id)}.png`
+      : null,
+    portraitAlt: `${displayName} portrait`,
     familyId: id,
     role,
     implemented,

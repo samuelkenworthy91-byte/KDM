@@ -1,4 +1,5 @@
 import React from 'react';
+import QuarryPortrait from '../components/QuarryPortrait.jsx';
 import { formatValueForDisplay } from '../utils/formatters.js';
 import {
   calculateAvailableQuarryTiers,
@@ -58,6 +59,7 @@ export default function QuarrySelectionScreen({
             className={selectedQuarry === quarry.id ? 'selected' : ''}
             onClick={() => onSelectQuarry(quarry.id)}
           >
+            <QuarryPortrait quarry={quarry} size="selection" />
             <strong>{quarry.name}</strong>
             <span>Monster Tier: {quarry.tier.charAt(0).toUpperCase() + quarry.tier.slice(1)}</span>
             <span>Highest defeated level: {getHighestDefeatedQuarryLevel(settlement, quarry.id)}</span>
@@ -73,21 +75,24 @@ export default function QuarrySelectionScreen({
           .map(level => <option value={level} key={level}>Level {level}</option>)}
       </select>
       {quarry && (
-        <article className="item-card">
-          <strong>{quarry.name} - Tier: {quarry.tier.charAt(0).toUpperCase() + quarry.tier.slice(1)} - Level {selectedLevel}</strong>
-          <p>Expected Danger: {danger}</p>
-          <p>Reward Quality: {rewardProfile?.quality} / {quarry.tierRewardProfile.genericQuality}</p>
-          <p>Unique resource reward count: {rewardProfile?.uniqueCount}</p>
-          <p><strong>Party Size Scaling</strong></p>
-          <p>1 survivor: normal HP | 2 survivors: monster HP x2 | 3 survivors: monster HP x3 | 4 survivors: monster HP x4</p>
-          <p>This quarry will have {scaledHp} HP because {partySize} survivor{partySize === 1 ? '' : 's'} are hunting.</p>
-          <p>
-            {selectedLevel === 1
-              ? 'A readable first hunt with mostly basic intents.'
-              : selectedLevel === 2
-                ? 'A more aggressive hunt with stronger thematic intents and uncommon parts.'
-                : 'The quarry at its deadliest. Rare intents, level 3 parts, and improved survivor learning are available.'}
-          </p>
+        <article className="item-card quarry-selection-summary">
+          <QuarryPortrait quarry={quarry} size="hero" />
+          <div>
+            <strong>{quarry.name} - Tier: {quarry.tier.charAt(0).toUpperCase() + quarry.tier.slice(1)} - Level {selectedLevel}</strong>
+            <p>Expected Danger: {danger}</p>
+            <p>Reward Quality: {rewardProfile?.quality} / {quarry.tierRewardProfile.genericQuality}</p>
+            <p>Unique resource reward count: {rewardProfile?.uniqueCount}</p>
+            <p><strong>Party Size Scaling</strong></p>
+            <p>1 survivor: normal HP | 2 survivors: monster HP x2 | 3 survivors: monster HP x3 | 4 survivors: monster HP x4</p>
+            <p>This quarry will have {scaledHp} HP because {partySize} survivor{partySize === 1 ? '' : 's'} are hunting.</p>
+            <p>
+              {selectedLevel === 1
+                ? 'A readable first hunt with mostly basic intents.'
+                : selectedLevel === 2
+                  ? 'A more aggressive hunt with stronger thematic intents and uncommon parts.'
+                  : 'The quarry at its deadliest. Rare intents, level 3 parts, and improved survivor learning are available.'}
+            </p>
+          </div>
         </article>
       )}
       <div className="button-row">
