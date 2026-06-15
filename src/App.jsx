@@ -72,6 +72,7 @@ import {
   forgetSurvivorCard,
   getCardForgetEligibility
 } from './game/cardForgetting.js';
+import { resolveRestStopChoice } from './game/restStopLogic.js';
 import {
   applyInnovationChoice,
   drawInnovationCandidates,
@@ -929,7 +930,9 @@ export default function App() {
         runDeck,
         huntDeckConditionsApplied: true
       });
-      setRunModifiers({});
+      setRunModifiers(current => current.nextEventWarning
+        ? { nextEventWarning: true }
+        : {});
       setRunBonus(current => ({
         ...current,
         firstCombatBlock: 0,
@@ -2124,7 +2127,10 @@ export default function App() {
     setRunParty(current => current.map(survivor =>
       survivor.id === result.runSurvivor.id ? result.runSurvivor : survivor
     ));
-    setRunModifiers(result.runModifiers);
+    setRunModifiers({
+      ...result.runModifiers,
+      nextEventWarning: false
+    });
     updateSettlement(current => {
       const memorySettlement = result.settlementMemoryDelta > 0
         ? gainMemories(current, result.settlementMemoryDelta, {
@@ -2190,56 +2196,43 @@ export default function App() {
     return result;
   };
 
-  const handleRestChoice = choiceId => {
-    if (choiceId === 'bindWounds') {
-      setRunSurvivor(current => {
-        const lightLocation = Object.entries(current.hitLocations || {})
-          .find(([, wound]) => wound.wounded && !wound.severe)?.[0];
-        const rested = lightLocation ? treatWound(current, lightLocation, 'rest') : current;
-        return {
-          ...rested,
-          hp: Math.min(
-            rested.maxHp,
-            rested.hp + Math.max(
-              0,
-              Math.ceil(rested.maxHp * 0.25) - (rested.injuries?.includes('twistedAnkle') ? 1 : 0)
-            )
-          )
-        };
-      });
-      setRunParty(current => current.map(survivor => survivor.id === runSurvivor.id
-        ? (() => {
-          const lightLocation = Object.entries(survivor.hitLocations || {})
-            .find(([, wound]) => wound.wounded && !wound.severe)?.[0];
-          const rested = lightLocation ? treatWound(survivor, lightLocation, 'rest') : survivor;
-          return {
-            ...rested,
-            hp: Math.min(
-              rested.maxHp,
-              rested.hp + Math.max(
-                0,
-                Math.ceil(rested.maxHp * 0.25) -
-                  (rested.injuries?.includes('twistedAnkle') ? 1 : 0)
-              )
-            )
-          };
-        })()
-        : survivor));
-    } else if (choiceId === 'shareStories') {
-      setRunSurvivor(current => ({
-        ...current,
-        survival: Math.min(current.maxSurvival || 3, (current.survival || 0) + 1)
-      }));
-      setRunParty(current => current.map(survivor => survivor.id === runSurvivor.id
-        ? {
-          ...survivor,
-          survival: Math.min(survivor.maxSurvival || 3, (survivor.survival || 0) + 1)
-        }
-        : survivor));
-    } else if (choiceId === 'sharpenGear') {
-      setRunModifiers(current => ({ ...current, firstAttackBonus: (current.firstAttackBonus || 0) + 2 }));
-    } else {
-      setRunModifiers(current => ({ ...current, nextCombatStartBlock: (current.nextCombatStartBlock || 0) + 2 }));
+  const handleRestChoice = (choiceId, options = {}) => {
+    const result = resolveRestStopChoice({
+      settlement,
+      runParty,
+      runSurvivor,
+      runModifiers,
+      runMap,
+      currentNode,
+      currentHuntId
+    }, choiceId, options);
+    if (!result.applied) return;
+
+    const nextParty = result.runParty || runParty;
+    const nextActive = result.runSurvivor || runSurvivor;
+    const nextPartyBonuses = nextParty.map(survivor => {
+      const equippedGear = (survivor.boundGear || [])
+        .map(gear => equipment[gear.equipmentId])
+        .filter(Boolean);
+      const existing = partyCombatBonuses.find(member => member?.survivor?.id === survivor.id);
+      return {
+        ...existing,
+        survivor,
+        runDeck: buildRunDeck({ survivor, equippedGear })
+      };
+    });
+
+    if (result.settlement !== settlement) setSettlement(result.settlement);
+    setRunParty(nextParty);
+    setRunSurvivor(nextActive);
+    setRunModifiers(result.runModifiers || runModifiers);
+    setRunMap(result.runMap || runMap);
+    setPartyCombatBonuses(nextPartyBonuses);
+    if (nextActive) {
+      const equippedGear = (nextActive.boundGear || [])
+        .map(gear => equipment[gear.equipmentId])
+        .filter(Boolean);
+      setRunDeck(buildRunDeck({ survivor: nextActive, equippedGear }));
     }
     completeCurrentNode();
   };
@@ -3307,9 +3300,11 @@ export default function App() {
           <EventScreen
             event={currentEvent}
             hasParanoia={
-              !runEventWarningUsed && (
+              runModifiers.nextEventWarning || (
+                !runEventWarningUsed && (
                 runSurvivor?.disorders?.includes('paranoia') ||
                 runSurvivor?.traits?.includes('watchful')
+                )
               )
             }
             onChoose={handleEventChoice}
@@ -3317,7 +3312,14 @@ export default function App() {
           />
         ) : null;
       case 'rest':
-        return <RestStopScreen onChoose={handleRestChoice} />;
+        return (
+          <RestStopScreen
+            settlement={settlement}
+            party={runParty}
+            activeSurvivor={runSurvivor}
+            onChoose={handleRestChoice}
+          />
+        );
       case 'survivorProgress':
         {
           const rewardSurvivorId = survivorRewardQueue[0] || runSummary?.survivorId;

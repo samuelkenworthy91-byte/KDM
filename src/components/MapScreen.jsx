@@ -69,10 +69,15 @@ export default function MapScreen({ map, onSelectNode, resources, onRetreat }) {
                     disabled={!node.available || node.completed}
                     onClick={() => onSelectNode(node)}
                   >
-                    <span className="node-type">{NODE_LABELS[node.type]}</span>
+                    <span className="node-type">
+                      {state === 'locked' && !node.revealedByTracks
+                        ? 'Unknown'
+                        : NODE_LABELS[node.type]}
+                    </span>
                     <span className="node-state">
                       {node.completed ? 'Completed' : node.available ? 'Available' : 'Locked'}
                     </span>
+                    {node.revealedByTracks && <span className="node-state">Tracks studied</span>}
                   </button>
                 );
               })}
