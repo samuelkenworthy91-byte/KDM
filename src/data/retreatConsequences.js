@@ -23,7 +23,7 @@ export const retreatConsequences = [
     'The next hunt begins with +1 monster aggression.'),
   consequence(7, 'childrenHeardIt', 'Children Heard It',
     'The youngest hear the screaming before the adults do.',
-    'Lose 1 population and gain 1 Settlement Memory.'),
+    'Lose 1 population.'),
   consequence(8, 'lostTools', 'Lost Tools',
     'They throw tools behind them to run faster.',
     'Destroy one random unbound armory item, or lose up to 2 Scrap or Bone.'),
@@ -62,7 +62,7 @@ export const retreatConsequences = [
     'No immediate loss. The next retreat rolls twice and takes the worse result.'),
   consequence(20, 'hardLesson', 'Hard Lesson',
     'They return ashamed, but alive, and survival has its own wisdom.',
-    'Gain 1 Settlement Memory. A hunting party survivor gains +1 Survival next hunt.')
+    'A hunting party survivor gains +1 Survival next hunt.')
 ];
 
 export function getRetreatConsequence(roll) {

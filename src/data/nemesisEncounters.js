@@ -29,7 +29,7 @@ export const nemesisEncounters = {
     victoryText: 'The Collector withdraws without its chosen trophies.',
     defeatText: 'The Collector leaves carrying proof that the settlement could not protect its own.',
     behaviourId: 'cruelCollector',
-    rewards: { settlementMemory: 2, resources: ['scrap'], innovationIds: ['trophyRites'] },
+    rewards: { resources: ['scrap'], innovationIds: ['trophyRites'] },
     defeatConsequences: { populationLoss: 1, randomResourceLoss: 2, disorderId: 'nightTerrors' },
     implemented: true
   },
@@ -50,7 +50,7 @@ export const nemesisEncounters = {
     victoryText: 'The mask lowers. For this year, the settlement is permitted to endure.',
     defeatText: 'The verdict is delivered without a voice.',
     behaviourId: 'maskedJudge',
-    rewards: { settlementMemory: 2, innovationIds: ['settlementLaw'] },
+    rewards: { innovationIds: ['settlementLaw'] },
     defeatConsequences: { settlementMemoryLoss: 2, disorderId: 'paranoia', populationLossIfNoMemory: 1 },
     implemented: true
   },
@@ -113,7 +113,7 @@ export const nemesisEncounters = {
     victoryText: 'The throne fractures. The settlement sees only itself again.',
     defeatText: 'The Tyrant takes a piece of the settlement into the dark glass.',
     behaviourId: 'mirrorTyrant',
-    rewards: { settlementMemory: 3, innovationIds: ['mirrorDoctrine'] },
+    rewards: { innovationIds: ['mirrorDoctrine'] },
     defeatConsequences: { loseBuiltInnovation: 1, settlementMemoryLossFallback: 3 },
     implemented: true
   }

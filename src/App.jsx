@@ -21,7 +21,6 @@ import { graveLegacies } from './data/graveLegacies.js';
 import { getIntentTargetRule } from './game/monsterTargeting.js';
 import { startingTraits } from './data/memoryInnovations.js';
 import {
-  getDrawableInnovationIds,
   innovationCards,
   QUARRY_INNOVATION_POOL
 } from './data/innovationCards.js';
@@ -31,7 +30,6 @@ import {
   getDiscoveryChoices,
   getHighestDefeatedQuarryLevel,
   hasDefeatedQuarryLevel,
-  normalizeDefeatedQuarryLevels,
   quarryList,
   quarries,
   recordDefeatedQuarryLevel,
@@ -58,11 +56,29 @@ import {
 } from './game/conditionLogic.js';
 import { calculateIntimacyProjections, resolveEvent } from './game/eventLogic.js';
 import { buildRunDeck, getCardsFromIds, getPersonalCardId } from './game/deckLogic.js';
-import { isMemoryInnovationUnlocked } from './game/memoryInnovationLogic.js';
+import {
+  EARLY_FORGETTING_COST,
+  forgetSurvivorCard,
+  getCardForgetEligibility
+} from './game/cardForgetting.js';
+import {
+  applyInnovationChoice,
+  drawInnovationCandidates,
+  getDrawableInnovationIdsForSettlement
+} from './game/innovationLogic.js';
 import {
   createBornSurvivorName,
   getSurvivorDisplayName
 } from './game/survivorIdentity.js';
+import {
+  awardHuntReturnMemories,
+  canSpendMemories,
+  createDeathResolution,
+  gainMemories,
+  queueDeathResolutions,
+  resolveDeathMemoryChoice,
+  spendMemories
+} from './game/memoryEconomy.js';
 import {
   applyLanternYearTimeline,
   resolveLanternTimelineChoice
@@ -115,6 +131,26 @@ import TitleScreen from './screens/TitleScreen.jsx';
 
 const RANDOM_MONSTER_PARTS = ['bone', 'hide', 'sinew', 'organ', 'claw', 'strangeEye'];
 const DEADLY_EVENT_IDS = new Set(['strangeCarcass', 'blackRain', 'woundedBeast', 'lanternStorm']);
+
+function getHuntAgeProgression(survivor, settlement) {
+  const hasGrace = settlement.innovationDeckState?.builtInnovationIds?.includes('timeKeeping')
+    && !survivor.ageingGraceUsed;
+  if (!hasGrace) {
+    return { completedRuns: (survivor.completedRuns || 0) + 1 };
+  }
+  return {
+    completedRuns: survivor.completedRuns || 0,
+    ageingGraceUsed: true,
+    ageingHistory: [
+      ...(survivor.ageingHistory || []),
+      {
+        type: 'hunt-age-prevented',
+        source: 'timeKeeping',
+        lanternYear: settlement.lanternYear
+      }
+    ]
+  };
+}
 
 validateQuarryContent();
 
@@ -941,8 +977,17 @@ export default function App() {
       const brokenWeakPoints = combatResult.brokenWeakPoints || [];
       const harvestResults = getBrokenWeakPointRewards(brokenWeakPoints);
       if (fallen.length) {
-        updateSettlement(current => ({
-          ...current,
+        updateSettlement(current => {
+          const deathSettlement = queueDeathResolutions(
+            current,
+            fallen.map(survivor => createDeathResolution(survivor, {
+              cause: combatResult.monster?.name || quarries[selectedQuarry].name,
+              huntId: currentHuntId,
+              lanternYear: current.lanternYear
+            }))
+          );
+          return {
+          ...deathSettlement,
           population: Math.max(0, current.population - fallen.length),
           deadSurvivors: current.deadSurvivors + fallen.length,
           survivors: current.survivors.map(survivor => fallen.some(item => item.id === survivor.id)
@@ -975,7 +1020,8 @@ export default function App() {
             })),
             ...current.graveHistory
           ]
-        }));
+        };
+        });
       }
       setRunParty(living);
       setRunSurvivor(living[0]);
@@ -1056,7 +1102,7 @@ export default function App() {
       quarryLevel: selectedLevel,
       nodesCompleted: progress.nodesCompleted,
       rowReached: progress.rowReached,
-      settlementMemoryEarned: progress.nodesCompleted,
+      settlementMemoryEarned: 1,
       resources: allRewards.map(id => resourceData[id]?.name || id),
       hpBeforeHealing: survivorAfterFight.hp,
       hpAfterHealing: healedSurvivorHp,
@@ -1079,9 +1125,13 @@ export default function App() {
       const existingReward = current.huntRewardLedger?.[huntResultId];
       if (huntResultId && existingReward?.partsApplied) return current;
       const nextYear = (current.lanternYear || 0) + 1;
+      const memorySettlement = awardHuntReturnMemories(
+        current,
+        [survivorAfterFight],
+        huntResultId
+      );
       const next = {
-      ...current,
-      settlementMemory: (current.settlementMemory || 0) + summary.settlementMemoryEarned,
+      ...memorySettlement,
       stash: addResources(current.stash, allRewards),
       totalRuns: (current.totalRuns || 0) + 1,
       completedHunts: (current.completedHunts || 0) + 1,
@@ -1125,7 +1175,7 @@ export default function App() {
             dealtFinalBlow: Boolean(survivorAfterFight.combatStats?.dealtFinalBlow)
           },
           kills: survivorAfterFight.kills || 0,
-          completedRuns: (survivor.completedRuns || 0) + 1
+          ...getHuntAgeProgression(survivor, current)
         }
         : survivor.alive === false ? survivor : {
           ...survivor,
@@ -1210,7 +1260,7 @@ export default function App() {
       quarryLevel: selectedLevel,
       nodesCompleted: progress.nodesCompleted,
       rowReached: progress.rowReached,
-      settlementMemoryEarned: progress.nodesCompleted,
+      settlementMemoryEarned: healedParty.length,
       resources: allRewards.map(id => resourceData[id]?.name || id),
       populationBefore: settlement.population,
       populationAfter: settlement.population,
@@ -1229,9 +1279,9 @@ export default function App() {
       const existingReward = current.huntRewardLedger?.[huntResultId];
       if (huntResultId && existingReward?.partsApplied) return current;
       const nextYear = current.lanternYear + 1;
+      const memorySettlement = awardHuntReturnMemories(current, healedParty, huntResultId);
       const next = {
-        ...current,
-        settlementMemory: current.settlementMemory + progress.nodesCompleted,
+        ...memorySettlement,
         stash: addResources(current.stash, allRewards),
         totalRuns: current.totalRuns + 1,
         completedHunts: current.completedHunts + 1,
@@ -1262,7 +1312,7 @@ export default function App() {
               brokeWeakPoint: Boolean(returning.combatStats?.brokeWeakPoint),
               dealtFinalBlow: Boolean(returning.combatStats?.dealtFinalBlow)
             },
-            completedRuns: (survivor.completedRuns || 0) + 1
+            ...getHuntAgeProgression(survivor, current)
           };
         }),
         defeatedQuarryLevels: recordDefeatedQuarryLevel(
@@ -1335,7 +1385,9 @@ export default function App() {
         killedById: deathDetails.killedById,
         nodesCompleted: progress.nodesCompleted,
         rowReached: progress.rowReached,
-        settlementMemoryEarned: progress.nodesCompleted,
+        settlementMemoryEarned: deathDetails.survivors.filter(survivor =>
+          survivor.hp > 0 && survivor.alive !== false
+        ).length,
         resources: runResources.map(id => resourceData[id]?.name || id),
         populationBefore: settlement.population,
         populationAfter: Math.max(0, settlement.population - fallen.length),
@@ -1345,17 +1397,24 @@ export default function App() {
       setRunSummary(summary);
       updateSettlement(current => {
         const nextYear = current.lanternYear + 1;
+        const returning = deathDetails.survivors.filter(survivor =>
+          survivor.hp > 0 && survivor.alive !== false
+        );
+        const memorySettlement = awardHuntReturnMemories(current, returning, currentHuntId);
+        const deathSettlement = queueDeathResolutions(
+          memorySettlement,
+          fallen.map(survivor => createDeathResolution(survivor, {
+            cause: survivor.causeOfDeath || deathDetails.killedBy,
+            huntId: currentHuntId,
+            lanternYear: nextYear
+          }))
+        );
         const next = {
-          ...current,
+          ...deathSettlement,
           population: Math.max(0, current.population - fallen.length),
           deadSurvivors: current.deadSurvivors + fallen.length,
           totalRuns: current.totalRuns + 1,
           lanternYear: nextYear,
-          settlementMemory: Math.max(
-            0,
-            current.settlementMemory + progress.nodesCompleted -
-              (current.temporarySettlementModifiers?.graveDebt ? 1 : 0)
-          ),
           temporarySettlementModifiers: {
             ...(current.temporarySettlementModifiers || {}),
             graveDebt: false
@@ -1435,7 +1494,7 @@ export default function App() {
       killedById: deathDetails?.killedById || 'unknownMonster',
       nodesCompleted: progress.nodesCompleted,
       rowReached: progress.rowReached,
-      settlementMemoryEarned: progress.nodesCompleted,
+      settlementMemoryEarned: 0,
       resources: fallenResources.map(id => resourceData[id]?.name || id),
       hpBeforeHealing: 0,
       hpAfterHealing: 0,
@@ -1461,17 +1520,19 @@ export default function App() {
     setRunSummary(summary);
     updateSettlement(current => {
       const nextYear = (current.lanternYear || 0) + 1;
+      const deathSettlement = queueDeathResolutions(current, [
+        createDeathResolution(fallenSurvivor, {
+          cause: deathDetails?.killedBy || 'Unknown',
+          huntId: currentHuntId,
+          lanternYear: nextYear
+        })
+      ]);
       const next = {
-      ...current,
+      ...deathSettlement,
       population: Math.max(0, (current.population || 0) - 1),
       deadSurvivors: (current.deadSurvivors || 0) + 1,
       totalRuns: (current.totalRuns || 0) + 1,
       lanternYear: nextYear,
-      settlementMemory: Math.max(
-        0,
-        (current.settlementMemory || 0) + summary.settlementMemoryEarned -
-          (current.temporarySettlementModifiers?.graveDebt ? 1 : 0)
-      ),
       temporarySettlementModifiers: {
         ...(current.temporarySettlementModifiers || {}),
         graveDebt: false
@@ -1559,20 +1620,13 @@ export default function App() {
     updateSettlement(current => {
       const nextRunBonus = { ...(current.nextRunBonus || {}) };
       const monsterKnowledge = { ...(current.monsterKnowledge || {}) };
-      let settlementMemory = current.settlementMemory || 0;
-
-      if (legacy.id === graveLegacies.rememberTechnique.id) settlementMemory += 1;
-      else if (legacy.id === graveLegacies.buryGear.id) nextRunBonus.randomMonsterPart = true;
+      if (legacy.id === graveLegacies.buryGear.id) nextRunBonus.randomMonsterPart = true;
       else if (legacy.id === graveLegacies.studyDeath.id) monsterKnowledge[killedById] = (monsterKnowledge[killedById] || 0) + 1;
       else if (legacy.id === graveLegacies.inheritScar.id) nextRunBonus.extraMaxHp = (nextRunBonus.extraMaxHp || 0) + 1;
       else if (legacy.id === graveLegacies.oathOfVengeance.id) nextRunBonus.firstCombatStrength = (nextRunBonus.firstCombatStrength || 0) + 1;
-      if (current.innovationDeckState.builtInnovationIds.includes('graves')) {
-        settlementMemory += 1;
-      }
 
       return {
         ...current,
-        settlementMemory,
         monsterKnowledge,
         nextRunBonus,
         graveHistory: [graveEntry, ...(current.graveHistory || [])]
@@ -1611,36 +1665,8 @@ export default function App() {
     });
   };
 
-  const handleBuildMemoryInnovation = innovation => {
-    updateSettlement(current => {
-      if (current.builtMemoryInnovations.includes(innovation.id)) return current;
-      if (!isMemoryInnovationUnlocked(innovation, current)) return current;
-      if (current.settlementMemory < innovation.costMemory) return current;
-      return {
-        ...current,
-        settlementMemory: current.settlementMemory - innovation.costMemory,
-        builtMemoryInnovations: [...current.builtMemoryInnovations, innovation.id]
-      };
-    });
-  };
-
   const handleAttemptInnovation = () => {
-    const highestQuarryLevel = Math.max(
-      0,
-      ...Object.values(normalizeDefeatedQuarryLevels(settlement.defeatedQuarryLevels))
-        .map(levels => Math.max(0, ...levels))
-    );
-    const drawable = getDrawableInnovationIds(settlement.innovationDeckState).filter(id => {
-      if (id === 'sharedBurden') {
-        return settlement.innovationDeckState.builtInnovationIds.includes('trailSignals') &&
-          (settlement.lanternYear >= 3 || highestQuarryLevel >= 2);
-      }
-      if (id === 'lanternProcession') {
-        return settlement.innovationDeckState.builtInnovationIds.includes('sharedBurden') &&
-          (settlement.lanternYear >= 6 || highestQuarryLevel >= 3);
-      }
-      return true;
-    });
+    const drawable = getDrawableInnovationIdsForSettlement(settlement);
     const basicIds = ['bone', 'hide', 'sinew', 'organ', 'scrap', 'claw'];
     const resourceAliases = {
       crackedMolar: 'bone', wailingHorn: 'bone', stormBone: 'bone', crystalBone: 'bone', harmonyBone: 'bone', timeBone: 'bone',
@@ -1664,7 +1690,7 @@ export default function App() {
 
     const resourceCost = settlement.temporarySettlementModifiers?.delayedWork ? 4 : 3;
     if (
-      settlement.settlementMemory < 1 ||
+      !canSpendMemories(settlement, 1) ||
       availableResources.length < resourceCost ||
       !drawable.length
     ) {
@@ -1680,15 +1706,19 @@ export default function App() {
       })
       .slice(0, resourceCost);
 
-    const choices = [...drawable].sort(() => Math.random() - 0.5).slice(0, 3);
+    const choices = drawInnovationCandidates(settlement, 3);
     updateSettlement(current => {
       const stash = { ...current.stash };
       payment.forEach(resourceId => {
         stash[resourceId] = Math.max(0, (stash[resourceId] || 0) - 1);
       });
+      const spent = spendMemories(current, 1, {
+        source: 'innovation',
+        description: 'Attempted an innovation.'
+      });
+      if (!spent) return current;
       return {
-        ...current,
-        settlementMemory: current.settlementMemory - 1,
+        ...spent,
         stash,
         temporarySettlementModifiers: {
           ...(current.temporarySettlementModifiers || {}),
@@ -1696,6 +1726,12 @@ export default function App() {
         },
         innovationDeckState: {
           ...current.innovationDeckState,
+          discoveredInnovationIds: [
+            ...new Set([
+              ...current.innovationDeckState.discoveredInnovationIds,
+              ...choices
+            ])
+          ],
           innovationHistory: [
             ...current.innovationDeckState.innovationHistory,
             {
@@ -1724,96 +1760,43 @@ export default function App() {
   const handleChooseInnovation = innovationId => {
     const card = innovationCards[innovationId];
     if (!card) return;
-    updateSettlement(current => ({
-      ...current,
-      maxHuntPartySize: innovationId === 'trailSignals'
-        ? Math.max(2, current.maxHuntPartySize)
-        : innovationId === 'sharedBurden'
-          ? Math.max(3, current.maxHuntPartySize)
-          : innovationId === 'lanternProcession'
-            ? 4
-            : current.maxHuntPartySize,
-      builtInnovations: [
-        ...new Set([...current.builtInnovations, ...(card.unlocksBuildings || [])])
-      ],
-      builtMemoryInnovations: current.builtMemoryInnovations.includes(innovationId) ||
-        !['riteOfForgetting', 'deathArchive', 'trialNames', 'painLessons', 'monsterStories',
-          'quietNight', 'weaponDrills', 'taboo', 'shrineOfNames', 'huntSongs', 'oralTradition',
-          'sharedWarnings'].includes(innovationId)
-        ? current.builtMemoryInnovations
-        : [...current.builtMemoryInnovations, innovationId],
-      rumouredInnovations: [
-        ...new Set([...current.rumouredInnovations, ...(card.unlocksBuildings || [])])
-      ],
-      innovationDeckState: {
-        ...current.innovationDeckState,
-        discoveredInnovationIds: [
-          ...new Set([...current.innovationDeckState.discoveredInnovationIds, innovationId])
-        ],
-        builtInnovationIds: [
-          ...new Set([...current.innovationDeckState.builtInnovationIds, innovationId])
-        ],
-        availableInnovationPoolIds: [
-          ...new Set([
-            ...current.innovationDeckState.availableInnovationPoolIds,
-            ...(card.addsToInnovationPool || [])
-          ])
-        ],
-        innovationHistory: [
-          ...current.innovationDeckState.innovationHistory,
-          {
-            type: 'chosen',
-            innovationId,
-            lanternYear: current.lanternYear,
-            timestamp: new Date().toISOString()
-          }
-        ]
-      }
-    }));
+    updateSettlement(current => applyInnovationChoice(current, innovationId));
     setAppliedInnovationId(innovationId);
-  };
-
-  const forgetCardForSurvivor = (survivor, cardId, method, lanternYear) => {
-    const cardName = cards[cardId]?.name || cardId;
-    const wasStarterCard = starterCardIds.includes(cardId);
-    const wasNegative = cardId === 'panic' ||
-      cards[cardId]?.type === 'curse' ||
-      (survivor.permanentNegativeCards || []).some(addition =>
-        getPersonalCardId(addition) === cardId
-      );
-    return {
-      ...survivor,
-      forgottenCardIds: [...new Set([...(survivor.forgottenCardIds || []), cardId])],
-      forgottenCardsLog: [
-        ...(survivor.forgottenCardsLog || []),
-        { cardId, cardName, lanternYear, method, wasStarterCard, wasNegative }
-      ]
-    };
   };
 
   const handleForgetCard = (survivorId, cardId) => {
     updateSettlement(current => {
       const survivor = current.survivors.find(item => item.id === survivorId);
-      if (!current.builtMemoryInnovations.includes('riteOfForgetting')) return current;
-      if (!survivor || survivor.lastForgetLanternYear === current.lanternYear) return current;
-      if (!cardId || survivor.forgottenCardIds?.includes(cardId)) return current;
-      const futureIds = [
-        ...starterCardIds,
-        ...(survivor.personalDeckAdditions || []).map(getPersonalCardId),
-        ...(survivor.permanentNegativeCards || []).map(getPersonalCardId)
+      if (!survivor || !cardId) return current;
+      const additions = [
+        ...(survivor.personalDeckAdditions || []),
+        ...(survivor.permanentNegativeCards || [])
       ];
-      if (!futureIds.includes(cardId) || cardId === 'panic' || cards[cardId]?.type === 'curse') {
-        return current;
-      }
-      if (current.settlementMemory < 1) return current;
+      const addition = additions.find(item => getPersonalCardId(item) === cardId);
+      if (!starterCardIds.includes(cardId) && !addition) return current;
+      const card = cards[cardId];
+      const eligibility = getCardForgetEligibility({
+        settlement: current,
+        survivor,
+        cardId,
+        card,
+        addition
+      });
+      if (!eligibility.eligible) return current;
+
+      const method = current.builtMemoryInnovations.includes('riteOfForgetting')
+        ? 'Rite of Forgetting'
+        : 'Guided Reflection';
+      const spent = spendMemories(current, EARLY_FORGETTING_COST, {
+        source: 'guided-reflection',
+        description: `${survivor.name} forgot ${card.name}.`,
+        survivorIds: [survivorId]
+      });
+      if (!spent) return current;
       return {
-        ...current,
-        settlementMemory: current.settlementMemory - 1,
-        survivors: current.survivors.map(item => item.id === survivorId
-          ? {
-            ...forgetCardForSurvivor(item, cardId, 'Rite of Forgetting', current.lanternYear),
-            lastForgetLanternYear: current.lanternYear
-          }
+        ...spent,
+        survivors: spent.survivors.map(item => item.id === survivorId
+          ? forgetSurvivorCard(item, cardId, method, current.lanternYear, card)
           : item)
       };
     });
@@ -1827,10 +1810,15 @@ export default function App() {
       const survivor = current.survivors.find(item => item.id === survivorId);
       if (!current.builtMemoryInnovations.includes(config.innovationId)) return current;
       if (current.memoryActionsUsedThisYear[actionId] === current.lanternYear) return current;
-      if (cardId !== 'panic' || current.settlementMemory < config.cost) return current;
+      if (cardId !== 'panic') return current;
+      const spent = spendMemories(current, config.cost, {
+        source: actionId,
+        description: `${config.method} removed Panic.`,
+        survivorIds: [survivorId]
+      });
+      if (!spent) return current;
       return {
-        ...current,
-        settlementMemory: current.settlementMemory - config.cost,
+        ...spent,
         memoryActionsUsedThisYear: {
           ...current.memoryActionsUsedThisYear,
           [actionId]: current.lanternYear
@@ -1846,10 +1834,15 @@ export default function App() {
     updateSettlement(current => {
       if (!current.builtMemoryInnovations.includes('weaponDrills')) return current;
       if (current.memoryActionsUsedThisYear.weaponDrills === current.lanternYear) return current;
-      if (!trainingCardIds.includes(cardId) || current.settlementMemory < 1) return current;
+      if (!trainingCardIds.includes(cardId)) return current;
+      const spent = spendMemories(current, 1, {
+        source: 'training',
+        description: 'A survivor completed weapon drills.',
+        survivorIds: [survivorId]
+      });
+      if (!spent) return current;
       return {
-        ...current,
-        settlementMemory: current.settlementMemory - 1,
+        ...spent,
         memoryActionsUsedThisYear: {
           ...current.memoryActionsUsedThisYear,
           weaponDrills: current.lanternYear
@@ -1902,10 +1895,14 @@ export default function App() {
     updateSettlement(current => {
       if (!current.builtMemoryInnovations.includes('shrineOfNames')) return current;
       if (current.memoryActionsUsedThisYear.shrineOfNames === current.lanternYear) return current;
-      if (current.settlementMemory < 2) return current;
+      const spent = spendMemories(current, 2, {
+        source: 'shrine-of-names',
+        description: 'A survivor gained lasting vitality.',
+        survivorIds: [survivorId]
+      });
+      if (!spent) return current;
       return {
-        ...current,
-        settlementMemory: current.settlementMemory - 2,
+        ...spent,
         memoryActionsUsedThisYear: {
           ...current.memoryActionsUsedThisYear,
           shrineOfNames: current.lanternYear
@@ -1919,7 +1916,7 @@ export default function App() {
 
   const handleRestSurvivor = survivorId => {
     updateSettlement(current => {
-      if ((current.settlementMemory || 0) < 1) return current;
+      if (!canSpendMemories(current, 1)) return current;
       const survivor = current.survivors.find(item =>
         item.id === survivorId && item.alive !== false && (
           item.hp < item.maxHp ||
@@ -1927,17 +1924,28 @@ export default function App() {
         )
       );
       if (!survivor) return current;
+      const spent = spendMemories(current, 1, {
+        source: 'rest',
+        description: `Rested ${survivor.name}.`,
+        survivorIds: [survivorId]
+      });
+      if (!spent) return current;
       return {
-        ...current,
-        settlementMemory: current.settlementMemory - 1,
+        ...spent,
         survivors: current.survivors.map(item => {
           if (item.id !== survivorId) return item;
           const lightLocation = Object.entries(item.hitLocations || {})
             .find(([, wound]) => wound.wounded && !wound.severe)?.[0];
           const rested = lightLocation ? treatWound(item, lightLocation, 'rest') : item;
+          const restMultiplier = current.innovationDeckState.builtInnovationIds.includes('quietNight')
+            ? innovationCards.quietNight.mechanicalEffects.restHealingMultiplier
+            : 1;
           return {
             ...rested,
-            hp: Math.min(rested.maxHp, rested.hp + Math.ceil(rested.maxHp / 3))
+            hp: Math.min(
+              rested.maxHp,
+              rested.hp + Math.ceil((rested.maxHp / 3) * restMultiplier)
+            )
           };
         })
       };
@@ -2106,9 +2114,24 @@ export default function App() {
       survivor.id === result.runSurvivor.id ? result.runSurvivor : survivor
     ));
     setRunModifiers(result.runModifiers);
-    updateSettlement(current => ({
-      ...current,
-      settlementMemory: Math.max(0, current.settlementMemory + result.settlementMemoryDelta),
+    updateSettlement(current => {
+      const memorySettlement = result.settlementMemoryDelta > 0
+        ? gainMemories(current, result.settlementMemoryDelta, {
+          source: 'hunt-event',
+          description: result.outcomeText || 'A hunt event preserved a memory.',
+          survivorIds: [result.runSurvivor.id],
+          huntId: currentHuntId
+        })
+        : result.settlementMemoryDelta < 0
+          ? spendMemories(current, Math.abs(result.settlementMemoryDelta), {
+            source: 'hunt-event',
+            description: result.outcomeText || 'A hunt event consumed memory.',
+            survivorIds: [result.runSurvivor.id],
+            huntId: currentHuntId
+          }) || current
+          : current;
+      return {
+      ...memorySettlement,
       survivors: current.survivors.map(survivor => survivor.id === result.runSurvivor.id
         ? {
           ...survivor,
@@ -2143,7 +2166,8 @@ export default function App() {
           !current.discoveredQuarries.includes(quarry.id)
         ).slice(0, 1).map(quarry => quarry.id)])]
         : current.unlockedQuarries
-    }));
+    };
+    });
     if (result.runSurvivor.hp <= 0) {
       handleCombatDefeat({
         survivorName: result.runSurvivor.name,
@@ -2337,13 +2361,9 @@ export default function App() {
     if (discoveryChoices.length) {
       setScreen('monsterDiscovery');
     } else {
-      updateSettlement(current => ({
-        ...current,
-        settlementMemory: current.settlementMemory + 1
-      }));
       setRunSummary(current => ({
         ...current,
-        discoveryMessage: 'No new quarry rumours were found. The settlement gains 1 Memory instead.'
+        discoveryMessage: 'No new quarry rumours were found.'
       }));
       setScreen('runSummary');
     }
@@ -2354,16 +2374,13 @@ export default function App() {
     const discoveryEvent = getQuarryDiscoveryEvent(quarryId);
     if (!quarry || quarry.role !== 'quarry' || !quarry.huntable || !discoveryEvent) return;
     updateSettlement(current => {
-      let settlementMemory = current.settlementMemory || 0;
       const stash = { ...current.stash };
       const nextRunBonus = { ...(current.nextRunBonus || {}) };
       const rumourTexts = [...(current.rumourTexts || [])];
 
       discoveryEvent.settlementEffects.forEach(effect => {
-        if (effect.type === 'settlementMemory') settlementMemory += effect.amount;
         if (effect.type === 'resource' || effect.type === 'resourceOrMemory') {
           if (resourceData[effect.resourceId]) stash[effect.resourceId] = (stash[effect.resourceId] || 0) + effect.amount;
-          else settlementMemory += effect.amount;
         }
         if (effect.type === 'resourceOrResource') {
           const resourceId = effect.resourceIds.find(id => resourceData[id]);
@@ -2375,7 +2392,6 @@ export default function App() {
 
       return {
         ...current,
-        settlementMemory,
         stash,
         nextRunBonus,
         rumourTexts: [...new Set(rumourTexts)],
@@ -2492,10 +2508,15 @@ export default function App() {
 
   const spendNemesisMemory = () => {
     updateSettlement(current => {
-      if (current.settlementMemory < 1 || current.pendingNemesisEncounter?.memorySpent) return current;
+      if (current.pendingNemesisEncounter?.memorySpent) return current;
+      const spent = spendMemories(current, 1, {
+        source: 'nemesis-preparation',
+        description: 'Prepared a defender for a settlement threat.',
+        survivorIds: [current.pendingNemesisEncounter?.selectedSurvivorId].filter(Boolean)
+      });
+      if (!spent) return current;
       return {
-        ...current,
-        settlementMemory: current.settlementMemory - 1,
+        ...spent,
         pendingNemesisEncounter: {
           ...current.pendingNemesisEncounter,
           memorySpent: true,
@@ -2533,7 +2554,6 @@ export default function App() {
     if (!encounter || !runSurvivor) return;
     const rewards = encounter.rewards || {};
     const details = [];
-    if (rewards.settlementMemory) details.push(`+${rewards.settlementMemory} settlement Memory`);
     (rewards.resources || []).forEach(id => details.push(`+1 ${resourceData[id]?.name || id}`));
     (rewards.innovationIds || []).forEach(id => details.push(`Innovation added: ${innovationCards[id]?.name || id}`));
     if (rewards.survivorStrength) details.push(`${runSurvivor.name} gains +${rewards.survivorStrength} strength`);
@@ -2555,7 +2575,6 @@ export default function App() {
       );
       return {
         ...current,
-        settlementMemory: current.settlementMemory + (rewards.settlementMemory || 0),
         stash: addResources(current.stash, rewards.resources || []),
         survivors: current.survivors.map(survivor => {
           if (survivor.id !== runSurvivor.id) return survivor;
@@ -2723,9 +2742,16 @@ export default function App() {
         deaths: [runSurvivor.name],
         timestamp: new Date().toISOString()
       };
+      const deathSettlement = queueDeathResolutions(current, [
+        createDeathResolution(runSurvivor, {
+          cause: encounter.displayName,
+          lanternYear: current.lanternYear
+        })
+      ]);
       return {
-        ...current,
+        ...deathSettlement,
         population,
+        memories: settlementMemory,
         settlementMemory,
         stash,
         builtInnovations,
@@ -2823,14 +2849,26 @@ export default function App() {
     });
   };
 
-  const handleAttemptIntimacy = (maleId, femaleId) => {
+  const handleAttemptIntimacy = (maleId, femaleId, options = {}) => {
     updateSettlement(current => {
       if (current.lastIntimacyLanternYear === current.lanternYear) return current;
       const male = current.survivors.find(survivor => survivor.id === maleId && survivor.alive !== false && survivor.gender === 'male');
       const female = current.survivors.find(survivor => survivor.id === femaleId && survivor.alive !== false && survivor.gender === 'female');
       if (!male || !female || current.population <= 0) return current;
+      const memorySettlement = options.mitigateRisk
+        ? spendMemories(current, 1, {
+          source: 'intimacy-mitigation',
+          description: 'Reduced intimacy tragedy risk.',
+          survivorIds: [male.id, female.id]
+        })
+        : current;
+      if (!memorySettlement) return current;
 
       const projections = calculateIntimacyProjections(current, innovationCards);
+      const tragedyChance = Math.max(
+        0,
+        projections.finalTragedyChance - (options.mitigateRisk ? 0.1 : 0)
+      );
       const roll = Math.random();
 
       let populationChange = 0;
@@ -2841,7 +2879,7 @@ export default function App() {
       let newborns = [];
       let finalRollValue = Math.floor(roll * 10) + 1; // For history display
 
-      if (roll < projections.finalTragedyChance) {
+      if (roll < tragedyChance) {
         // Tragedy / Wound
         if (Math.random() < 0.5) {
           deathId = Math.random() < 0.5 ? male.id : female.id;
@@ -2870,7 +2908,26 @@ export default function App() {
           const identity = createBornSurvivorName(male, female, {
             primaryParent: female
           });
-          return createSurvivor(identity.displayName, Math.random() < 0.5 ? 'female' : 'male', identity);
+          const newborn = createSurvivor(
+            identity.displayName,
+            Math.random() < 0.5 ? 'female' : 'male',
+            identity
+          );
+          if (!current.innovationDeckState.builtInnovationIds.includes('trialNames')) {
+            return newborn;
+          }
+          const traitIds = Object.keys(startingTraits);
+          const traitId = traitIds[Math.floor(Math.random() * traitIds.length)];
+          const fightingArt = generalFightingArts[
+            Math.floor(Math.random() * generalFightingArts.length)
+          ];
+          const trainedNewborn = fightingArt
+            ? learnFightingArt(newborn, fightingArt.id, 'Trial Names birth teaching')
+            : newborn;
+          return {
+            ...trainedNewborn,
+            traits: traitId ? [...new Set([...(trainedNewborn.traits || []), traitId])] : []
+          };
         });
         if (newborns.length) {
           outcome += ` ${newborns.map(getSurvivorDisplayName).join(' and ')} joined the settlement.`;
@@ -2901,11 +2958,28 @@ export default function App() {
         roll,
         outcome,
         populationChange,
+        memoryAwarded: newborns.length ? 1 : 0,
+        memorySpentOnMitigation: options.mitigateRisk ? 1 : 0,
         deathName: deathSurvivor?.name || null
       };
+      const intimacyMemorySettlement = newborns.length
+        ? gainMemories(memorySettlement, 1, {
+          source: 'successful-intimacy',
+          description: 'A successful intimacy created a lasting settlement memory.',
+          survivorIds: [male.id, female.id, ...newborns.map(survivor => survivor.id)]
+        })
+        : memorySettlement;
+      const resolvedSettlement = deathSurvivor
+        ? queueDeathResolutions(intimacyMemorySettlement, [
+          createDeathResolution(deathSurvivor, {
+            cause: 'Intimacy tragedy',
+            lanternYear: current.lanternYear
+          })
+        ])
+        : intimacyMemorySettlement;
 
       return {
-        ...current,
+        ...resolvedSettlement,
         population: Math.max(0, current.population + populationChange),
         deadSurvivors: current.deadSurvivors + (deathId ? 1 : 0),
         survivors: [...nextSurvivors, ...newborns],
@@ -2936,6 +3010,12 @@ export default function App() {
     });
   };
 
+  const handleResolveDeath = (resolutionId, choice, resourceId) => {
+    updateSettlement(current =>
+      resolveDeathMemoryChoice(current, resolutionId, choice, resourceId)
+    );
+  };
+
   const renderScreen = () => {
     switch (screen) {
       case 'title':
@@ -2962,13 +3042,13 @@ export default function App() {
             onBeginHunt={() => settlement.activeSurvivorId && prepareHunt(settlement.activeSurvivorId)}
             onBuild={handleBuild}
             onCraft={handleCraft}
-            onBuildMemoryInnovation={handleBuildMemoryInnovation}
             onAttemptInnovation={handleAttemptInnovation}
             onTimelineChoice={handleTimelineChoice}
             onCreateSurvivor={handleCreateSurvivor}
             onSelectSurvivor={survivorId => updateSettlement(current => ({ ...current, activeSurvivorId: survivorId }))}
             onStartHunt={prepareHunt}
             onAttemptIntimacy={handleAttemptIntimacy}
+            onResolveDeath={handleResolveDeath}
             onRestSurvivor={handleRestSurvivor}
             onTreatInjury={handleTreatInjury}
             onForgetCard={handleForgetCard}
@@ -3119,6 +3199,10 @@ export default function App() {
             appliedCard={innovationCards[appliedInnovationId] || null}
             onChoose={handleChooseInnovation}
             onContinue={() => {
+              updateSettlement(current => ({
+                ...current,
+                pendingInnovationTutorialId: null
+              }));
               setInnovationDraw([]);
               setInnovationPayment([]);
               setAppliedInnovationId(null);

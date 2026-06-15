@@ -1,20 +1,51 @@
+const destinationFor = (category, options) => {
+  if (options.uiDestination) return options.uiDestination;
+  if (options.unlocksBuildings?.length || category.includes('craft')) return 'Settlement > Armoury';
+  if (category === 'training') return 'Settlement > Survivors > Survivor details';
+  if (category === 'recovery' || category === 'treatment') return 'Settlement > Survivors';
+  if (category === 'identity' || category === 'food') return 'Settlement > Population';
+  if (category === 'survival' || category === 'utility') return 'Settlement > Hunt preparation';
+  if (category === 'legacy') return 'Settlement > Graveyard';
+  return 'Settlement > Innovations';
+};
+
 const card = (
   id, name, category, description, effects, options = {}
-) => ({
-  id,
-  name,
-  category,
-  description,
-  costType: options.costType || 'innovationAttempt',
-  buildCost: options.buildCost || { settlementMemory: 1, basicResources: 3 },
-  unlockRequirement: options.unlockRequirement || { type: 'pool' },
-  addsToInnovationPool: options.addsToInnovationPool || [],
-  unlocksRecipes: options.unlocksRecipes || [],
-  unlocksBuildings: options.unlocksBuildings || [],
-  effects,
-  tags: options.tags || [],
-  implemented: options.implemented !== false
-});
+) => {
+  const safeEffects = Array.isArray(effects) ? effects : [effects].filter(Boolean);
+  const unlocksBuildings = options.unlocksBuildings || [];
+  const unlocksRecipes = options.unlocksRecipes || [];
+  const uiDestination = destinationFor(category, options);
+  return {
+    id,
+    name,
+    tier: options.tier || (category.includes('quarry') || category.includes('strange') ? 2 : 1),
+    category,
+    description,
+    prerequisites: options.prerequisites || options.unlockRequirement || { type: 'pool' },
+    deckWeight: Number.isFinite(options.deckWeight) ? options.deckWeight : 1,
+    costType: options.costType || 'innovationAttempt',
+    buildCost: options.buildCost || { settlementMemory: 1, basicResources: 3 },
+    memoryCost: Number.isFinite(options.memoryCost) ? options.memoryCost : 1,
+    unlockRequirement: options.unlockRequirement || { type: 'pool' },
+    addsToInnovationPool: options.addsToInnovationPool || [],
+    unlocksRecipes,
+    unlocksBuildings,
+    unlocks: options.unlocks || [...unlocksBuildings, ...unlocksRecipes],
+    settlementBoostSummary: options.settlementBoostSummary || safeEffects[0] || description,
+    mechanicalEffects: options.mechanicalEffects || {},
+    tutorialTitle: options.tutorialTitle || `Using ${name}`,
+    tutorialSteps: options.tutorialSteps || [
+      `Open ${uiDestination}.`,
+      `Look for the ${name} effect or unlocked action.`,
+      `Review its limits before spending resources or Memory: ${safeEffects[0] || 'the settlement has changed.'}`
+    ],
+    uiDestination,
+    effects: safeEffects,
+    tags: options.tags || [],
+    implemented: options.implemented !== false
+  };
+};
 
 export const BASE_INNOVATION_POOL_IDS = [
   'language',
@@ -140,16 +171,54 @@ export const innovationCards = {
       tags: ['party', 'culture']
     }
   ),
-  riteOfForgetting: card('riteOfForgetting', 'Rite of Forgetting', 'ritual', 'A lesson can be named and released into smoke.', ['Unlocks card forgetting.'], { tags: ['memory'] }),
+  riteOfForgetting: card('riteOfForgetting', 'Rite of Forgetting', 'ritual', 'A lesson can be named and released into smoke.', ['Preserves Guided Reflection: forget one eligible personal or basic card per survivor each year for 1 Memory.'], {
+    tags: ['memory'],
+    unlocks: ['forgetCard'],
+    uiDestination: 'Settlement > Survivors > Survivor details > Personal Deck',
+    tutorialSteps: [
+      'Open Settlement > Survivors and expand a survivor.',
+      'Open Personal Cards and choose Forget beside an eligible personal or basic card.',
+      'Monster Bane, permanent cards, and gear cards cannot be forgotten. Each use costs 1 Memory.'
+    ]
+  }),
   deathArchive: card('deathArchive', 'Death Archive', 'legacy', 'Every grave is indexed by wound and final lesson.', ['Expands grave legacy choices.'], { tags: ['legacy'] }),
-  trialNames: card('trialNames', 'Trial Names', 'identity', 'A new name declares a way of facing darkness.', ['New survivors may choose a starting trait.'], { tags: ['identity'] }),
+  trialNames: card('trialNames', 'Trial Names', 'identity', 'A new name declares a way of facing darkness.', ['New survivors may choose a starting trait; children born through intimacy also receive a starting trait and fighting art.'], {
+    tags: ['identity'],
+    unlocks: ['newbornTraitChoice'],
+    uiDestination: 'Settlement > Population',
+    tutorialSteps: [
+      'Open Settlement > Population.',
+      'When creating a survivor, choose an available starting trait.',
+      'Children born through intimacy automatically receive one starting trait and one general fighting art.'
+    ]
+  }),
   painLessons: card('painLessons', 'Pain Lessons', 'training', 'Wounds are studied until they become instruction.', ['Unlocks injury-to-scar treatment.'], { tags: ['treatment'] }),
   monsterStories: card('monsterStories', 'Monster Stories', 'knowledge', 'Quarry tales reveal recurring weaknesses.', ['Monster Bane is more likely after victory.'], { tags: ['bane'] }),
-  quietNight: card('quietNight', 'Quiet Night', 'recovery', 'One night is kept free of work and retelling.', ['Remove one Panic per Lantern Year.'], { tags: ['recovery'] }),
-  weaponDrills: card('weaponDrills', 'Weapon Drills', 'training', 'Repeated forms become dependable techniques.', ['Add training cards to survivors.'], { tags: ['training'] }),
+  quietNight: card('quietNight', 'Quiet Night', 'recovery', 'One night is kept free of work and retelling.', ['Remove one Panic per Lantern Year and double healing from Memory-based rest.'], {
+    tags: ['recovery'],
+    unlocks: ['quietNight'],
+    mechanicalEffects: { restHealingMultiplier: 2 },
+    tutorialSteps: [
+      'Open Settlement > Survivors and expand a survivor carrying Panic.',
+      'Choose Quiet Night beside the Panic card.',
+      'The settlement spends 1 Memory and can remove Panic once each Lantern Year. Rest healing is doubled automatically.'
+    ]
+  }),
+  weaponDrills: card('weaponDrills', 'Weapon Drills', 'training', 'Repeated forms become dependable techniques.', ['Add one basic training card to a survivor each Lantern Year for 1 Memory.'], {
+    tags: ['training'],
+    unlocks: ['weaponDrills'],
+    tutorialSteps: [
+      'Open Settlement > Survivors and expand the survivor to train.',
+      'Choose one card under Weapon Drills.',
+      'Training costs 1 Memory and the settlement may perform it once each Lantern Year.'
+    ]
+  }),
   taboo: card('taboo', 'Taboo', 'law', 'One poisonous story is forbidden.', ['Remove one curse per Lantern Year.'], { tags: ['law'] }),
   shrineOfNames: card('shrineOfNames', 'Shrine of Names', 'legacy', 'The living carry strength beneath recorded names.', ['Grant a survivor +1 max HP.'], { tags: ['legacy'] }),
-  huntSongs: card('huntSongs', 'Hunt Songs', 'culture', 'Victories are sung into the rhythm of departure.', ['Gain +1 starting survival against known quarries.'], { tags: ['culture'] }),
+  huntSongs: card('huntSongs', 'Hunt Songs', 'culture', 'Victories are sung into the rhythm of departure.', ['Gain +1 starting survival against known quarries.'], {
+    tags: ['culture'],
+    uiDestination: 'Hunt > Party preparation'
+  }),
   blackLanternRite: card('blackLanternRite', 'Black Lantern Rite', 'ritual', 'A lightless flame is used to study fear without dispelling it.', ['Timeline choices may follow the black lantern path.', 'Campaign pressure can rise around strange knowledge.'], { tags: ['timeline', 'strange', 'ritual'] }),
   graveOfferings: card('graveOfferings', 'Grave Offerings', 'legacy', 'Useful tools are surrendered so their lessons remain with the living.', ['Grave history carries stronger survivor lessons.'], { tags: ['timeline', 'death', 'legacy'] }),
   wrongArchitecture: card('wrongArchitecture', 'Wrong Architecture', 'strange craft', 'Rooms are built to fit shapes that have not arrived.', ['Strange timeline events become more likely.'], { tags: ['timeline', 'strange', 'building'] }),
@@ -166,13 +235,25 @@ export const innovationCards = {
   phoenixPyre: card('phoenixPyre', 'Phoenix Pyre', 'quarry craft', 'A controlled fire shapes time-touched remains.', ['Unlocks Phoenix Pyre.'], { unlocksBuildings: ['phoenixPyre'] }),
   monsterArchive: card('monsterArchive', 'Monster Archive', 'knowledge', 'Quarry weaknesses are carved into durable records.', ['Monster Bane deals +1 damage.'], { unlocksBuildings: ['monsterArchive'] }),
   ashRitual: card('ashRitual', 'Ash Ritual', 'ritual', 'Ash is used to separate useful memory from fear.', ['Reveals Panic-control themes.']),
-  timeKeeping: card('timeKeeping', 'Time Keeping', 'knowledge', 'The settlement marks years the Phoenix tried to steal.', ['Timeline records show clearer milestones.']),
+  timeKeeping: card('timeKeeping', 'Time Keeping', 'knowledge', 'The settlement marks years the Phoenix tried to steal.', ['Each survivor ignores their next hunt-age increase once.'], {
+    mechanicalEffects: { ageingGraceUses: 1 },
+    unlocks: ['ageingGrace'],
+    uiDestination: 'Settlement > Survivors',
+    tutorialSteps: [
+      'Open Settlement > Survivors to review completed hunts.',
+      'Each survivor ignores their next hunt-age increase once.',
+      'The protection is automatic and recorded when consumed.'
+    ]
+  }),
   stormShrine: card('stormShrine', 'Storm Shrine', 'quarry craft', 'Lightning is invited into a controlled place.', ['Unlocks Storm Shrine rumour.'], { unlocksBuildings: ['stormShrine'] }),
   thunderWorkshop: card('thunderWorkshop', 'Thunder Workshop', 'quarry craft', 'Dense organs power violent tools.', ['Unlocks Thunder Workshop rumour.'], { unlocksBuildings: ['thunderWorkshop'] }),
+  redTannery: card('redTannery', 'Red Tannery', 'quarry craft', 'River scales and dense red leather are cured without losing their strength.', ['Unlocks Red Tannery crafting and Crimson Crocodile gear.'], { unlocksBuildings: ['redTannery'] }),
+  wetYard: card('wetYard', 'Wet Yard', 'quarry craft', 'A contained yard makes elastic hides and volatile glands usable.', ['Unlocks Wet Yard crafting and Frogdog gear.'], { unlocksBuildings: ['wetYard'] }),
   silkLoom: card('silkLoom', 'Silk Loom', 'quarry craft', 'Chitin thread becomes settlement cloth.', ['Unlocks Silk Loom rumour.'], { unlocksBuildings: ['silkLoom'] }),
   venomLab: card('venomLab', 'Venom Lab', 'quarry craft', 'Venom becomes a measured tool.', ['Unlocks Venom Lab rumour.'], { unlocksBuildings: ['venomLab'] }),
   duelistGarden: card('duelistGarden', 'Duelist Garden', 'quarry craft', 'Living thorns teach measured violence.', ['Unlocks Duelist Garden rumour.'], { unlocksBuildings: ['duelistGarden'] }),
   petalForge: card('petalForge', 'Petal Forge', 'quarry craft', 'Floral metal is shaped without losing life.', ['Unlocks Petal Forge rumour.'], { unlocksBuildings: ['petalForge'] }),
+  smogKiln: card('smogKiln', 'Smog Kiln', 'quarry craft', 'Soot, tar, and resonant bone are fired into dependable tools.', ['Unlocks Smog Kiln crafting and Smog Singer gear.'], { unlocksBuildings: ['smogKiln'] }),
   chitinFoundry: card('chitinFoundry', 'Chitin Foundry', 'quarry craft', 'Shell and resin become layered armour.', ['Unlocks Chitin Foundry rumour.'], { unlocksBuildings: ['chitinFoundry'] }),
   armourDoctrine: card('armourDoctrine', 'Armour Doctrine', 'training', 'Guard becomes a settlement discipline.', ['Reveals armour training themes.']),
   crystalForge: card('crystalForge', 'Crystal Forge', 'quarry craft', 'Crystal bone holds an imperial edge.', ['Unlocks Crystal Forge rumour.'], { unlocksBuildings: ['crystalForge'] }),
@@ -208,9 +289,3 @@ export const QUARRY_INNOVATION_POOL = {
   sunSovereign: ['sunMirror', 'shellSanctum'],
   prideKing: ['prideHall', 'judgementRite']
 };
-
-export function getDrawableInnovationIds(state) {
-  const built = new Set(state?.builtInnovationIds || []);
-  return (state?.availableInnovationPoolIds || [])
-    .filter(id => innovationCards[id]?.implemented && !built.has(id));
-}

@@ -4,6 +4,7 @@ import {
   quarries
 } from '../data/quarries.js';
 import { equipment } from '../data/equipment.js';
+import { BASE_INNOVATION_POOL_IDS } from '../data/innovationCards.js';
 import {
   createWeaponProficiency,
   isValidWeaponType
@@ -14,15 +15,13 @@ import {
   getSurvivorDisplayName,
   normalizeSurvivorIdentity
 } from './survivorIdentity.js';
+import { getMemoryBalance } from './memoryEconomy.js';
+import { normalizeInnovationDeckState } from './innovationModel.js';
 
 const LEGACY_SAVE_KEY = 'settlement';
 const ACTIVE_SLOT_KEY = 'lanternDeckbuilder.activeSlot';
 const SLOT_COUNT = 3;
-const SAVE_VERSION = 3;
-const BASE_INNOVATION_POOL_IDS = [
-  'language', 'symposium', 'ammonia', 'cooking', 'bloodletting', 'graves',
-  'oralTradition', 'sharedWarnings', 'trailSignals'
-];
+const SAVE_VERSION = 5;
 const CHILD_TRAIT_ALIASES = {
   'Lantern-Touched': 'lanternEyed',
   'Lantern-Eyed': 'lanternEyed',
@@ -146,6 +145,9 @@ export const defaultSettlement = {
   settlementName: 'Unnamed Settlement',
   population: 10,
   settlementMemory: 0,
+  memories: 0,
+  memoryHistory: [],
+  pendingDeathResolutions: [],
   monsterKnowledge: {},
   nextRunBonus: {},
   graveHistory: [],
@@ -175,6 +177,7 @@ export const defaultSettlement = {
     builtInnovationIds: ['lanternHearth'],
     innovationHistory: []
   },
+  pendingInnovationTutorialId: null,
   memoryActionsUsedThisYear: {},
   survivorTrainingLog: [],
   conditionHistory: {
@@ -216,6 +219,7 @@ function isValidSlot(slotId) {
 }
 
 export function normalizeSettlement(data = {}) {
+  const migratedMemoryBalance = getMemoryBalance(data);
   const survivors = Array.isArray(data.survivors) && data.survivors.length
     ? data.survivors.map(survivor => {
       const survivorIdentity = normalizeSurvivorIdentity(survivor);
@@ -352,6 +356,10 @@ export function normalizeSettlement(data = {}) {
       ? innovationDeckState.builtInnovationIds
       : [])
   ])];
+  const normalizedInnovationDeckState = normalizeInnovationDeckState(innovationDeckState, {
+    ownedIds: builtInnovationIds,
+    defaultPoolIds: BASE_INNOVATION_POOL_IDS
+  });
   const discoveredQuarryIds = [...new Set([
     ...(Array.isArray(data.discoveredQuarries) ? data.discoveredQuarries : []),
     ...(Array.isArray(data.unlockedQuarries) ? data.unlockedQuarries : [])
@@ -369,6 +377,27 @@ export function normalizeSettlement(data = {}) {
     ...data,
     settlementName: data.settlementName?.trim() || 'Unnamed Settlement',
     population: Number.isFinite(data.population) ? data.population : defaultSettlement.population,
+    memories: migratedMemoryBalance,
+    settlementMemory: migratedMemoryBalance,
+    memoryHistory: Array.isArray(data.memoryHistory) ? data.memoryHistory : (
+      migratedMemoryBalance > 0
+        ? [{
+          id: 'legacy-memory-migration',
+          type: 'migration',
+          amount: migratedMemoryBalance,
+          balance: migratedMemoryBalance,
+          source: 'legacy-save',
+          description: 'Migrated from the previous settlement memory balance.',
+          survivorIds: [],
+          huntId: null,
+          lanternYear: Number.isFinite(data.lanternYear) ? data.lanternYear : null,
+          timestamp: new Date().toISOString()
+        }]
+        : []
+    ),
+    pendingDeathResolutions: Array.isArray(data.pendingDeathResolutions)
+      ? data.pendingDeathResolutions
+      : [],
     monsterKnowledge: data.monsterKnowledge || {},
     nextRunBonus: data.nextRunBonus || {},
     graveHistory: Array.isArray(data.graveHistory)
@@ -431,24 +460,10 @@ export function normalizeSettlement(data = {}) {
     builtMemoryInnovations: Array.isArray(data.builtMemoryInnovations)
       ? [...new Set(data.builtMemoryInnovations)]
       : [],
-    innovationDeckState: {
-      discoveredInnovationIds: [...new Set([
-        ...builtInnovationIds,
-        ...(Array.isArray(innovationDeckState.discoveredInnovationIds)
-          ? innovationDeckState.discoveredInnovationIds
-          : [])
-      ])],
-      availableInnovationPoolIds: [...new Set([
-        ...BASE_INNOVATION_POOL_IDS,
-        ...(Array.isArray(innovationDeckState.availableInnovationPoolIds)
-          ? innovationDeckState.availableInnovationPoolIds
-          : [])
-      ])],
-      builtInnovationIds,
-      innovationHistory: Array.isArray(innovationDeckState.innovationHistory)
-        ? innovationDeckState.innovationHistory
-        : []
-    },
+    innovationDeckState: normalizedInnovationDeckState,
+    pendingInnovationTutorialId: typeof data.pendingInnovationTutorialId === 'string'
+      ? data.pendingInnovationTutorialId
+      : null,
     memoryActionsUsedThisYear: data.memoryActionsUsedThisYear &&
       typeof data.memoryActionsUsedThisYear === 'object'
       ? data.memoryActionsUsedThisYear

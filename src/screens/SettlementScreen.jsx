@@ -3,7 +3,7 @@ import { cards, starterCardIds, trainingCardIds } from '../data/cards.js';
 import { childTraits, normalizeChildTraitId } from '../data/childTraits.js';
 import { equipmentList, getEquipment } from '../data/equipment.js';
 import { fightingArts } from '../data/fightingArts.js';
-import { getDrawableInnovationIds, innovationCards } from '../data/innovationCards.js';
+import { innovationCards } from '../data/innovationCards.js';
 import { injuries } from '../data/injuries.js';
 import { getNextTimelineMilestone } from '../data/lanternTimeline.js';
 import { nemesisEncounters, nemesisList } from '../data/nemesisEncounters.js';
@@ -46,14 +46,22 @@ import {
 import { calculateIntimacyProjections } from '../game/eventLogic.js';
 import { getPersonalCardId } from '../game/deckLogic.js';
 import {
+  EARLY_FORGETTING_COST,
+  getCardForgetEligibility,
+  hasEarlyForgettingAccess
+} from '../game/cardForgetting.js';
+import {
   getLegacyDescription,
   getLegacyDisplayName
 } from '../game/legacyContent.js';
 import {
-  getMissingMemoryUnlockRequirements,
-  isMemoryActionUsed,
-  isMemoryInnovationUnlocked
+  isMemoryActionUsed
 } from '../game/memoryInnovationLogic.js';
+import {
+  getDrawableInnovationIdsForSettlement,
+  getInnovationDeckEntries
+} from '../game/innovationLogic.js';
+import { getInnovationDefinition } from '../game/innovationModel.js';
 import {
   formatEffectsForDisplay,
   formatHistoryDetail,
@@ -64,6 +72,7 @@ import {
   getSurvivorDisplayName,
   getSurvivorGenerationText
 } from '../game/survivorIdentity.js';
+import { canSpendMemories, getMemoryBalance } from '../game/memoryEconomy.js';
 
 const tabs = ['overview', 'survivors', 'armory', 'innovations', 'population', 'graveyard', 'quarries'];
 function CostList({ cost, stash }) {
@@ -190,21 +199,20 @@ function SurvivorCard({
   const treatmentUsed = settlement.lastInjuryTreatmentLanternYear === settlement.lanternYear;
   const canPayTreatment = (settlement.stash.organ || 0) > 0 || (settlement.stash.hide || 0) > 0;
   const memoryBuilt = innovationId => settlement.builtMemoryInnovations.includes(innovationId);
-  const forgetUsed = survivor.lastForgetLanternYear === settlement.lanternYear;
   const forgotten = new Set(survivor.forgottenCardIds || []);
   const profileEntries = [
-    ...starterCardIds.map(cardId => ({ cardId, source: 'Starter', eligible: true })),
+    ...starterCardIds.map(cardId => ({ cardId, source: 'Starter' })),
     ...(survivor.personalDeckAdditions || []).map(addition => ({
       cardId: getPersonalCardId(addition),
       source: addition.sourceType || 'Personal',
       reason: addition.reason,
       locked: Boolean(addition.locked),
-      eligible: true
+      addition
     })),
     ...(survivor.permanentNegativeCards || []).map(addition => ({
       cardId: getPersonalCardId(addition),
       source: 'Permanent negative',
-      eligible: true
+      addition
     }))
   ].filter(entry => entry.cardId);
   const uniqueProfileEntries = [...new Map(
@@ -308,6 +316,11 @@ function SurvivorCard({
             Gear cards come from equipped gear. Remove the gear to remove these cards.
             Removing bound gear destroys it.
           </p>
+          <p className="muted-text">
+            Guided Reflection is available through the Lantern Hearth. Spend 1 Memory to forget
+            one eligible personal or basic card per survivor each Lantern Year. Rite of Forgetting
+            remains a later formal route to the same action.
+          </p>
           <h4>Personal Deck</h4>
           {uniqueProfileEntries.length ? uniqueProfileEntries.map(entry => {
             const cardId = entry.cardId;
@@ -315,19 +328,13 @@ function SurvivorCard({
             const isPanic = cardId === 'panic' || personalCard?.type === 'curse';
             const isLocked = entry.locked || personalCard?.locked || personalCard?.unforgettable;
             const isForgotten = forgotten.has(cardId);
-            const genericDisabled = !memoryBuilt('riteOfForgetting') ||
-              forgetUsed ||
-              settlement.settlementMemory < 1 ||
-              isPanic ||
-              isLocked ||
-              isForgotten;
-            let disabledReason = '';
-            if (!memoryBuilt('riteOfForgetting')) disabledReason = 'Requires Rite of Forgetting';
-            else if (forgetUsed) disabledReason = 'Already used this Lantern Year';
-            else if (settlement.settlementMemory < 1) disabledReason = 'Not enough settlementMemory';
-            else if (isPanic) disabledReason = 'Requires Quiet Night or Taboo';
-            else if (isLocked) disabledReason = 'Locked and unforgettable';
-            else if (isForgotten) disabledReason = 'Already forgotten';
+            const eligibility = getCardForgetEligibility({
+              settlement,
+              survivor,
+              cardId,
+              card: personalCard,
+              addition: entry.addition
+            });
 
             return (
               <div className="personal-card-row" key={cardId}>
@@ -342,8 +349,8 @@ function SurvivorCard({
                 {!isPanic && (
                   <button
                     type="button"
-                    disabled={genericDisabled}
-                    title={disabledReason}
+                    disabled={!eligibility.eligible}
+                    title={eligibility.reason}
                     onClick={() => confirmForget(
                       personalCard?.name || cardId,
                       () => onForgetCard(survivor.id, cardId)
@@ -398,8 +405,8 @@ function SurvivorCard({
                     </button>
                   </>
                 )}
-                {disabledReason && genericDisabled && !isPanic && (
-                  <small>{disabledReason}</small>
+                {eligibility.reason && !eligibility.eligible && !isPanic && (
+                  <small>{eligibility.reason}</small>
                 )}
               </div>
             );
@@ -408,7 +415,8 @@ function SurvivorCard({
           {gearEntries.length ? gearEntries.map((entry, index) => (
             <div className="personal-card-row" key={`${entry.source}-${entry.cardId}-${index}`}>
               <DeckCardDetails cardId={entry.cardId} source={entry.source} />
-              <button type="button" disabled title="Remove or destroy the bound gear instead">Gear card</button>
+              <button type="button" disabled title="Gear card: unequip item to remove">Gear card</button>
+              <small>Gear card: unequip item to remove</small>
             </div>
           )) : <p className="muted-text">No bound gear cards.</p>}
           <h4>Active Proficiency Cards</h4>
@@ -441,7 +449,7 @@ function SurvivorCard({
                   art?.mechanicalEffect ||
                   'Reveals exact quarry intent and weak-point knowledge.'
                 )}</p>
-              <p className="effect-text">Locked. Cannot be forgotten or replaced.</p>
+              <p className="effect-text">Locked: Monster Bane. Cannot be forgotten or replaced.</p>
             </article>
           )) : <p className="muted-text">No locked Monster Bane.</p>}
           {!!survivor.forgottenCardsLog?.length && (
@@ -591,13 +599,13 @@ export default function SettlementScreen({
   onBeginHunt,
   onBuild,
   onCraft,
-  onBuildMemoryInnovation,
   onAttemptInnovation,
   onTimelineChoice,
   onCreateSurvivor,
   onSelectSurvivor,
   onStartHunt,
   onAttemptIntimacy,
+  onResolveDeath,
   onRestSurvivor,
   onTreatInjury,
   onForgetCard,
@@ -617,23 +625,28 @@ export default function SettlementScreen({
   const [startingTrait, setStartingTrait] = useState('');
   const [intimacyMaleId, setIntimacyMaleId] = useState('');
   const [intimacyFemaleId, setIntimacyFemaleId] = useState('');
+  const [spendMemoryOnIntimacy, setSpendMemoryOnIntimacy] = useState(false);
   const [timelineNomineeId, setTimelineNomineeId] = useState('');
   const [showDeckInspection, setShowDeckInspection] = useState(false);
-  const visibleInnovations = innovationList.filter(item =>
-    canBuildUnlocked(item, settlement) &&
-    (!innovationCards[item.id] || settlement.innovationDeckState.builtInnovationIds.includes(item.id))
+  const settlementStructures = innovationList.filter(item => !innovationCards[item.id]);
+  const buildableInnovations = settlementStructures.filter(item =>
+    !settlement.builtInnovations.includes(item.id) && canBuildUnlocked(item, settlement)
   );
-  const buildableInnovations = visibleInnovations.filter(item => !settlement.builtInnovations.includes(item.id));
-  const builtInnovations = innovationList.filter(item => settlement.builtInnovations.includes(item.id));
-  const rumouredInnovations = innovationList.filter(
-    item => !settlement.builtInnovations.includes(item.id) && !canBuildUnlocked(item, settlement) &&
-    (!innovationCards[item.id] || settlement.innovationDeckState.builtInnovationIds.includes(item.id))
+  const builtInnovations = settlementStructures.filter(item =>
+    settlement.builtInnovations.includes(item.id)
+  );
+  const rumouredInnovations = settlementStructures.filter(item =>
+    !settlement.builtInnovations.includes(item.id) && !canBuildUnlocked(item, settlement)
   );
   const builtMemoryInnovations = memoryInnovationList.filter(item =>
     settlement.builtMemoryInnovations.includes(item.id)
   );
-  const drawableInnovationIds = getDrawableInnovationIds(settlement.innovationDeckState);
-  const discoveredInnovationIds = settlement.innovationDeckState?.builtInnovationIds || [];
+  const innovationDeckEntries = getInnovationDeckEntries(settlement);
+  const drawableInnovationIds = getDrawableInnovationIdsForSettlement(settlement);
+  const ownedInnovationIds = settlement.innovationDeckState?.builtInnovationIds || [];
+  const ownedInnovationEntries = ownedInnovationIds.map(id =>
+    getInnovationDefinition(innovationCards, id)
+  );
   const basicResourceCount = ['bone', 'hide', 'sinew', 'organ', 'scrap', 'claw']
     .reduce((total, resourceId) => total + (settlement.stash[resourceId] || 0), 0);
   const canAttemptInnovation =
@@ -641,14 +654,6 @@ export default function SettlementScreen({
     basicResourceCount >= 3 &&
     drawableInnovationIds.length > 0;
   const nextTimelineMilestone = getNextTimelineMilestone(settlement.lanternYear);
-  const availableMemoryInnovations = memoryInnovationList.filter(item =>
-    !settlement.builtMemoryInnovations.includes(item.id) &&
-    isMemoryInnovationUnlocked(item, settlement)
-  );
-  const unknownMemoryInnovations = memoryInnovationList.filter(item =>
-    !settlement.builtMemoryInnovations.includes(item.id) &&
-    !isMemoryInnovationUnlocked(item, settlement)
-  );
   const armouryData = useMemo(() => {
     return groupGearByArmouryTab(equipmentList, settlement, {
       includeLocked: showLockedGear
@@ -681,6 +686,7 @@ export default function SettlementScreen({
   const livingMales = livingSurvivors.filter(survivor => survivor.gender === 'male');
   const livingFemales = livingSurvivors.filter(survivor => survivor.gender === 'female');
   const intimacyUsedThisYear = settlement.lastIntimacyLanternYear === settlement.lanternYear;
+  const memoryBalance = getMemoryBalance(settlement);
   const validMaleParticipant = livingMales.some(survivor => survivor.id === intimacyMaleId);
   const validFemaleParticipant = livingFemales.some(survivor => survivor.id === intimacyFemaleId);
   const activeSurvivor = livingSurvivors.find(survivor => survivor.id === settlement.activeSurvivorId);
@@ -722,11 +728,12 @@ export default function SettlementScreen({
 
   const getMemoryActionStatus = actionId => {
     if (actionId === 'forgetCard') {
+      if (!hasEarlyForgettingAccess(settlement)) return 'Requires the Lantern Hearth';
       if (!hasPersonalCard) return 'No eligible personal cards';
       if (livingSurvivors.every(survivor => survivor.lastForgetLanternYear === settlement.lanternYear)) {
         return 'Already used for every survivor this Lantern Year';
       }
-      if (settlement.settlementMemory < 1) return 'Not enough settlementMemory';
+      if (settlement.settlementMemory < EARLY_FORGETTING_COST) return 'Not enough Memory';
       return 'Available in survivor details';
     }
     if (['quietNight', 'taboo'].includes(actionId) && !hasPanic) return 'No eligible Panic cards';
@@ -778,7 +785,9 @@ export default function SettlementScreen({
         <div className="settlement-stats">
           <span>Population: {settlement.population}</span>
           <span>Hunt party slots: {settlement.maxHuntPartySize}/4</span>
-          <span>Memory: {settlement.settlementMemory}</span>
+          <span title="Gain Memory from successful intimacy, living hunt returns, hunt events, and burial. Spend it on innovation, rest, training, newborn development, and intimacy protection.">
+            Memories: {memoryBalance}
+          </span>
           <span>Lantern Year: {settlement.lanternYear}</span>
           <span>Save Slot {activeSlot}</span>
         </div>
@@ -810,6 +819,21 @@ export default function SettlementScreen({
                 .filter(actionId => getMemoryActionStatus(actionId) === 'Available in survivor details').length}
             </span>
           </div>
+          <details className="memory-ledger">
+            <summary>Memory Ledger ({settlement.memoryHistory?.length || 0} transactions)</summary>
+            <p className="muted-text">
+              Gain: successful intimacy, living hunt returns, hunt events, and burial.
+              Spend: innovation, rest, training, newborn development, and intimacy protection.
+            </p>
+            {(settlement.memoryHistory || []).slice(0, 20).map(entry => (
+              <p key={entry.id || entry.timestamp}>
+                <strong>{entry.amount > 0 ? '+' : ''}{entry.amount}</strong>{' '}
+                {formatValueForDisplay(entry.source)}: {entry.description}
+                <small> Balance {entry.balance}</small>
+              </p>
+            ))}
+            {!settlement.memoryHistory?.length && <p>No Memory transactions recorded.</p>}
+          </details>
           <HuntHints settlement={settlement} recipes={visibleRecipes} />
           <section className="rumours-section">
             <h3>Lantern Year Timeline</h3>
@@ -997,8 +1021,16 @@ export default function SettlementScreen({
           <h3>Living Survivors</h3>
           <section className="memory-actions-panel">
             <h3>Memory Actions</h3>
+            {hasEarlyForgettingAccess(settlement) && (
+              <p>
+                <strong>Guided Reflection ({EARLY_FORGETTING_COST} Memory):</strong>{' '}
+                {getMemoryActionStatus('forgetCard')}. Open a survivor&apos;s details and use
+                Forget beside an eligible personal or basic card.
+              </p>
+            )}
             {settlement.builtMemoryInnovations.flatMap(id => {
               const innovation = memoryInnovationList.find(item => item.id === id);
+              if (id === 'riteOfForgetting') return [];
               return (innovation?.actionUnlocks || []).map(actionId => (
                 <p key={actionId}>
                   <strong>{innovation.name}:</strong>{' '}
@@ -1006,7 +1038,7 @@ export default function SettlementScreen({
                 </p>
               ));
             })}
-            {!settlement.builtMemoryInnovations.some(id =>
+            {!hasEarlyForgettingAccess(settlement) && !settlement.builtMemoryInnovations.some(id =>
               memoryInnovationList.find(item => item.id === id)?.actionUnlocks?.length
             ) && <p className="muted-text">Build a memory innovation to unlock survivor actions.</p>}
           </section>
@@ -1155,7 +1187,11 @@ export default function SettlementScreen({
 
       {tab === 'innovations' && (
         <div className="settlement-panel">
-          <h3>Resource Buildings and Innovations</h3>
+          <h3>Settlement Structures</h3>
+          <p className="muted-text">
+            Structures are unlocked by innovations, discoveries, and campaign progress. Innovation
+            cards themselves are acquired only through the deck below.
+          </p>
           <div className="item-grid">
             {builtInnovations.map(item => (
               <article className="item-card built" key={item.id}>
@@ -1165,8 +1201,9 @@ export default function SettlementScreen({
                 <p className="effect-text">{formatEffectsForDisplay(item.effects)}</p>
               </article>
             ))}
+            {!builtInnovations.length && <p>No standalone structures have been built.</p>}
           </div>
-          <h3>Available to Build</h3>
+          <h3>Unlocked Structures</h3>
           <div className="item-grid">
             {buildableInnovations.map(item => {
               const affordable = canAffordCost(item.cost, settlement.stash) ||
@@ -1181,19 +1218,21 @@ export default function SettlementScreen({
                 </article>
               );
             })}
+            {!buildableInnovations.length && <p>No structures are currently waiting to be built.</p>}
           </div>
           <section className="rumours-section">
-            <h3>Rumours</h3>
+            <h3>Structure Rumours</h3>
             {rumouredInnovations.map(item => <p key={item.id}><strong>{item.name}</strong> [Requires: {item.unlockText} (missing)]</p>)}
+            {!rumouredInnovations.length && <p>No unresolved structure rumours.</p>}
           </section>
           <section className="memory-innovations-section">
             <h3>Innovation Deck</h3>
             <p>
-              Spend 1 settlementMemory and any 3 basic resources to draw up to 3 innovations,
-              then choose one.
+              Spend 1 Memory and any 3 basic resources to draw up to 3 innovations,
+              then choose one. There is no normal direct-purchase innovation list.
             </p>
             <p>
-              Available pool: {drawableInnovationIds.length} | Memory: {settlement.settlementMemory} |
+              Available pool: {drawableInnovationIds.length} | Memory: {memoryBalance} |
               Basic resources: {basicResourceCount}
             </p>
             <button
@@ -1214,19 +1253,40 @@ export default function SettlementScreen({
 
             {showDeckInspection && (
               <div className="deck-inspection item-card">
-                <h4>Innovation Deck Contents ({drawableInnovationIds.length})</h4>
-                <p className="muted-text">These innovations can be drawn during an attempt:</p>
-                <div className="deck-pool-list">
-                  {drawableInnovationIds.map(id => (
-                    <span key={id} className="status-tag">{innovationCards[id]?.name || id}</span>
-                  ))}
-                </div>
-                <h4>Discovered Innovations ({discoveredInnovationIds.length})</h4>
-                <div className="deck-pool-list">
-                  {discoveredInnovationIds.map(id => (
-                    <span key={id} className="status-tag met">{innovationCards[id]?.name || id}</span>
-                  ))}
-                </div>
+                {[
+                  ['Available to Draw', 'available'],
+                  ['Previously Drawn', 'drawn'],
+                  ['Prerequisite Locked', 'prerequisite-locked'],
+                  ['Not Yet Added to Pool', 'locked'],
+                  ['Owned', 'owned']
+                ].map(([label, status]) => {
+                  const entries = innovationDeckEntries.filter(entry => entry.status === status);
+                  return (
+                    <details key={status} open={status === 'available' || status === 'owned'}>
+                      <summary>{label} ({entries.length})</summary>
+                      <div className="item-grid">
+                        {entries.map(item => (
+                          <article className={`item-card ${status === 'owned' ? 'built' : ''}`} key={item.id}>
+                            <p className="eyebrow">Tier {item.tier} | {item.category}</p>
+                            <h4>{item.name}</h4>
+                            <p>{formatValueForDisplay(item.description)}</p>
+                            <p className="effect-text">{item.settlementBoostSummary}</p>
+                            <p><strong>Destination:</strong> {item.uiDestination}</p>
+                            <p><strong>Attempt cost:</strong> {item.memoryCost ?? 1} Memory plus shared draw resources</p>
+                            {item.lockReason && <p className="missing">{item.lockReason}</p>}
+                            <details>
+                              <summary>{item.tutorialTitle}</summary>
+                              <ol>
+                                {item.tutorialSteps.map(step => <li key={step}>{step}</li>)}
+                              </ol>
+                            </details>
+                          </article>
+                        ))}
+                        {!entries.length && <p>None.</p>}
+                      </div>
+                    </details>
+                  );
+                })}
               </div>
             )}
 
@@ -1235,17 +1295,21 @@ export default function SettlementScreen({
                 No available innovations. Unlock more through hunts, discoveries or timeline events.
               </p>
             )}
-            <h3>Built Culture and Memory</h3>
+            <h3>Owned Innovations</h3>
             <div className="item-grid">
-              {settlement.innovationDeckState.builtInnovationIds
-                .map(id => innovationCards[id])
-                .filter(Boolean)
-                .map(item => (
+              {ownedInnovationEntries.map(item => (
                   <article className="item-card built" key={item.id}>
-                    <p className="eyebrow">{item.category}</p>
+                    <p className="eyebrow">Tier {item.tier} | {item.category}</p>
                     <h4>{item.name}</h4>
                     <p>{formatValueForDisplay(item.description)}</p>
-                    <p className="effect-text">{formatEffectsForDisplay(item.effects)}</p>
+                    <p className="effect-text">{item.settlementBoostSummary}</p>
+                    <p><strong>Use at:</strong> {item.uiDestination}</p>
+                    <details>
+                      <summary>{item.tutorialTitle}</summary>
+                      {item.tutorialSteps.length ? (
+                        <ol>{item.tutorialSteps.map(step => <li key={step}>{step}</li>)}</ol>
+                      ) : <p>Legacy innovation details are unavailable.</p>}
+                    </details>
                   </article>
                 ))}
             </div>
@@ -1254,7 +1318,7 @@ export default function SettlementScreen({
               {settlement.innovationDeckState.innovationHistory.slice().reverse().map((entry, index) => (
                 <p key={`${entry.timestamp}-${index}`}>
                   Year {entry.lanternYear}: {entry.type === 'chosen'
-                    ? `Chose ${innovationCards[entry.innovationId]?.name || entry.innovationId}`
+                    ? `Chose ${getInnovationDefinition(innovationCards, entry.innovationId).name}`
                     : `Attempted innovation (${entry.offeredIds?.length || 0} offers)`}
                 </p>
               ))}
@@ -1308,6 +1372,7 @@ export default function SettlementScreen({
           })()}
 
           <p className="muted-text">One attempt is allowed per Lantern Year. A disastrous roll can kill a participant.</p>
+          <p className="effect-text">A successful intimacy grants 1 Memory.</p>
           {intimacyUsedThisYear && <p className="missing">Unavailable: intimacy was already attempted this Lantern Year.</p>}
           {!livingMales.length && <p className="missing">Unavailable: no living male survivor.</p>}
           {!livingFemales.length && <p className="missing">Unavailable: no living female survivor.</p>}
@@ -1324,10 +1389,28 @@ export default function SettlementScreen({
           <button
             type="button"
             disabled={intimacyUsedThisYear || !validMaleParticipant || !validFemaleParticipant}
-            onClick={() => onAttemptIntimacy(intimacyMaleId, intimacyFemaleId)}
+            onClick={() => {
+              onAttemptIntimacy(intimacyMaleId, intimacyFemaleId, {
+                mitigateRisk: spendMemoryOnIntimacy
+              });
+              setSpendMemoryOnIntimacy(false);
+            }}
           >
             Attempt Intimacy
           </button>
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={spendMemoryOnIntimacy}
+              disabled={!canSpendMemories(settlement, 1)}
+              onChange={event => setSpendMemoryOnIntimacy(event.target.checked)}
+            />
+            Spend 1 Memory to reduce tragedy risk by 10%
+          </label>
+          <p className="muted-text">
+            Newborn trait and fighting-art investment will use escalating Memory costs.
+            The central spending hook is ready; quality tables arrive in a later patch.
+          </p>
           <p className="muted-text">
             Children inherit the birthing parent&apos;s family name when available, then the other
             parent&apos;s. Two founders begin a new family line.
@@ -1366,6 +1449,34 @@ export default function SettlementScreen({
       {tab === 'graveyard' && (
         <div className="settlement-panel">
           <h3>Fallen Survivors</h3>
+          {(settlement.pendingDeathResolutions || []).some(entry => entry.status === 'pending') && (
+            <section className="death-resolution-list">
+              <h3>Bodies Awaiting Resolution</h3>
+              {(settlement.pendingDeathResolutions || [])
+                .filter(entry => entry.status === 'pending')
+                .map(entry => (
+                  <article className="item-card" key={entry.id}>
+                    <h4>{entry.survivorName}</h4>
+                    <p>{entry.cause}</p>
+                    <p className="muted-text">
+                      Lay them to rest for 1 Memory, or recover one basic resource.
+                    </p>
+                    <div className="button-row">
+                      <button type="button" onClick={() => onResolveDeath(entry.id, 'bury')}>
+                        Lay to Rest (+1 Memory)
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => onResolveDeath(entry.id, 'recover-resource', 'bone')}
+                      >
+                        Recover 1 Bone
+                      </button>
+                    </div>
+                  </article>
+                ))}
+            </section>
+          )}
           {settlement.graveHistory.length ? (
             <div className="item-grid">
               {settlement.graveHistory.map(grave => (

@@ -58,7 +58,7 @@ test('retreat banks gathered resources and records history', () => {
 
   assert.equal(resolved.settlement.stash.bone, 1);
   assert.equal(resolved.settlement.stash.hide, 1);
-  assert.equal(resolved.settlement.settlementMemory, 4);
+  assert.equal(resolved.settlement.settlementMemory, 3);
   const history = resolved.settlement.settlementHistory.at(-1);
   assert.equal(history.type, 'retreat');
   assert.equal(history.quarry, 'Pale Hunt Lion');
@@ -96,7 +96,7 @@ test('same retreat result cannot apply twice', () => {
 
   assert.equal(second.duplicate, true);
   assert.equal(second.settlement.stash.bone, 1);
-  assert.equal(second.settlement.settlementMemory, 4);
+  assert.equal(second.settlement.settlementMemory, 3);
 });
 
 test('empty hands loses half gathered resources rounded down', () => {

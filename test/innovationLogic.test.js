@@ -1,0 +1,96 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import {
+  BASE_INNOVATION_POOL_IDS,
+  innovationCards,
+  QUARRY_INNOVATION_POOL
+} from '../src/data/innovationCards.js';
+import {
+  applyInnovationChoice,
+  drawInnovationCandidates,
+  getInnovationDeckEntries
+} from '../src/game/innovationLogic.js';
+import { normalizeSettlement } from '../src/game/saveLogic.js';
+
+function settlement(overrides = {}) {
+  return {
+    lanternYear: 1,
+    maxHuntPartySize: 1,
+    builtInnovations: ['lanternHearth'],
+    builtMemoryInnovations: [],
+    rumouredInnovations: [],
+    settlementHistory: [],
+    defeatedQuarryLevels: {},
+    innovationDeckState: {
+      discoveredInnovationIds: ['lanternHearth'],
+      availableInnovationPoolIds: [...BASE_INNOVATION_POOL_IDS],
+      builtInnovationIds: ['lanternHearth'],
+      innovationHistory: []
+    },
+    ...overrides
+  };
+}
+
+test('every innovation card has a summary, destination, and tutorial', () => {
+  Object.values(innovationCards).forEach(card => {
+    assert.ok(card.settlementBoostSummary, `${card.id} needs a settlement boost summary`);
+    assert.ok(card.uiDestination, `${card.id} needs a UI destination`);
+    assert.ok(card.tutorialTitle, `${card.id} needs a tutorial title`);
+    assert.ok(card.tutorialSteps.length, `${card.id} needs tutorial steps`);
+    assert.ok(card.effects.length, `${card.id} needs an explained effect`);
+  });
+});
+
+test('all quarry innovation-pool ids resolve to real cards', () => {
+  const missing = [...new Set(Object.values(QUARRY_INNOVATION_POOL).flat())]
+    .filter(id => !innovationCards[id]);
+
+  assert.deepEqual(missing, []);
+});
+
+test('draws only use available cards whose prerequisites are satisfied', () => {
+  const current = settlement({
+    innovationDeckState: {
+      discoveredInnovationIds: [],
+      availableInnovationPoolIds: ['sharedBurden', 'language'],
+      builtInnovationIds: [],
+      innovationHistory: []
+    }
+  });
+  const entries = getInnovationDeckEntries(current);
+  const choices = drawInnovationCandidates(current, 3, () => 0);
+
+  assert.equal(entries.find(entry => entry.id === 'sharedBurden').status, 'prerequisite-locked');
+  assert.deepEqual(choices, ['language']);
+});
+
+test('choosing an innovation applies unlocks, history, and tutorial state atomically', () => {
+  const next = applyInnovationChoice(settlement(), 'trailSignals', '2026-06-15T00:00:00.000Z');
+
+  assert.equal(next.maxHuntPartySize, 2);
+  assert.ok(next.innovationDeckState.builtInnovationIds.includes('trailSignals'));
+  assert.ok(next.innovationDeckState.availableInnovationPoolIds.includes('sharedBurden'));
+  assert.equal(next.pendingInnovationTutorialId, 'trailSignals');
+  assert.equal(next.settlementHistory[0].type, 'innovation-acquired');
+});
+
+test('deck-acquired memory innovations retain existing action compatibility', () => {
+  const next = applyInnovationChoice(settlement(), 'weaponDrills');
+
+  assert.ok(next.builtMemoryInnovations.includes('weaponDrills'));
+});
+
+test('legacy innovation ids survive save migration and render in owned state', () => {
+  const migrated = normalizeSettlement({
+    survivors: [],
+    builtInnovations: ['legacyLaw'],
+    innovationDeckState: {
+      builtInnovationIds: ['legacyLaw'],
+      availableInnovationPoolIds: []
+    }
+  });
+
+  assert.ok(migrated.innovationDeckState.builtInnovationIds.includes('legacyLaw'));
+  assert.ok(migrated.innovationDeckState.availableInnovationPoolIds.includes('scoutTower'));
+});

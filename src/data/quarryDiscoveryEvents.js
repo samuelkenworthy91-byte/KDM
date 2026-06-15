@@ -25,7 +25,7 @@ export const quarryDiscoveryEvents = {
       'Children gather around the trophy scraps and learn a new fear: some beasts do not simply kill. They study.',
       'The settlement hangs the first pale mane where everyone can see it.'
     ],
-    [{ type: 'settlementMemory', amount: 1 }, { type: 'rumour', text: 'Pale shapes circle beyond the lanternlight, testing every open guard.' }],
+    [{ type: 'rumour', text: 'Pale shapes circle beyond the lanternlight, testing every open guard.' }],
     ['clawLore'], ['lionTrophyHall'],
     'The settlement learned to read the shape of a predator.'
   ),
@@ -35,7 +35,7 @@ export const quarryDiscoveryEvents = {
       'The carcass stinks of sour grass and impossible hunger.',
       'The survivors cut it open and find that its body is less a body than a warning: everything can be consumed, even fear.'
     ],
-    [{ type: 'resourceOrMemory', resourceId: 'organ', amount: 1 }, { type: 'rumour', text: 'Hoofbeats continue beneath the ground after the meat is stored.' }],
+    [{ type: 'resource', resourceId: 'organ', amount: 1 }, { type: 'rumour', text: 'Hoofbeats continue beneath the ground after the meat is stored.' }],
     ['stomachLore'], ['antelopeLarder'],
     'The settlement learned that hunger could be studied.'
   ),
@@ -45,14 +45,14 @@ export const quarryDiscoveryEvents = {
       'The feathers do not cool. They whisper names no survivor spoke aloud.',
       'The settlement watches the ash curl into shapes like hands, clocks, and broken faces.'
     ],
-    [{ type: 'settlementMemory', amount: 1 }, { type: 'nextHuntModifier', id: 'ashMemory', text: 'Draw 1 extra card on the first turn of the next hunt.', effects: { extraFirstTurnDraw: 1 } }],
+    [{ type: 'nextHuntModifier', id: 'ashMemory', text: 'Draw 1 extra card on the first turn of the next hunt.', effects: { extraFirstTurnDraw: 1 } }],
     ['ashRitual', 'timeKeeping'], ['phoenixPyre'],
     'The settlement learned that time could leave bones behind.'
   ),
   bloatedGodling: event(
     'bloatedGodling', 'Thunder Beneath the Skin',
     ['The dead thing twitches long after it stops breathing.', 'Every cut spills heat, static, and the smell of storms trapped in meat.'],
-    [{ type: 'settlementMemory', amount: 1 }, { type: 'rumour', text: 'Thunder answers from clear skies whenever dense organs are opened.' }],
+    [{ type: 'rumour', text: 'Thunder answers from clear skies whenever dense organs are opened.' }],
     ['stormShrine'], ['stormShrine'],
     'The settlement learned to listen for storms beneath living skin.'
   ),
@@ -80,14 +80,14 @@ export const quarryDiscoveryEvents = {
   bloomKnight: event(
     'bloomKnight', 'The Duelist Flower',
     ['The monster dies kneeling, as if accepting applause.', 'The petals around it are sharp enough to shave bone.'],
-    [{ type: 'settlementMemory', amount: 1 }, { type: 'nextHuntModifier', id: 'perfectStep', text: 'Begin the next combat with +2 block.', effects: { startingBlock: 2 } }],
+    [{ type: 'nextHuntModifier', id: 'perfectStep', text: 'Begin the next combat with +2 block.', effects: { startingBlock: 2 } }],
     ['duelistGarden'], ['duelistGarden'],
     'The settlement learned that grace could be sharpened.'
   ),
   smogSingers: event(
     'smogSingers', 'The Chorus in the Lung',
     ['The survivors cough black notes into their hands.', 'Someone hums in their sleep, and three others answer without waking.'],
-    [{ type: 'settlementMemory', amount: 1 }, { type: 'rumour', text: 'A chorus answers any lone voice raised beyond the walls.' }],
+    [{ type: 'rumour', text: 'A chorus answers any lone voice raised beyond the walls.' }],
     ['sootChorus'], ['smogKiln'],
     'The settlement learned to hear danger in shared breath.'
   ),
@@ -101,21 +101,21 @@ export const quarryDiscoveryEvents = {
   drakeEmperor: event(
     'drakeEmperor', 'The Imperial Ember',
     ['The teeth glow like coals under glass.', 'The settlement warms itself around the carcass and dreams of crowns made from flame.'],
-    [{ type: 'settlementMemory', amount: 1 }, { type: 'nextHuntModifier', id: 'imperialEmber', text: 'Gain +1 strength in the first combat of the next hunt.', effects: { firstCombatStrength: 1 } }],
+    [{ type: 'nextHuntModifier', id: 'imperialEmber', text: 'Gain +1 strength in the first combat of the next hunt.', effects: { firstCombatStrength: 1 } }],
     ['fireRite'], ['crystalForge'],
     'The settlement learned to carry authority as heat.'
   ),
   sunSovereign: event(
     'sunSovereign', 'The Shell of Noon',
     ['No one can look at the trophy directly.', 'The settlement places it beneath cloth, and still the cloth glows.'],
-    [{ type: 'settlementMemory', amount: 1 }, { type: 'rumour', text: 'A covered trophy casts a shadow even when every lantern is dark.' }],
+    [{ type: 'rumour', text: 'A covered trophy casts a shadow even when every lantern is dark.' }],
     ['sunMirror'], ['shellSanctum'],
     'The settlement learned to shape light without looking into it.'
   ),
   prideKing: event(
     'prideKing', 'The Beast That Judged',
     ['The trophy does not feel dead.', 'The settlement stands taller around it, then quieter, as if waiting to be measured.'],
-    [{ type: 'settlementMemory', amount: 1 }, { type: 'nextHuntModifier', id: 'measuredPride', text: 'Begin the next combat with +1 survival.', effects: { startingSurvival: 1 } }],
+    [{ type: 'nextHuntModifier', id: 'measuredPride', text: 'Begin the next combat with +1 survival.', effects: { startingSurvival: 1 } }],
     ['judgementRite'], ['prideHall'],
     'The settlement learned to name the weight of judgement.'
   )

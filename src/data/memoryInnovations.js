@@ -16,11 +16,11 @@ export const memoryInnovations = {
     name: 'Rite of Forgetting',
     category: 'ritual',
     costMemory: 3,
-    description: 'A survivor names a lesson and lets the lantern smoke carry it away.',
+    description: 'A formal later practice that preserves access to Guided Reflection.',
     unlockRequirement: { type: 'personalCardOrPanic' },
     unlockText: 'Requires a survivor with a personal card or Panic.',
     limit: 'Forget once per survivor per Lantern Year.',
-    effect: 'Unlocks Forget Card. Each use costs 1 Memory.',
+    effect: 'Keeps Guided Reflection available. Each use costs 1 Memory.',
     actionUnlocks: ['forgetCard']
   },
   sharedWarnings: {

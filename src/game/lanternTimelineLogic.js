@@ -5,6 +5,7 @@ import {
 import { getNemesisForLanternYear } from '../data/nemesisEncounters.js';
 import { quarries } from '../data/quarries.js';
 import { getProficiencyLevel } from '../data/weaponProficiency.js';
+import { spendMemories } from './memoryEconomy.js';
 
 function addUnique(values, value) {
   return [...new Set([...(values || []), value])];
@@ -22,7 +23,7 @@ function updateNominatedSurvivors(settlement, nominatedSurvivorIds, updater) {
 
 function effectText(effect, detail = '') {
   const labels = {
-    gainSettlementMemory: `Settlement Memory +${effect.amount}`,
+    gainSettlementMemory: 'No Memory award under the current economy',
     loseSettlementMemory: `Settlement Memory -${effect.amount}`,
     gainPopulation: `Population +${effect.amount}`,
     losePopulation: `Population -${effect.amount}`,
@@ -156,9 +157,12 @@ export function applyTimelineEffects(settlement, effects = [], context = {}) {
 
   effects.forEach(effect => {
     if (effect.type === 'gainSettlementMemory') {
-      next.settlementMemory = (next.settlementMemory || 0) + effect.amount;
+      appliedEffects.push('This timeline event no longer grants Memory.');
     } else if (effect.type === 'loseSettlementMemory') {
-      next.settlementMemory = Math.max(0, (next.settlementMemory || 0) - effect.amount);
+      next = spendMemories(next, effect.amount, {
+        source: 'timeline-consequence',
+        description: 'A timeline consequence consumed Memory.'
+      }) || next;
     } else if (effect.type === 'gainPopulation') {
       next.population += effect.amount;
     } else if (effect.type === 'losePopulation') {

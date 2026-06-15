@@ -3,7 +3,7 @@ export const graveLegacies = {
     id: 'rememberTechnique',
     name: 'Remember Technique',
     description: 'The settlement records one useful movement from the dead survivor.',
-    effect: 'Gain +1 settlementMemory immediately.'
+    effect: 'Records the technique in settlement history. Body resolution handles Memory separately.'
   },
   buryGear: {
     id: 'buryGear',

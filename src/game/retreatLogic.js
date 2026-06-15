@@ -2,6 +2,11 @@ import { getRetreatConsequence } from '../data/retreatConsequences.js';
 import { quarries } from '../data/quarries.js';
 import { resources } from '../data/resources.js';
 import { addResources } from './craftingLogic.js';
+import {
+  createDeathResolution,
+  getMemoryBalance,
+  queueDeathResolutions
+} from './memoryEconomy.js';
 
 function pick(items, random) {
   if (!items.length) return null;
@@ -106,7 +111,7 @@ export function resolveHuntRetreat({
   let survivors = mergePartyConditions(settlement.survivors || [], party);
   let stash = { ...(settlement.stash || {}) };
   let population = Math.max(0, (settlement.population || 0) - newlyDeadParty.length);
-  let settlementMemory = settlement.settlementMemory || 0;
+  let settlementMemory = getMemoryBalance(settlement);
   let armory = [...(settlement.armory || [])];
   let keptResources = [...gatheredResources];
   const resourcesLost = [];
@@ -205,8 +210,7 @@ export function resolveHuntRetreat({
       break;
     case 'childrenHeardIt':
       population = Math.max(0, population - 1);
-      settlementMemory += 1;
-      affectedDetails.push('Population decreased by 1; Settlement Memory increased by 1.');
+      affectedDetails.push('Population decreased by 1.');
       break;
     case 'lostTools':
       if (armory.length) {
@@ -312,8 +316,6 @@ export function resolveHuntRetreat({
       affectedDetails.push('The next retreat rolls twice and takes the worse result.');
       break;
     case 'hardLesson': {
-      settlementMemory += 1;
-      affectedDetails.push('Settlement Memory increased by 1.');
       const target = chooseLiving(livingParty());
       if (target) {
         changeSurvivor(target.id, survivor => ({
@@ -373,35 +375,47 @@ export function resolveHuntRetreat({
     timestamp: new Date().toISOString()
   };
 
+  const nextSettlement = queueDeathResolutions({
+    ...settlement,
+    population,
+    memories: settlementMemory,
+    settlementMemory,
+    stash,
+    armory,
+    survivors,
+    livingSurvivors: survivors.filter(survivor => survivor.alive !== false),
+    activeSurvivorId: survivors.some(survivor =>
+      survivor.id === settlement.activeSurvivorId && survivor.alive !== false
+    ) ? settlement.activeSurvivorId : living()[0]?.id || null,
+    graveHistory: [...graveEntries, ...(settlement.graveHistory || [])],
+    deadSurvivors: (settlement.deadSurvivors || 0) + graveEntries.length,
+    temporarySettlementModifiers,
+    quarryRetreatModifiers,
+    totalRuns: (settlement.totalRuns || 0) + 1,
+    settlementHistory: [...(settlement.settlementHistory || []), historyEntry],
+    huntRewardLedger: {
+      ...(settlement.huntRewardLedger || {}),
+      [huntResultId]: {
+        ...(settlement.huntRewardLedger?.[huntResultId] || {}),
+        huntResultId,
+        retreatResolved: true,
+        retreatResult: result
+      }
+    }
+  }, graveEntries.map(entry => createDeathResolution({
+    id: entry.survivorId,
+    name: entry.survivorName,
+    causeOfDeath: entry.killedBy
+  }, {
+    cause: entry.killedBy,
+    huntId: huntResultId,
+    lanternYear: settlement.lanternYear,
+    timestamp: entry.timestamp
+  })));
+
   return {
     duplicate: false,
     result,
-    settlement: {
-      ...settlement,
-      population,
-      settlementMemory,
-      stash,
-      armory,
-      survivors,
-      livingSurvivors: survivors.filter(survivor => survivor.alive !== false),
-      activeSurvivorId: survivors.some(survivor =>
-        survivor.id === settlement.activeSurvivorId && survivor.alive !== false
-      ) ? settlement.activeSurvivorId : living()[0]?.id || null,
-      graveHistory: [...graveEntries, ...(settlement.graveHistory || [])],
-      deadSurvivors: (settlement.deadSurvivors || 0) + graveEntries.length,
-      temporarySettlementModifiers,
-      quarryRetreatModifiers,
-      totalRuns: (settlement.totalRuns || 0) + 1,
-      settlementHistory: [...(settlement.settlementHistory || []), historyEntry],
-      huntRewardLedger: {
-        ...(settlement.huntRewardLedger || {}),
-        [huntResultId]: {
-          ...(settlement.huntRewardLedger?.[huntResultId] || {}),
-          huntResultId,
-          retreatResolved: true,
-          retreatResult: result
-        }
-      }
-    }
+    settlement: nextSettlement
   };
 }
