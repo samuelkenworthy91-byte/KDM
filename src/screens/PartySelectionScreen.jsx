@@ -4,6 +4,7 @@ import { equipment } from '../data/equipment.js';
 import { fightingArts, getSurvivorMonsterBaneId } from '../data/fightingArts.js';
 import { injuries } from '../data/injuries.js';
 import { buildRunDeck } from '../game/deckLogic.js';
+import { getSurvivorDisplayName } from '../game/survivorIdentity.js';
 
 export default function PartySelectionScreen({
   settlement,
@@ -39,7 +40,7 @@ export default function PartySelectionScreen({
               disabled={disabled}
               onClick={() => onToggle(survivor.id)}
             >
-              <strong>{survivor.name}</strong>
+              <strong>{getSurvivorDisplayName(survivor)}</strong>
               <span>HP {survivor.hp}/{survivor.maxHp} | Survival {survivor.survival || 0}</span>
               <span>Personal deck: {deckSize} cards | Bound gear: {gear.length}</span>
               <span>
@@ -74,7 +75,10 @@ export default function PartySelectionScreen({
       )}
       <h3>Party order</h3>
       <ol>
-        {selectedIds.map(id => <li key={id}>{living.find(survivor => survivor.id === id)?.name}</li>)}
+        {selectedIds.map(id => {
+          const survivor = living.find(item => item.id === id);
+          return <li key={id}>{survivor ? getSurvivorDisplayName(survivor) : 'Unknown / Legacy'}</li>;
+        })}
       </ol>
       <div className="button-row">
         <button type="button" disabled={!selectedIds.length} onClick={onContinue}>Prepare Loadouts</button>

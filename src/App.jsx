@@ -48,15 +48,21 @@ import { getQuarryDiscoveryEvent } from './data/quarryDiscoveryEvents.js';
 import { createMonsterWeakPoints, getBrokenWeakPointRewards } from './data/weakPoints.js';
 import { treatWound } from './data/woundTables.js';
 import { addResources, canAffordCost, deductCost } from './game/craftingLogic.js';
+import { getGearUnlockState } from './utils/gearNormalization.js';
+import { validateOverhaulData } from './utils/overhaulValidation.js';
 import {
   addUniqueCondition,
   getConditionName,
   rollBossScar,
   rollLowHpCondition
 } from './game/conditionLogic.js';
-import { resolveEvent } from './game/eventLogic.js';
+import { calculateIntimacyProjections, resolveEvent } from './game/eventLogic.js';
 import { buildRunDeck, getCardsFromIds, getPersonalCardId } from './game/deckLogic.js';
 import { isMemoryInnovationUnlocked } from './game/memoryInnovationLogic.js';
+import {
+  createBornSurvivorName,
+  getSurvivorDisplayName
+} from './game/survivorIdentity.js';
 import {
   applyLanternYearTimeline,
   resolveLanternTimelineChoice
@@ -309,6 +315,11 @@ function getLoadoutBonus(settlement, monsterId, quarryId) {
 }
 
 export default function App() {
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      validateOverhaulData();
+    }
+  }, []);
   const initialSlot = getActiveSlot();
   const initialSettlement = loadSettlement(initialSlot);
   const recoveryBootScreen = consumeRecoveryBootScreen();
@@ -1571,6 +1582,10 @@ export default function App() {
   };
 
   const handleBuild = item => {
+    // Prevent direct building of deck-pool innovations unless they were drawn/chosen
+    if (innovationCards[item.id] && !settlement.innovationDeckState.builtInnovationIds.includes(item.id)) {
+      return;
+    }
     const cost = item.fallbackCost && canAffordCost(item.fallbackCost, settlement.stash)
       ? item.fallbackCost
       : item.cost;
@@ -1583,13 +1598,17 @@ export default function App() {
   };
 
   const handleCraft = recipe => {
-    if (!settlement.builtInnovations.includes(recipe.buildingId) || !canAffordCost(recipe.cost, settlement.stash)) return;
-    updateSettlement(current => ({
-      ...current,
-      stash: deductCost(current.stash, recipe.cost),
-      totalCraftedGear: (current.totalCraftedGear || 0) + 1,
-      armory: [...current.armory, createGearInstance(recipe.id)]
-    }));
+    updateSettlement(current => {
+      if (!getGearUnlockState(recipe, current).unlocked || !canAffordCost(recipe.cost, current.stash)) {
+        return current;
+      }
+      return {
+        ...current,
+        stash: deductCost(current.stash, recipe.cost),
+        totalCraftedGear: (current.totalCraftedGear || 0) + 1,
+        armory: [...current.armory, createGearInstance(recipe.id)]
+      };
+    });
   };
 
   const handleBuildMemoryInnovation = innovation => {
@@ -1623,9 +1642,26 @@ export default function App() {
       return true;
     });
     const basicIds = ['bone', 'hide', 'sinew', 'organ', 'scrap', 'claw'];
-    const availableResources = basicIds.flatMap(resourceId =>
-      Array(settlement.stash[resourceId] || 0).fill(resourceId)
-    );
+    const resourceAliases = {
+      crackedMolar: 'bone', wailingHorn: 'bone', stormBone: 'bone', crystalBone: 'bone', harmonyBone: 'bone', timeBone: 'bone',
+      paleLionHide: 'hide', wailingHide: 'hide', bloatedHide: 'hide', webbedHide: 'hide', rubberyHide: 'hide',
+      screamingSinew: 'sinew', paleLionSinew: 'sinew', floralSinew: 'sinew',
+      wailingOrgan: 'organ', denseOrgan: 'organ', burntOrgan: 'organ', bloodMudOrgan: 'organ', smogPipe: 'organ', sootLung: 'organ',
+      paleLionClaw: 'claw'
+    };
+
+    const availableResources = [];
+    Object.entries(settlement.stash).forEach(([id, count]) => {
+      if (count <= 0) return;
+      const isBasic = basicIds.includes(id);
+      const isAlias = Boolean(resourceAliases[id]);
+      if (isBasic || isAlias) {
+        for (let i = 0; i < count; i++) {
+          availableResources.push(id);
+        }
+      }
+    });
+
     const resourceCost = settlement.temporarySettlementModifiers?.delayedWork ? 4 : 3;
     if (
       settlement.settlementMemory < 1 ||
@@ -1634,7 +1670,16 @@ export default function App() {
     ) {
       return;
     }
-    const payment = availableResources.slice(0, resourceCost);
+
+    // Prioritize basic resources for payment, then aliases
+    const payment = [...availableResources]
+      .sort((a, b) => {
+        const aBasic = basicIds.includes(a) ? 0 : 1;
+        const bBasic = basicIds.includes(b) ? 0 : 1;
+        return aBasic - bBasic;
+      })
+      .slice(0, resourceCost);
+
     const choices = [...drawable].sort(() => Math.random() - 0.5).slice(0, 3);
     updateSettlement(current => {
       const stash = { ...current.stash };
@@ -2717,7 +2762,10 @@ export default function App() {
 
   const handleCreateSurvivor = (name, gender, options) => {
     updateSettlement(current => {
-      const survivor = createSurvivor(name, gender, options);
+      const survivor = createSurvivor(name, gender, {
+        ...options,
+        generationType: 'founder'
+      });
       if (options?.useSpecialTrait && current.pendingSpecialChildTrait) {
         const traitId = normalizeChildTraitId(current.pendingSpecialChildTrait);
         const trait = childTraits[traitId];
@@ -2782,37 +2830,51 @@ export default function App() {
       const female = current.survivors.find(survivor => survivor.id === femaleId && survivor.alive !== false && survivor.gender === 'female');
       if (!male || !female || current.population <= 0) return current;
 
-      const roll = Math.floor(Math.random() * 10) + 1;
+      const projections = calculateIntimacyProjections(current, innovationCards);
+      const roll = Math.random();
+
       let populationChange = 0;
       let outcome = 'No birth.';
       let deathId = null;
       let severeWoundId = null;
       let pendingSpecialChildTrait = current.pendingSpecialChildTrait;
+      let newborns = [];
+      let finalRollValue = Math.floor(roll * 10) + 1; // For history display
 
-      if (roll === 1) {
-        deathId = Math.random() < 0.5 ? male.id : female.id;
-        populationChange = -1;
-        outcome = 'Tragedy struck during intimacy.';
-      } else if (roll === 2) {
+      if (roll < projections.finalTragedyChance) {
+        // Tragedy / Wound
         if (Math.random() < 0.5) {
           deathId = Math.random() < 0.5 ? male.id : female.id;
           populationChange = -1;
-          outcome = 'A fatal disaster claimed a participant.';
+          outcome = 'Tragedy struck during intimacy.';
         } else {
           severeWoundId = Math.random() < 0.5 ? male.id : female.id;
           outcome = 'A participant survived with a severe wound.';
         }
-      } else if (roll >= 6 && roll <= 8) {
-        populationChange = 1;
-        outcome = 'New life. Population increased by 1.';
-      } else if (roll === 9) {
-        populationChange = 2;
-        outcome = 'Twins were born. Population increased by 2.';
-      } else if (roll === 10) {
-        populationChange = 1;
-        pendingSpecialChildTrait =
-          childTraitList[Math.floor(Math.random() * childTraitList.length)].id;
-        outcome = 'A special child was born. Population increased by 1.';
+      } else if (roll >= 1 - projections.finalSuccessChance) {
+        // Success
+        const successRoll = Math.random();
+        if (successRoll < 0.2) {
+          populationChange = 2;
+          outcome = 'Twins were born. Population increased by 2.';
+        } else if (successRoll < 0.4) {
+          populationChange = 1;
+          pendingSpecialChildTrait =
+            childTraitList[Math.floor(Math.random() * childTraitList.length)].id;
+          outcome = 'A special child was born. Population increased by 1.';
+        } else {
+          populationChange = 1;
+          outcome = 'New life. Population increased by 1.';
+        }
+        newborns = Array.from({ length: populationChange }, () => {
+          const identity = createBornSurvivorName(male, female, {
+            primaryParent: female
+          });
+          return createSurvivor(identity.displayName, Math.random() < 0.5 ? 'female' : 'male', identity);
+        });
+        if (newborns.length) {
+          outcome += ` ${newborns.map(getSurvivorDisplayName).join(' and ')} joined the settlement.`;
+        }
       }
 
       const deathSurvivor = current.survivors.find(survivor => survivor.id === deathId);
@@ -2833,7 +2895,9 @@ export default function App() {
         timestamp: new Date().toISOString(),
         lanternYear: current.lanternYear,
         participantIds: [male.id, female.id],
-        participantNames: [male.name, female.name],
+        participantNames: [getSurvivorDisplayName(male), getSurvivorDisplayName(female)],
+        newbornIds: newborns.map(survivor => survivor.id),
+        newbornNames: newborns.map(getSurvivorDisplayName),
         roll,
         outcome,
         populationChange,
@@ -2844,7 +2908,7 @@ export default function App() {
         ...current,
         population: Math.max(0, current.population + populationChange),
         deadSurvivors: current.deadSurvivors + (deathId ? 1 : 0),
-        survivors: nextSurvivors,
+        survivors: [...nextSurvivors, ...newborns],
         activeSurvivorId: deathId === current.activeSurvivorId
           ? nextLiving[0]?.id || null
           : current.activeSurvivorId,

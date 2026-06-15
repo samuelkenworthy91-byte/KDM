@@ -32,6 +32,11 @@ export default function InnovationDrawScreen({
               <span>{card.category}</span>
               <span>{formatValueForDisplay(card.description)}</span>
               <span>{formatEffectsForDisplay(card.effects) || 'Effect not described yet'}</span>
+              {(card.unlocksBuildings?.length > 0 || card.unlocksRecipes?.length > 0) && (
+                <span className="unlock-hint">
+                  Unlocks: {[...(card.unlocksBuildings || []), ...(card.unlocksRecipes || [])].join(', ')}
+                </span>
+              )}
               <span>Choose</span>
             </button>
           ))}

@@ -25,33 +25,71 @@ export const BASE_INNOVATION_POOL_IDS = [
   'graves',
   'oralTradition',
   'sharedWarnings',
-  'trailSignals'
+  'trailSignals',
+  'scoutTower',
+  'storytellerCircle',
+  'armoryRack'
 ];
 
 export const innovationCards = {
   language: card(
     'language', 'Language', 'culture',
     'Survivors learn to preserve meaning, warning and names.',
-    ['Settlement history becomes clearer.', 'Adds Symposium and Oral Tradition to the innovation pool.'],
-    { addsToInnovationPool: ['symposium', 'oralTradition'], tags: ['history', 'culture'] }
+    ['Settlement history becomes clearer.', 'Adds Symposium and Oral Tradition to the innovation pool.', '+5% Intimacy success chance.'],
+    { 
+      addsToInnovationPool: ['symposium', 'oralTradition'], 
+      tags: ['history', 'culture'],
+      mechanicalEffects: { intimacySuccessBonus: 0.05 }
+    }
   ),
   symposium: card(
     'symposium', 'Symposium', 'education',
     'The settlement learns by argument, story and shared panic.',
-    ['Boss victory progress offers one additional reward option when possible.'],
-    { addsToInnovationPool: ['weaponDrills', 'trialNames'], tags: ['education'] }
+    ['Boss victory progress offers one additional reward option when possible.', 'Unlocks deeper training techniques.'],
+    { 
+      addsToInnovationPool: ['weaponDrills', 'trialNames'], 
+      tags: ['education'],
+      mechanicalEffects: { trainingOptionsBonus: 1 }
+    }
   ),
   ammonia: card(
     'ammonia', 'Ammonia', 'treatment',
     'The settlement discovers a harsh cleansing substance.',
-    ['Reveals First Aid Tent and treatment innovations.'],
-    { addsToInnovationPool: ['painLessons'], unlocksBuildings: ['firstAidTent'], tags: ['treatment'] }
+    ['Reveals First Aid Tent and treatment innovations.', '-10% Intimacy tragedy risk.'],
+    { 
+      addsToInnovationPool: ['painLessons'], 
+      unlocksBuildings: ['firstAidTent'], 
+      tags: ['treatment'],
+      mechanicalEffects: { intimacyTragedyReduction: 0.1 }
+    }
   ),
   cooking: card(
     'cooking', 'Cooking', 'food',
     'Survivors discover that food can be changed before it changes them.',
-    ['New survivors start with +1 max HP.', 'Adds communal food knowledge to the pool.'],
-    { addsToInnovationPool: ['huntSongs'], tags: ['food', 'health'] }
+    ['New survivors start with +1 max HP.', 'Adds communal food knowledge to the pool.', '+10% Intimacy success chance.'],
+    { 
+      addsToInnovationPool: ['huntSongs'], 
+      tags: ['food', 'health'],
+      mechanicalEffects: { startingMaxHpBonus: 1, intimacySuccessBonus: 0.1 }
+    }
+  ),
+  scoutTower: card(
+    'scoutTower', 'Scout Tower', 'utility',
+    'Scouts mark the character of each route before departure.',
+    ['Hunt map node types are identified.'],
+    { unlocksBuildings: ['scoutTower'], tags: ['utility', 'map'] }
+  ),
+  storytellerCircle: card(
+    'storytellerCircle', 'Storyteller Circle', 'legacy',
+    'The settlement turns victories and deaths into useful instruction.',
+    ['Survivor progress offers four choices after victories.'],
+    { unlocksBuildings: ['storytellerCircle'], tags: ['legacy', 'instruction'] }
+  ),
+  armoryRack: card(
+    'armoryRack', 'Armory Rack', 'utility',
+    'Organizes equipment so hunters can carry one additional piece.',
+    ['Increases the gear equip limit from 4 to 5.'],
+    { unlocksBuildings: ['armoryRack'], tags: ['utility', 'gear'] }
   ),
   bloodletting: card(
     'bloodletting', 'Bloodletting', 'treatment',

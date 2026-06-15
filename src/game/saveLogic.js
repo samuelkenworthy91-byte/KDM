@@ -10,11 +10,15 @@ import {
 } from '../data/weaponProficiency.js';
 import { createHitLocations } from '../data/woundTables.js';
 import { syncFightingArtCards } from './survivorProgression.js';
+import {
+  getSurvivorDisplayName,
+  normalizeSurvivorIdentity
+} from './survivorIdentity.js';
 
 const LEGACY_SAVE_KEY = 'settlement';
 const ACTIVE_SLOT_KEY = 'lanternDeckbuilder.activeSlot';
 const SLOT_COUNT = 3;
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const BASE_INNOVATION_POOL_IDS = [
   'language', 'symposium', 'ammonia', 'cooking', 'bloodletting', 'graves',
   'oralTradition', 'sharedWarnings', 'trailSignals'
@@ -91,9 +95,18 @@ export function createGearInstance(equipmentId) {
 }
 
 export function createSurvivor(name = 'Nameless Survivor', gender = 'other', options = {}) {
+  const identity = normalizeSurvivorIdentity({
+    name: name?.trim() || options.givenName || 'Nameless Survivor',
+    generationType: options.generationType || 'founder',
+    givenName: options.givenName || name,
+    familyName: options.familyName || null,
+    parentIds: options.parentIds || [],
+    familyOrigin: options.familyOrigin || null
+  });
   return {
     id: `survivor-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    name: name?.trim() || 'Nameless Survivor',
+    ...identity,
+    name: getSurvivorDisplayName(identity),
     gender,
     appearance: options.appearance?.trim() || '',
     alive: true,
@@ -205,6 +218,7 @@ function isValidSlot(slotId) {
 export function normalizeSettlement(data = {}) {
   const survivors = Array.isArray(data.survivors) && data.survivors.length
     ? data.survivors.map(survivor => {
+      const survivorIdentity = normalizeSurvivorIdentity(survivor);
       const legacyBanes = (survivor.traits || [])
         .filter(trait => typeof trait === 'string' && trait.startsWith('Monster Bane: '))
         .map(trait => {
@@ -217,7 +231,7 @@ export function normalizeSettlement(data = {}) {
         .filter(Boolean);
       const normalizedBanes = normalizeMonsterBanes(
         [...(survivor.fightingArts || []), ...legacyBanes],
-        survivor.name,
+        getSurvivorDisplayName(survivorIdentity),
         survivor.history
       );
       const boundGear = Array.isArray(survivor.boundGear)
@@ -242,6 +256,7 @@ export function normalizeSettlement(data = {}) {
         unavailableHunts: 0,
         alive: true,
         ...survivor,
+        ...survivorIdentity,
         gender: ['male', 'female', 'other'].includes(survivor.gender) ? survivor.gender : 'other',
         injuries: Array.isArray(survivor.injuries) ? survivor.injuries : [],
         scars: Array.isArray(survivor.scars) ? survivor.scars : [],

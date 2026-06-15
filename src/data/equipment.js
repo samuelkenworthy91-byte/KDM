@@ -5,6 +5,7 @@ import {
   getGearMetadata,
   weaponStyleDefinitions
 } from './gearMetadata.js';
+import { gearById } from './overhaul/gearRegistry.js';
 
 const LOCATION_QUARRIES = {
   lionTrophyHall: 'paleHuntLion',
@@ -46,6 +47,7 @@ function recipe(id, name, buildingId, cost, description, cardPackage, passiveTex
 }
 
 export const equipment = {
+  ...gearById,
   boneBlade: recipe('boneBlade', 'Bone Blade', 'boneSmith', { bone: 1, sinew: 1 }, 'A reliable cutting weapon.', ['hack', 'hack', 'carve'], 'Adds direct attack cards.', 'weapon'),
   boneHammer: recipe('boneHammer', 'Bone Hammer', 'boneSmith', { bone: 2, hide: 1 }, 'A heavy weapon for cracking defenses.', ['skullCrack', 'skullCrack', 'guardBreak'], 'Heavy block-breaking package.', 'weapon'),
   boneDarts: recipe('boneDarts', 'Bone Darts', 'boneSmith', { bone: 1, sinew: 1 }, 'Light throwing weapons.', ['boneDart', 'boneDart', 'quickToss'], 'Fast ranged attack package.', 'weapon'),
@@ -240,7 +242,20 @@ Object.values(equipment).forEach(item => {
   item.proficiencyXpGranted = Boolean(item.weaponType);
 });
 
-export const equipmentList = Object.values(equipment);
+import { dedupeGearList } from '../utils/gearNormalization.js';
+
+export const equipmentList = dedupeGearList(Object.values(equipment));
+
+export function getEquipment(id) {
+  return equipment[id] || {
+    id,
+    name: `Unknown Legacy Gear (${id})`,
+    passiveText: 'This item is from a legacy version of the game.',
+    cardPackage: [],
+    slot: 'gear',
+    implemented: false
+  };
+}
 
 export function validateEquipmentCardPackages() {
   const missingCardIds = [];

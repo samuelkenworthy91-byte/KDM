@@ -61,8 +61,8 @@ test('unknown card shapes return a safe string preview', () => {
   assert.equal(Array.isArray(preview.modifierBreakdown), true);
 });
 
-test('buckler block conversion preview and effect cap at 20 damage', () => {
-  const card = gearCards.maneRimStrike;
+test('buckler block conversion preview and effect cap at 10 damage', () => {
+  const card = gearCards.shieldBash;
   const state = stateWith(card);
   state.survivor = { ...state.survivor, block: 50, strength: 0 };
   state.monster = { ...state.monster, hp: 50, maxHp: 50 };
@@ -74,8 +74,8 @@ test('buckler block conversion preview and effect cap at 20 damage', () => {
     monster: state.monster
   });
 
-  assert.equal(card.effects[0].maximum, 20);
-  assert.match(card.description, /up to 20/i);
-  assert.equal(preview.monsterHpDamage, 20);
-  assert.equal(preview.effectSummary, 'Damage: 20');
+  assert.equal(card.effects[0].maximumBonus, 10);
+  assert.match(card.description, /max 10/i);
+  assert.equal(preview.monsterHpDamage, 13); // 3 base + 10 bonus
+  assert.equal(preview.effectSummary, 'Damage: 13');
 });

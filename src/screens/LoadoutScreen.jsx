@@ -12,6 +12,7 @@ import {
   getLegacyDisplayName
 } from '../game/legacyContent.js';
 import { formatValueForDisplay } from '../utils/formatters.js';
+import { getSurvivorDisplayName } from '../game/survivorIdentity.js';
 
 function GearCards({ gear }) {
   const item = equipment[gear.equipmentId];
@@ -91,7 +92,7 @@ export default function LoadoutScreen({
   return (
     <section className="settlement-hub">
       <p className="eyebrow">Loadout</p>
-      <h2>Prepare {survivor.name}</h2>
+      <h2>Prepare {getSurvivorDisplayName(survivor)}</h2>
       <p>HP {survivor.hp}/{survivor.maxHp} | Survival {survivor.survival || 0}</p>
       {wounded && <p className="missing">Warning: this survivor is wounded.</p>}
       {(survivor.injuries?.length > 0 || survivor.disorders?.length > 0) && (

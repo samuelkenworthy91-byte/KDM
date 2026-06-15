@@ -25,7 +25,18 @@ export function applyDamageToSurvivor({
   amount,
   ignoreBlock = false
 }) {
-  const incoming = Math.max(0, Number(amount) || 0);
+  let incoming = Math.max(0, Number(amount) || 0);
+  let nextGuarded = survivor.guarded || 0;
+
+  if (survivor.vulnerable > 0 && incoming > 0) {
+    incoming = Math.ceil(incoming * 1.5);
+  }
+
+  if (nextGuarded > 0 && incoming > 0) {
+    incoming = Math.max(1, incoming - 2);
+    nextGuarded -= 1;
+  }
+
   const availableBlock = Math.max(0, Number(survivor.block) || 0);
   const absorbed = ignoreBlock ? 0 : Math.min(availableBlock, incoming);
   const damage = incoming - absorbed;
@@ -37,6 +48,7 @@ export function applyDamageToSurvivor({
       ...survivor,
       block: ignoreBlock ? availableBlock : availableBlock - absorbed,
       hp: nextHp,
+      guarded: nextGuarded,
       ...(lethal ? { alive: false, isAlive: false } : {})
     },
     absorbed,
@@ -114,7 +126,19 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
           .reduce((total, effect) => total + (effect.value || 0), 0)
     ),
     hitLocations: createHitLocations(runBonus.survivor?.hitLocations),
-    treatmentNotes: [...(runBonus.survivor?.treatmentNotes || [])]
+    treatmentNotes: [...(runBonus.survivor?.treatmentNotes || [])],
+    bleed: 0,
+    burn: 0,
+    poison: 0,
+    doom: 0,
+    vulnerable: 0,
+    staggered: 0,
+    guarded: 0,
+    marked: false,
+    exposed: false,
+    snared: 0,
+    shock: 0,
+    blind: 0
   };
   const monster = {
     ...monsterOverride,
@@ -126,6 +150,18 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     ),
     block: monsterOverride.block ?? 0,
     maxHp: (monsterOverride.maxHp ?? monsterOverride.hp) + (runBonus.monsterBonusHp || 0),
+    bleed: 0,
+    burn: 0,
+    poison: 0,
+    doom: 0,
+    vulnerable: 0,
+    staggered: 0,
+    guarded: 0,
+    marked: false,
+    exposed: false,
+    snared: 0,
+    shock: 0,
+    blind: 0,
     intents: monsterOverride.intents.map(intent => ({
       ...intent,
       targetingRule: getIntentTargetRule(intent, monsterOverride),
@@ -201,7 +237,16 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     selectedWeakPointId: null,
     weakPointFeedback: '',
     combatLogEntries: [],
-    status: 'playing'
+    status: 'playing',
+    // Status conditions
+    bleed: 0,
+    poison: 0,
+    vulnerable: 0,
+    staggered: 0,
+    guarded: 0,
+    // Delayed effects
+    pendingEnergy: 0,
+    pendingDraw: 0
   };
 }
 
@@ -221,6 +266,10 @@ export function playCard(cardIndex, state) {
     energy: state.survivor.energy - card.cost
   };
   let monster = { ...state.monster };
+  const hasMonsterBane = state.hasMonsterBane || 
+                         state.monsterBaneKnowledge?.[monster.quarryId] || 
+                         state.fightingArts?.includes(`monsterBane_${monster.quarryId}`);
+  
   let drawPile = state.drawPile;
   let hand = state.hand;
   let discardPile = state.discardPile;
@@ -230,7 +279,7 @@ export function playCard(cardIndex, state) {
   let monsterHitsThisTurn = state.monsterHitsThisTurn || 0;
   let blockGainedThisTurn = state.blockGainedThisTurn || 0;
   let cardDiscardedThisTurn = state.cardDiscardedThisTurn || false;
-  let intentHintLevel = state.intentHintLevel || 0;
+  let intentHintLevel = hasMonsterBane ? 2 : (state.intentHintLevel || 0);
   let emittedPartyEffects = [...(state.emittedPartyEffects || [])];
   const isAttack = card.type === 'attack';
   const weaponType = card.weaponType ||
@@ -267,7 +316,7 @@ export function playCard(cardIndex, state) {
   let tellState = selectedWeakPoint
     ? getWeakPointTellState(selectedWeakPoint, currentIntent, monster.quarryId)
     : 'neutral';
-  if (selectedWeakPoint && cardTags.includes('exposeWeakPoint')) tellState = 'exposed';
+  if (selectedWeakPoint && (cardTags.includes('exposeWeakPoint') || monster.exposed)) tellState = 'exposed';
   let suitability = selectedWeakPoint
     ? getWeaponSuitability(selectedWeakPoint, weaponType, cardTags)
     : { modifier: 0, label: 'Neutral' };
@@ -282,7 +331,12 @@ export function playCard(cardIndex, state) {
   let weakPointRiskText = '';
   let harvestBreakResult = null;
   let strangeWeakPointPanicAdded = false;
+  let cardBreakBonus = 0;
   const combatLogEntries = [];
+
+  card.effects.forEach(effect => {
+    if (effect.type === 'breakBonus') cardBreakBonus += effect.amount;
+  });
 
   if (isAttack && proficiencyLevel >= 1) {
     if (weaponType === 'sword' && firstWeaponCard) proficiencyDamageBonus += 1;
@@ -382,6 +436,60 @@ export function playCard(cardIndex, state) {
     target.splice(target.findIndex(item => item.id === 'panic'), 1);
     return true;
   };
+
+  const parseAndApplyStatus = (statusStr, targetType) => {
+    if (!statusStr) return;
+    const lower = statusStr.toLowerCase();
+    const isMonster = targetType === 'monster';
+    const target = isMonster ? monster : survivor;
+
+    if (lower.includes('apply bleed')) {
+      const match = lower.match(/apply bleed (\d+)/);
+      const amount = match ? parseInt(match[1]) : 1;
+      target.bleed = (target.bleed || 0) + amount;
+    } else if (lower.includes('apply burn')) {
+      const match = lower.match(/apply burn (\d+)/);
+      const amount = match ? parseInt(match[1]) : 1;
+      target.burn = (target.burn || 0) + amount;
+    } else if (lower.includes('apply poison')) {
+      const match = lower.match(/apply poison (\d+)/);
+      const amount = match ? parseInt(match[1]) : 1;
+      target.poison = (target.poison || 0) + amount;
+    } else if (lower.includes('apply doom')) {
+      const match = lower.match(/apply doom (\d+)/);
+      const amount = match ? parseInt(match[1]) : 1;
+      target.doom = (target.doom || 0) + amount;
+    } else if (lower.includes('marked')) {
+      target.marked = true;
+    } else if (lower.includes('exposed')) {
+      target.exposed = true;
+    } else if (lower.includes('apply snared')) {
+      const match = lower.match(/apply snared (\d+)/);
+      const amount = match ? parseInt(match[1]) : 1;
+      target.snared = (target.snared || 0) + amount;
+    } else if (lower.includes('apply shock')) {
+      const match = lower.match(/apply shock (\d+)/);
+      const amount = match ? parseInt(match[1]) : 1;
+      target.shock = (target.shock || 0) + amount;
+    } else if (lower.includes('apply blind')) {
+      const match = lower.match(/apply blind (\d+)/);
+      const amount = match ? parseInt(match[1]) : 1;
+      target.blind = (target.blind || 0) + amount;
+    } else if (lower.includes('apply stagger')) {
+      const match = lower.match(/apply stagger (\d+)/);
+      const amount = match ? parseInt(match[1]) : 1;
+      target.staggered = (target.staggered || 0) + amount;
+    } else if (lower.includes('guarded')) {
+      const match = lower.match(/guarded (\d+)/);
+      const amount = match ? parseInt(match[1]) : 1;
+      target.guarded = (target.guarded || 0) + amount;
+    }
+  };
+
+  if (card.statusApplied) {
+    parseAndApplyStatus(card.statusApplied, 'monster'); // Cards usually apply to monster
+  }
+
   const drawAmount = amount => {
     const result = drawCards(drawPile, hand, discardPile, amount);
     drawPile = result.deck;
@@ -398,49 +506,59 @@ export function playCard(cardIndex, state) {
   };
   const conditionalDamage = effect => {
     let amount = effect.amount || 0;
-    if (monster.marked) amount += effect.bonusIfMonsterMarked || 0;
-    if (survivor.hp < survivor.maxHp) amount += effect.bonusIfSurvivorWounded || 0;
-    if (panicInDiscard()) amount += effect.bonusIfPanicInDiscard || 0;
-    if ((state.survivalSpentThisTurn || 0) > 0) amount += effect.bonusIfSurvivalSpent || 0;
-    if ((state.cardsPlayedThisTurn || 0) === 0) amount += effect.bonusIfFirstCard || 0;
-    if ((state.attacksPlayedThisTurn || 0) === 1) amount += effect.bonusIfSecondAttack || 0;
-    if ((state.attacksPlayedThisTurn || 0) === 0) amount += effect.bonusIfFirstAttack || 0;
-    if (survivor.block > 0) amount += effect.bonusIfBlock || 0;
-    if ((state.blockGainedThisTurn || 0) > 0) amount += effect.bonusIfBlockThisTurn || 0;
-    if (monster.block <= 0) amount += effect.bonusIfMonsterNoBlock || 0;
-    if (monster.block > 0) amount += effect.bonusIfMonsterHasBlock || 0;
-    if (monster.bleed > 0) amount += effect.bonusIfMonsterBleeding || 0;
-    if (monster.hp < monster.maxHp / 2) amount += effect.bonusIfMonsterWounded || 0;
+    let bonus = 0;
+    if (monster.marked) bonus += effect.bonusIfMonsterMarked || 0;
+    if (survivor.hp < survivor.maxHp) bonus += effect.bonusIfSurvivorWounded || 0;
+    if (panicInDiscard()) bonus += effect.bonusIfPanicInDiscard || 0;
+    if ((state.survivalSpentThisTurn || 0) > 0) bonus += effect.bonusIfSurvivalSpent || 0;
+    if ((state.cardsPlayedThisTurn || 0) === 0) bonus += effect.bonusIfFirstCard || 0;
+    if ((state.attacksPlayedThisTurn || 0) === 1) bonus += effect.bonusIfSecondAttack || 0;
+    if ((state.attacksPlayedThisTurn || 0) === 0) bonus += effect.bonusIfFirstAttack || 0;
+    if (survivor.block > 0) bonus += effect.bonusIfBlock || 0;
+    if ((state.blockGainedThisTurn || 0) > 0) bonus += effect.bonusIfBlockThisTurn || 0;
+    if (monster.block <= 0) bonus += effect.bonusIfMonsterNoBlock || 0;
+    if (monster.block > 0) bonus += effect.bonusIfMonsterHasBlock || 0;
+    if (monster.bleed > 0) bonus += effect.bonusIfMonsterBleeding || 0;
+    if (monster.vulnerable > 0) bonus += effect.bonusIfMonsterVulnerable || 0;
+    if (monster.hp < monster.maxHp / 2) bonus += effect.bonusIfMonsterWounded || 0;
+    if (survivor.block > 0) bonus += (survivor.block * (effect.bonusPerBlock || 0));
+    
     if ((state.cardsPlayedThisTurn || 0) >= (effect.cardsRequired || Infinity)) {
-      amount += effect.bonusIfCardsPlayed || 0;
+      bonus += effect.bonusIfCardsPlayed || 0;
     }
     if (survivor.survival >= (effect.survivalRequired || Infinity)) {
-      amount += effect.bonusIfHighSurvival || 0;
+      bonus += effect.bonusIfHighSurvival || 0;
     }
-    if (state.previousCardType === 'skill') amount += effect.bonusIfPreviousCardSkill || 0;
-    if (state.disorders?.length) amount += effect.bonusIfDisorder || 0;
-    if (state.damageTakenLastTurn > 0) amount += effect.bonusIfTargetedLastTurn || 0;
-    if (state.cardDiscardedThisTurn) amount += effect.bonusIfCardDiscarded || 0;
-    amount += Math.min(
-      effect.maximumBonus || Infinity,
-      panicInDiscard() * (effect.bonusPerPanicInDiscard || 0)
-    );
-    return amount;
+    if (state.previousCardType === 'skill') bonus += effect.bonusIfPreviousCardSkill || 0;
+    if (state.disorders?.length) bonus += effect.bonusIfDisorder || 0;
+    if (state.damageTakenLastTurn > 0) bonus += effect.bonusIfTargetedLastTurn || 0;
+    if (state.cardDiscardedThisTurn) bonus += effect.bonusIfCardDiscarded || 0;
+
+    bonus += panicInDiscard() * (effect.bonusPerPanicInDiscard || 0);
+
+    if (effect.maximumBonus) {
+      bonus = Math.min(effect.maximumBonus, bonus);
+    }
+
+    return amount + bonus;
   };
   const dealCardDamage = effect => {
     const firstAttackPenalty = !state.firstAttackPlayed && firstDamageEffect
       ? (state.injuries?.includes('brokenArm') ? 1 : 0) +
         (state.scars?.includes('boneSetWrong') ? 1 : 0)
       : 0;
+    const staggeredPenalty = survivor.staggered > 0 ? 2 : 0;
     const amount = Math.max(0,
       conditionalDamage(effect) +
       (survivor.strength || 0) +
+      (hasMonsterBane ? 1 : 0) +
       (state.fightingArts?.includes('clawStyle') ? 1 : 0) +
       (state.fightingArts?.includes('berserker') && survivor.block === 0 ? 1 : 0) +
       (state.disorders?.includes('deathWish') && survivor.hp <= 2 ? 2 : 0) +
       (!state.firstAttackPlayed && state.disorders?.includes('recklessJoy') ? 2 : 0) -
       (!state.firstAttackPlayed && state.disorders?.includes('cowardice') ? 1 : 0) -
-      firstAttackPenalty +
+      firstAttackPenalty -
+      staggeredPenalty +
       (!state.firstAttackPlayed ? state.firstAttackBonus || 0 : 0) +
       (isAttack ? nextAttackBonus : 0) +
       proficiencyDamageBonus +
@@ -514,7 +632,7 @@ export function playCard(cardIndex, state) {
         }
       }
       const breakDamage = Math.max(0, Math.round(
-        (totalAmount + flatBreakBonus) *
+        (totalAmount + flatBreakBonus + cardBreakBonus) *
         selectedWeakPoint.breakDamageMultiplier *
         (1 + suitability.modifier) *
         getTellBreakModifier(tellState)
@@ -570,7 +688,8 @@ export function playCard(cardIndex, state) {
 
   card.effects.forEach(effect => {
     switch (effect.type) {
-      case 'damage': {
+      case 'damage':
+      case 'skillDamage': {
         dealCardDamage(effect);
         (monster.passiveRules || []).forEach(rule => {
           if (
@@ -596,7 +715,23 @@ export function playCard(cardIndex, state) {
         }
         break;
       case 'bleedMonster':
+        if (effect.condition === 'monsterMarked' && !monster.marked) break;
         monster.bleed = (monster.bleed || 0) + effect.amount;
+        break;
+      case 'poisonMonster':
+        if (effect.condition === 'monsterMarked' && !monster.marked) break;
+        monster.poison = (monster.poison || 0) + effect.amount;
+        break;
+      case 'vulnerableMonster':
+        if (effect.condition === 'monsterMarked' && !monster.marked) break;
+        monster.vulnerable = (monster.vulnerable || 0) + effect.amount;
+        break;
+      case 'staggerMonster':
+        if (effect.condition === 'monsterMarked' && !monster.marked) break;
+        monster.staggered = (monster.staggered || 0) + effect.amount;
+        break;
+      case 'guardedSurvivor':
+        survivor.guarded = (survivor.guarded || 0) + effect.amount;
         break;
       case 'removeMonsterBlock':
         monster = { ...monster, block: Math.max(0, monster.block - effect.amount) };
@@ -694,6 +829,12 @@ export function playCard(cardIndex, state) {
         drawAmount(effect.amount);
         break;
       }
+      case 'delayedEnergy':
+        state.pendingEnergy += effect.amount;
+        break;
+      case 'delayedDraw':
+        state.pendingDraw += effect.amount;
+        break;
       case 'drawIfSecondAttack':
         if ((state.attacksPlayedThisTurn || 0) === 1) drawAmount(effect.amount);
         break;
@@ -875,6 +1016,15 @@ export function playCard(cardIndex, state) {
       !weaponMasteryUsed.spearWeakPointRisk;
     const riskSuppressed = tellState === 'open' || tellState === 'exposed' ||
       cardTags.includes('safeWeakPoint') || spearRiskProtection;
+
+    // Consume Exposed and Marked
+    if (tellState === 'exposed' && monster.exposed) {
+      monster.exposed = false;
+    }
+    if (isAttack && monster.marked && !cardTags.includes('keepMarked')) {
+      monster.marked = false;
+    }
+
     if (spearRiskProtection && updatedPoint && !updatedPoint.broken) {
       weaponMasteryUsed.spearWeakPointRisk = true;
     }
@@ -1361,11 +1511,61 @@ export function applyMonsterIntent(monster, state) {
     .map(weakPoint => weakPoint.effect);
   let survivor = { ...state.survivor };
   const hpBeforeIntent = survivor.hp;
-  let nextMonster = { ...monster, block: 0 };
+  let nextMonster = { ...monster };
+  const hasMonsterBane = state.monsterBaneKnowledge?.[monster.quarryId] || 
+                         state.fightingArts?.includes(`monsterBane_${monster.quarryId}`);
+  
+  // Monster Status Ticks - Apply damage before intent resolve
   if (nextMonster.bleed > 0) {
-    nextMonster = applyDirectDamage(nextMonster, 1);
+    const bleedDmg = nextMonster.bleed;
+    nextMonster.hp = Math.max(0, nextMonster.hp - bleedDmg);
     nextMonster.bleed = Math.max(0, nextMonster.bleed - 1);
+    state.combatLogEntries.push(`${monster.name} takes ${bleedDmg} damage from Bleed.`);
   }
+  if (nextMonster.burn > 0) {
+    const burnDmg = nextMonster.burn;
+    const absorbed = Math.min(nextMonster.block, burnDmg);
+    nextMonster.block -= absorbed;
+    const remaining = burnDmg - absorbed;
+    nextMonster.hp = Math.max(0, nextMonster.hp - remaining);
+    nextMonster.burn = Math.max(0, nextMonster.burn - 1);
+    state.combatLogEntries.push(`${monster.name} takes ${burnDmg} damage from Burn.`);
+  }
+  if (nextMonster.poison > 0) {
+    const poisonDmg = nextMonster.poison;
+    const ignoredBlock = Math.floor(nextMonster.block / 2);
+    const effectiveBlock = nextMonster.block - ignoredBlock;
+    const absorbed = Math.min(effectiveBlock, poisonDmg);
+    const damage = poisonDmg - absorbed;
+    nextMonster.hp = Math.max(0, nextMonster.hp - damage);
+    // Note: nextMonster.block is not reduced by Poison in a way that permanently removes the ignored part,
+    // but the rule says Poison ignores half block. For simplicity, we just apply damage.
+    nextMonster.poison = Math.max(0, nextMonster.poison - 1);
+    state.combatLogEntries.push(`${monster.name} takes ${poisonDmg} damage from Poison.`);
+  }
+  if (nextMonster.doom > 0) {
+    nextMonster.doom -= 1;
+    if (nextMonster.doom === 0) {
+      state.combatLogEntries.push(`${monster.name}'s Doom resolves!`);
+      // Placeholder for Doom effect: deal massive damage
+      nextMonster.hp = Math.max(0, nextMonster.hp - 10);
+    }
+  }
+  
+  if (nextMonster.vulnerable > 0) nextMonster.vulnerable = Math.max(0, nextMonster.vulnerable - 1);
+  if (nextMonster.staggered > 0) nextMonster.staggered = Math.max(0, nextMonster.staggered - 1);
+  // Guarded for monster? If we add support for it.
+  if (nextMonster.guarded > 0) nextMonster.guarded = Math.max(0, nextMonster.guarded - 1);
+  if (nextMonster.snared > 0) nextMonster.snared = Math.max(0, nextMonster.snared - 1);
+  if (nextMonster.shock > 0) nextMonster.shock = Math.max(0, nextMonster.shock - 1);
+  if (nextMonster.blind > 0) nextMonster.blind = Math.max(0, nextMonster.blind - 1);
+  // Marked and Exposed clear after use, handled in playCard.
+
+  nextMonster.block = 0;
+
+  // Bane Effect: Full intent visibility
+  const intentHintLevel = hasMonsterBane ? 2 : (state.intentHintLevel || 0);
+
   let drawPile = [...state.drawPile];
   let discardPile = [...state.discardPile];
   let lanternPanicIgnored = state.lanternPanicIgnored;
@@ -1380,11 +1580,16 @@ export function applyMonsterIntent(monster, state) {
       survivor.hp < survivor.maxHp
     )
     .reduce((total, rule) => total + (rule.amount || 0), 0);
+
+  // Staggered reduces monster damage
+  const staggeredPenalty = nextMonster.staggered > 0 ? 2 : 0;
+
   let attackBonus =
     (monster.nextAttackBonus || 0) +
     (monster.enrage || 0) +
     passiveAttackBonus +
-    woundedAttackBonus;
+    woundedAttackBonus -
+    staggeredPenalty;
   let attackBonusConsumed = false;
   let monsterAttackCount = 0;
   const damageSurvivor = amount => {
@@ -1528,6 +1733,55 @@ export function endTurn(state) {
   }
 
   let survivorBeforeIntent = { ...state.survivor };
+
+  // Survivor Status Ticks
+  if (survivorBeforeIntent.bleed > 0) {
+    survivorBeforeIntent = applyDirectDamage(survivorBeforeIntent, survivorBeforeIntent.bleed);
+    survivorBeforeIntent.bleed = Math.max(0, survivorBeforeIntent.bleed - 1);
+  }
+  if (survivorBeforeIntent.burn > 0) {
+    const burnDmg = survivorBeforeIntent.burn;
+    const result = applyDamageToSurvivor({ survivor: survivorBeforeIntent, amount: burnDmg });
+    survivorBeforeIntent = result.survivor;
+    survivorBeforeIntent.burn = Math.max(0, survivorBeforeIntent.burn - 1);
+  }
+  if (survivorBeforeIntent.poison > 0) {
+    const poisonDmg = survivorBeforeIntent.poison;
+    const ignoredBlock = Math.floor(survivorBeforeIntent.block / 2);
+    const result = applyDamageToSurvivor({
+      survivor: survivorBeforeIntent,
+      amount: poisonDmg,
+      ignoreBlock: false // applyDamageToSurvivor will use its internal block logic
+    });
+    // applyDamageToSurvivor doesn't support "ignore half block" easily, so we manually adjust:
+    const effectiveBlock = survivorBeforeIntent.block - ignoredBlock;
+    const absorbed = Math.min(effectiveBlock, poisonDmg);
+    const damage = poisonDmg - absorbed;
+    survivorBeforeIntent.hp = Math.max(0, survivorBeforeIntent.hp - damage);
+    survivorBeforeIntent.block = Math.max(0, survivorBeforeIntent.block - absorbed);
+    survivorBeforeIntent.poison = Math.max(0, survivorBeforeIntent.poison - 1);
+  }
+  if (survivorBeforeIntent.doom > 0) {
+    survivorBeforeIntent.doom -= 1;
+    if (survivorBeforeIntent.doom === 0) {
+      // Placeholder Doom effect: massive damage
+      survivorBeforeIntent.hp = Math.max(0, survivorBeforeIntent.hp - 10);
+    }
+  }
+
+  if (survivorBeforeIntent.vulnerable > 0) survivorBeforeIntent.vulnerable = Math.max(0, survivorBeforeIntent.vulnerable - 1);
+  if (survivorBeforeIntent.staggered > 0) survivorBeforeIntent.staggered = Math.max(0, survivorBeforeIntent.staggered - 1);
+  // Note: Guarded is consumed when taking damage, but also ticks down if not used.
+  if (survivorBeforeIntent.guarded > 0) survivorBeforeIntent.guarded = Math.max(0, survivorBeforeIntent.guarded - 1);
+  if (survivorBeforeIntent.snared > 0) survivorBeforeIntent.snared = Math.max(0, survivorBeforeIntent.snared - 1);
+  if (survivorBeforeIntent.shock > 0) survivorBeforeIntent.shock = Math.max(0, survivorBeforeIntent.shock - 1);
+  if (survivorBeforeIntent.blind > 0) survivorBeforeIntent.blind = Math.max(0, survivorBeforeIntent.blind - 1);
+
+
+  // Apply delayed effects for next turn
+  const nextEnergy = survivorBeforeIntent.energy + state.pendingEnergy;
+  const drawNext = state.pendingDraw;
+
   const artTriggers = { ...(state.artTriggers || {}) };
   const artPassives = state.artPassives || getArtPassiveEffects(state.fightingArts);
   if ((state.attacksPlayedThisTurn || 0) === 0) {
@@ -1567,20 +1821,22 @@ export function endTurn(state) {
     afterIntent.drawPile,
     [],
     afterIntent.discardPile,
-    HAND_SIZE
+    HAND_SIZE + (state.pendingDraw || 0)
   );
 
   return {
     ...afterIntent,
     survivor: {
       ...afterIntent.survivor,
-      energy: Math.max(0, ENERGY_PER_TURN - (afterIntent.pendingEnergyPenalty || 0))
+      energy: Math.max(0, ENERGY_PER_TURN + (state.pendingEnergy || 0) - (afterIntent.pendingEnergyPenalty || 0))
     },
     drawPile: drawn.deck,
     hand: drawn.hand,
     discardPile: drawn.discard,
     intentIndex: (state.intentIndex + 1) % state.monster.intents.length,
     pendingEnergyPenalty: 0,
+    pendingEnergy: 0,
+    pendingDraw: 0,
     monsterHitsThisTurn: 0,
     survivalActionsUsed: [],
     survivalFeedback: '',

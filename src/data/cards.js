@@ -1,6 +1,7 @@
 import { gearCards } from './gearCards.js';
 import { monsterRewardCards } from './monsterSurvivorRewards.js';
 import { fightingArtCards } from './fightingArtCards.js';
+import { overhaulCards } from './overhaul/cardRegistry.js';
 
 function card(id, name, cost, description, effects, options = {}) {
   return {
@@ -19,6 +20,7 @@ function card(id, name, cost, description, effects, options = {}) {
 }
 
 export const cards = {
+  ...overhaulCards,
   foundingStone: card('foundingStone', 'Founding Stone', 1, 'Deal 6 damage. Exhaust.', [{ type: 'damage', amount: 6 }], { type: 'attack', tags: ['brutal'], exhaust: true }),
   wildSwing: card('wildSwing', 'Wild Swing', 2, 'Deal 10 damage.', [{ type: 'damage', amount: 10 }], { type: 'attack', tags: ['brutal', 'hideBreaker'] }),
   scramble: card('scramble', 'Scramble', 1, 'Gain 5 block.', [{ type: 'block', amount: 5 }]),

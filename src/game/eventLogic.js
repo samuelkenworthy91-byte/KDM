@@ -266,3 +266,55 @@ export function resolveEvent(event, choice, state, context) {
     ...applyEffects(choice.effects || {}, { ...state, appliedEffects: [] }, context)
   };
 }
+
+export function calculateIntimacyProjections(settlement, innovationCards) {
+  const baseSuccessChance = 0.5; // rolls 6-10
+  const baseTragedyChance = 0.2; // rolls 1-2
+  
+  const modifiers = [];
+  const builtIds = settlement.innovationDeckState?.builtInnovationIds || [];
+  
+  builtIds.forEach(id => {
+    const card = innovationCards[id];
+    if (card?.mechanicalEffects?.intimacySuccessBonus) {
+      modifiers.push({
+        name: card.name,
+        value: card.mechanicalEffects.intimacySuccessBonus,
+        type: 'success',
+        source: 'innovation'
+      });
+    }
+    if (card?.mechanicalEffects?.intimacyTragedyReduction) {
+      modifiers.push({
+        name: card.name,
+        value: -card.mechanicalEffects.intimacyTragedyReduction,
+        type: 'tragedy',
+        source: 'innovation'
+      });
+    }
+  });
+
+  const successBonus = modifiers
+    .filter(m => m.type === 'success')
+    .reduce((total, m) => total + m.value, 0);
+  const tragedyReduction = modifiers
+    .filter(m => m.type === 'tragedy')
+    .reduce((total, m) => total + m.value, 0);
+
+  const finalSuccessChance = Math.min(0.95, baseSuccessChance + successBonus);
+  const finalTragedyChance = Math.max(0.01, baseTragedyChance + tragedyReduction);
+
+  return {
+    baseSuccessChance,
+    baseTragedyChance,
+    modifiers,
+    finalSuccessChance,
+    finalTragedyChance,
+    outcomes: [
+      { label: 'Tragedy / Wound', chance: finalTragedyChance, risk: true },
+      { label: 'No Birth', chance: Math.max(0, 1 - finalSuccessChance - finalTragedyChance) },
+      { label: 'New Life (Success)', chance: finalSuccessChance }
+    ]
+  };
+}
+

@@ -34,6 +34,7 @@ export function getCardsFromIds(cardIds = [], source, sourceType) {
     }
     return [{
       ...card,
+      instanceId: `card-${cardId}-${Math.random().toString(36).substr(2, 9)}`,
       sourceType: sourceType || normalized.sourceType || card.sourceType,
       ...(source ? { source } : {}),
       ...(normalized.reason ? { sourceReason: normalized.reason } : {})

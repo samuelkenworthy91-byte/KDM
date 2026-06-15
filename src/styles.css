@@ -198,6 +198,78 @@ select {
   margin: 1rem 0;
 }
 
+/* Status Tags */
+.status-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+.status-tag {
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  background: #222;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.status-tag.bleed { color: #ff5555; border-color: #882222; }
+.status-tag.poison { color: #55ff55; border-color: #228822; }
+.status-tag.vulnerable { color: #ffaa00; border-color: #885500; }
+.status-tag.staggered { color: #aaaaff; border-color: #444488; }
+.status-tag.guarded { color: #55ffff; border-color: #228888; }
+.status-tag.marked { color: #ffff55; border-color: #888822; }
+.status-tag.met { color: #55ff55; border-color: #228822; }
+
+/* Intimacy Transparency */
+.intimacy-transparency {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+  border: 1px solid #494136;
+  padding: 1rem;
+  background: #1a1815;
+}
+
+.odds-breakdown h4,
+.how-to-improve h4 {
+  margin-top: 0;
+  color: #ded0b4;
+}
+
+.modifier-list {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+}
+
+.modifier-list .bonus { color: #77dd77; }
+.modifier-list .penalty { color: #ff7777; }
+
+.final-odds {
+  margin-top: 1rem;
+  border-top: 1px solid #302c27;
+  padding-top: 0.5rem;
+}
+
+.deck-pool-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.unlock-hint {
+  display: block;
+  margin-top: 0.5rem;
+  color: #77dd77;
+  font-size: 0.85rem;
+}
+
+
 .settlement-tabs button {
   text-transform: capitalize;
 }
@@ -1111,4 +1183,69 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+/* Armoury Overhaul Styles */
+.armoury-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  border-bottom: 2px solid #3b342b;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #a69c8d;
+}
+
+.sub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #302c27;
+}
+
+.tab-button {
+  background: #1a1815;
+  border: 1px solid #494136;
+  color: #a69c8d;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.tab-button.active {
+  background: #3b2816;
+  border-color: #76572d;
+  color: #ded0b4;
+  font-weight: bold;
+}
+
+.item-card.locked {
+  opacity: 0.6;
+  filter: grayscale(0.5);
+  border-style: dashed;
+}
+
+.locked-badge {
+  display: inline-block;
+  background: #3b1616;
+  color: #ff9999;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #762d2d;
+}
+
+.recipe-group h3 {
+  margin-top: 1.5rem;
+  color: #d09b48;
+  border-left: 3px solid #76572d;
+  padding-left: 0.75rem;
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { getSurvivorDisplayName } from '../game/survivorIdentity.js';
 
 export default function NemesisPreparationScreen({
   encounter,
@@ -31,7 +32,7 @@ export default function NemesisPreparationScreen({
             className={selectedSurvivorId === survivor.id ? 'selected' : ''}
             onClick={() => onSelectSurvivor(survivor.id)}
           >
-            <strong>{survivor.name}</strong>
+            <strong>{getSurvivorDisplayName(survivor)}</strong>
             <span>HP {survivor.hp}/{survivor.maxHp} | Survival {survivor.survival || 0}</span>
             {survivor.hp < survivor.maxHp && <span className="missing">Wounded</span>}
           </button>

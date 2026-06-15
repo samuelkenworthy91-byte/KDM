@@ -57,17 +57,17 @@ const exactSets = {
     skill('rationBundle', 'shareRations', 'Share Rations', 1, 'At the next rest node, heal all party members 1 HP. Exhaust.', [{ type: 'partyEffect', target: 'all', effectType: 'restHeal', value: 1 }], ['support', 'party', 'wound', 'exhaust'], true),
   ],
   boneBlade: [
-    attack('boneBlade', 'carefulCut', 'Careful Cut', 1, 'Deal 5 damage. Deal +2 if the monster is Marked.', [{ type: 'damage', amount: 5, bonusIfMonsterMarked: 2 }], ['marked', 'precise', 'safeWeakPoint']),
+    attack('boneBlade', 'carefulCut', 'Careful Cut', 1, 'Deal 5 damage. Apply 2 Bleed if the monster is Marked.', [{ type: 'damage', amount: 5 }, { type: 'bleedMonster', amount: 2, condition: 'monsterMarked' }], ['marked', 'precise', 'bleed']),
     attack('boneBlade', 'nickWeakSpot', 'Nick Weak Spot', 0, 'Deal 2 damage and Mark the monster.', [{ type: 'damage', amount: 2 }, { type: 'markMonster' }], ['quick', 'marked']),
     attack('boneBlade', 'boneEdge', 'Bone Edge', 1, 'Deal 4 damage. Draw 1 if this is your second attack this turn.', [{ type: 'damage', amount: 4 }, { type: 'drawIfSecondAttack', amount: 1 }], ['quick'])
   ],
   boneHammer: [
-    attack('boneHammer', 'crackGuard', 'Crack Guard', 1, 'Remove 5 monster block, then deal 4 damage.', [{ type: 'removeMonsterBlock', amount: 5 }, { type: 'damage', amount: 4 }], ['heavy', 'breaker', 'hideBreaker', 'exposeWeakPoint']),
-    attack('boneHammer', 'heavyStagger', 'Heavy Stagger', 2, 'Deal 8 damage and gain 3 block.', [{ type: 'damage', amount: 8 }, { type: 'block', amount: 3 }], ['heavy', 'block']),
+    attack('boneHammer', 'crackGuard', 'Crack Guard', 1, 'Remove 5 monster block and apply 1 Vulnerable.', [{ type: 'removeMonsterBlock', amount: 5 }, { type: 'vulnerableMonster', amount: 1 }], ['heavy', 'breaker', 'vulnerable']),
+    attack('boneHammer', 'heavyStagger', 'Heavy Stagger', 2, 'Deal 8 damage and apply 1 Staggered.', [{ type: 'damage', amount: 8 }, { type: 'staggerMonster', amount: 1 }], ['heavy', 'staggered']),
     attack('boneHammer', 'skullRattle', 'Skull Rattle', 1, 'Deal 3 damage. Add 1 Panic to discard, then draw 1.', [{ type: 'damage', amount: 3 }, { type: 'addPanic', amount: 1 }, { type: 'draw', amount: 1 }], ['heavy', 'panic'])
   ],
   boneDarts: [
-    attack('boneDarts', 'quickDart', 'Quick Dart', 0, 'Deal 2 damage and apply 1 Bleed. Exhaust.', [{ type: 'damage', amount: 2 }, { type: 'bleedMonster', amount: 1 }], ['quick', 'bleed', 'exhaust']),
+    attack('boneDarts', 'quickDart', 'Quick Dart', 0, 'Deal 2 damage and apply 1 Poison. Exhaust.', [{ type: 'damage', amount: 2 }, { type: 'poisonMonster', amount: 1 }], ['quick', 'poison', 'exhaust']),
     attack('boneDarts', 'pinTheBeast', 'Pin the Beast', 1, 'Deal 3 damage and Mark the monster.', [{ type: 'damage', amount: 3 }, { type: 'markMonster' }], ['quick', 'marked', 'ranged', 'limbHunter']),
     attack('boneDarts', 'throwAndMove', 'Throw and Move', 1, 'Deal 3 damage and gain 3 block.', [{ type: 'damage', amount: 3 }, { type: 'block', amount: 3 }], ['quick', 'block'])
   ],
@@ -100,9 +100,8 @@ const exactSets = {
     skill('strangeEyeAmulet', 'seeTooMuch', 'See Too Much', 1, 'Clarify the monster tell without revealing numbers. With Monster Bane, draw 1.', [{ type: 'revealIntentHint' }, { type: 'drawIfMonsterBane', amount: 1 }], ['strange', 'reveal', 'monsterBane'])
   ],
   hornMaul: [
-    attack('hornMaul', 'hornSwing', 'Horn Swing', 2, 'Deal 10 damage.', [{ type: 'damage', amount: 10 }], ['heavy', 'brutal', 'hideBreaker']),
-    skill('hornMaul', 'braceForImpact', 'Brace for Impact', 1, 'Gain 8 block.', [{ type: 'block', amount: 8 }], ['heavy', 'block']),
-    attack('hornMaul', 'throwWeight', 'Throw Weight', 1, 'Discard another card. Deal 6 if discarded, otherwise deal 3.', [{ type: 'discardForDamage', amount: 6, fallbackAmount: 3 }], ['heavy', 'discard'])
+    attack('hornMaul', 'goringSwing', 'Goring Swing', 2, 'Deal 9 damage and apply 2 Staggered.', [{ type: 'damage', amount: 9 }, { type: 'staggerMonster', amount: 2 }], ['heavy', 'staggered']),
+    skill('hornMaul', 'braceMaul', 'Brace Maul', 1, 'Gain 7 block and 1 Guarded.', [{ type: 'block', amount: 7 }, { type: 'guardedSurvivor', amount: 1 }], ['heavy', 'block', 'guarded'])
   ],
   lionFangKatar: [
     attack('lionFangKatar', 'lionFangKatarJab', 'Fang Nick', 0, 'Deal 2 damage and apply 1 Bleed.', [{ type: 'damage', amount: 2 }, { type: 'bleedMonster', amount: 1 }], ['quick', 'bleed']),
@@ -138,9 +137,8 @@ const exactSets = {
     attack('stalkingSpear', 'reachUnderTheMane', 'Reach Under the Mane', 1, 'Deal 5 damage with reduced weak-point risk.', [{ type: 'damage', amount: 5 }], ['reach', 'safeWeakPoint', 'limbHunter'])
   ],
   lionhideBuckler: [
-    skill('lionhideBuckler', 'catchThePounce', 'Catch the Pounce', 1, 'Gain 8 block.', [{ type: 'block', amount: 8 }], ['block', 'pounce', 'counter']),
-    attack('lionhideBuckler', 'maneRimStrike', 'Mane-Rim Strike', 1, 'Deal damage equal to half your block, up to 20.', [{ type: 'damageFromBlock', divisor: 2, maximum: 20 }], ['attack', 'block', 'counter']),
-    skill('lionhideBuckler', 'standUnderClaws', 'Stand Under Claws', 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], ['block', 'exhaust'], true)
+    skill('lionhideBuckler', 'aggressiveBuckle', 'Aggressive Buckle', 1, 'Gain 4 block and apply 1 Vulnerable.', [{ type: 'block', amount: 4 }, { type: 'vulnerableMonster', amount: 1 }], ['block', 'vulnerable']),
+    attack('lionhideBuckler', 'shieldBash', 'Shield Bash', 1, 'Deal 3 damage. If you have block, deal extra damage equal to your block (max 10).', [{ type: 'damage', amount: 3, bonusPerBlock: 1, maximumBonus: 10 }], ['block', 'breaker'])
   ],
   maneCloak: [
     skill('maneCloak', 'hideInTheMane', 'Hide in the Mane', 1, 'Gain 7 block.', [{ type: 'block', amount: 7 }], ['block']),
@@ -202,9 +200,8 @@ const exactSets = {
     skill('ashFeatherMantle', 'featheredMemory', 'Feathered Memory', 1, 'Draw 2, then discard another card if possible.', [{ type: 'draw', amount: 2 }, { type: 'discard', amount: 1 }], ['discard'])
   ],
   timeBoneBlade: [
-    attack('timeBoneBlade', 'secondBeforeCut', 'Second Before Cut', 1, 'Deal 4 damage. Draw 1 if this is the first card played this turn.', [{ type: 'damage', amount: 4 }, { type: 'drawIfFirstCard', amount: 1 }], ['precise']),
-    attack('timeBoneBlade', 'timeSplitSlash', 'Time-Split Slash', 2, 'Deal 5 damage twice.', [{ type: 'multiHitDamage', amount: 5, hits: 2 }], ['precise', 'multiHit']),
-    skill('timeBoneBlade', 'borrowedMoment', 'Borrowed Moment', 0, 'Gain 1 energy. Exhaust.', [{ type: 'energy', amount: 1 }], ['precise', 'exhaust'], true)
+    attack('timeBoneBlade', 'delayedCut', 'Delayed Cut', 1, 'Deal 5 damage. Next turn, gain 1 energy and draw 1.', [{ type: 'damage', amount: 5 }, { type: 'delayedEnergy', amount: 1 }, { type: 'delayedDraw', amount: 1 }], ['strange', 'time']),
+    attack('timeBoneBlade', 'quickCut', 'Quick Cut', 0, 'Deal 2 damage twice. Exhaust.', [{ type: 'damage', amount: 2 }, { type: 'damage', amount: 2 }], ['quick', 'exhaust'])
   ],
   memoryGlassEye: [
     skill('memoryGlassEye', 'lookBack', 'Look Back', 0, 'Return the top card of discard to your hand, or draw 1. Exhaust.', [{ type: 'drawFromDiscardOrDeck', amount: 1 }], ['strange', 'exhaust'], true),

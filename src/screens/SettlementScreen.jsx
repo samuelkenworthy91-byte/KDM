@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { cards, starterCardIds, trainingCardIds } from '../data/cards.js';
 import { childTraits, normalizeChildTraitId } from '../data/childTraits.js';
-import { equipmentList } from '../data/equipment.js';
+import { equipmentList, getEquipment } from '../data/equipment.js';
 import { fightingArts } from '../data/fightingArts.js';
 import { getDrawableInnovationIds, innovationCards } from '../data/innovationCards.js';
 import { injuries } from '../data/injuries.js';
@@ -38,6 +38,12 @@ import {
   formatCostWithMissing,
   getMissingResources
 } from '../game/craftingLogic.js';
+import {
+  getGearDisplayName,
+  getGearUnlockState,
+  groupGearByArmouryTab
+} from '../utils/gearNormalization.js';
+import { calculateIntimacyProjections } from '../game/eventLogic.js';
 import { getPersonalCardId } from '../game/deckLogic.js';
 import {
   getLegacyDescription,
@@ -54,6 +60,10 @@ import {
   formatModifierEffect,
   formatValueForDisplay
 } from '../utils/formatters.js';
+import {
+  getSurvivorDisplayName,
+  getSurvivorGenerationText
+} from '../game/survivorIdentity.js';
 
 const tabs = ['overview', 'survivors', 'armory', 'innovations', 'population', 'graveyard', 'quarries'];
 function CostList({ cost, stash }) {
@@ -201,7 +211,7 @@ function SurvivorCard({
     profileEntries.map(entry => [entry.cardId, entry])
   ).values()];
   const gearEntries = (survivor.boundGear || []).flatMap(gear => {
-    const item = equipmentList.find(candidate => candidate.id === gear.equipmentId);
+    const item = getEquipment(gear.equipmentId);
     return (item?.cardPackage || []).map(cardId => ({
       cardId,
       source: `Gear: ${item.name}`,
@@ -229,7 +239,8 @@ function SurvivorCard({
 
   return (
     <article className={`item-card ${active ? 'built' : ''}`}>
-      <h4>{survivor.name}</h4>
+      <h4>{getSurvivorDisplayName(survivor)}</h4>
+      <p className="muted-text survivor-identity-note">{getSurvivorGenerationText(survivor)}</p>
       <p>
         {survivor.gender || 'Unspecified'} | HP {survivor.hp}/{survivor.maxHp} | Survival{' '}
         {survivor.survival || 0}/{survivor.maxSurvival || 3}
@@ -454,7 +465,7 @@ function SurvivorCard({
           <p>{survivor.recentRewardOfferIds?.slice().reverse().join(', ') || 'No reward offers recorded.'}</p>
         </details>
         <p><strong>Bound gear:</strong> {survivor.boundGear?.length
-          ? survivor.boundGear.map(gear => equipmentList.find(item => item.id === gear.equipmentId)?.name || gear.equipmentId).join(', ')
+          ? survivor.boundGear.map(gear => getEquipment(gear.equipmentId).name).join(', ')
           : 'None'}</p>
         {[...(survivor.injuries || []), ...(survivor.scars || []), ...(survivor.disorders || [])].map(id => {
           const condition = injuries[id] || scars[id] || disorders[id];
@@ -597,6 +608,8 @@ export default function SettlementScreen({
   onReturnToTitle
 }) {
   const [tab, setTab] = useState('overview');
+  const [showLockedGear, setShowLockedGear] = useState(false);
+  const [activeArmouryTab, setActiveArmouryTab] = useState(null);
   const [survivorName, setSurvivorName] = useState('');
   const [survivorGender, setSurvivorGender] = useState('other');
   const [survivorAppearance, setSurvivorAppearance] = useState('');
@@ -605,16 +618,22 @@ export default function SettlementScreen({
   const [intimacyMaleId, setIntimacyMaleId] = useState('');
   const [intimacyFemaleId, setIntimacyFemaleId] = useState('');
   const [timelineNomineeId, setTimelineNomineeId] = useState('');
-  const visibleInnovations = innovationList.filter(item => canBuildUnlocked(item, settlement));
+  const [showDeckInspection, setShowDeckInspection] = useState(false);
+  const visibleInnovations = innovationList.filter(item =>
+    canBuildUnlocked(item, settlement) &&
+    (!innovationCards[item.id] || settlement.innovationDeckState.builtInnovationIds.includes(item.id))
+  );
   const buildableInnovations = visibleInnovations.filter(item => !settlement.builtInnovations.includes(item.id));
   const builtInnovations = innovationList.filter(item => settlement.builtInnovations.includes(item.id));
   const rumouredInnovations = innovationList.filter(
-    item => !settlement.builtInnovations.includes(item.id) && !canBuildUnlocked(item, settlement)
+    item => !settlement.builtInnovations.includes(item.id) && !canBuildUnlocked(item, settlement) &&
+    (!innovationCards[item.id] || settlement.innovationDeckState.builtInnovationIds.includes(item.id))
   );
   const builtMemoryInnovations = memoryInnovationList.filter(item =>
     settlement.builtMemoryInnovations.includes(item.id)
   );
   const drawableInnovationIds = getDrawableInnovationIds(settlement.innovationDeckState);
+  const discoveredInnovationIds = settlement.innovationDeckState?.builtInnovationIds || [];
   const basicResourceCount = ['bone', 'hide', 'sinew', 'organ', 'scrap', 'claw']
     .reduce((total, resourceId) => total + (settlement.stash[resourceId] || 0), 0);
   const canAttemptInnovation =
@@ -630,16 +649,34 @@ export default function SettlementScreen({
     !settlement.builtMemoryInnovations.includes(item.id) &&
     !isMemoryInnovationUnlocked(item, settlement)
   );
-  const recipeGroups = useMemo(() => {
-    const groups = {};
-    equipmentList.forEach(recipe => {
-      if (!settlement.builtInnovations.includes(recipe.buildingId)) return;
-      if (!groups[recipe.buildingId]) groups[recipe.buildingId] = [];
-      groups[recipe.buildingId].push(recipe);
+  const armouryData = useMemo(() => {
+    return groupGearByArmouryTab(equipmentList, settlement, {
+      includeLocked: showLockedGear
     });
-    return groups;
-  }, [settlement.builtInnovations]);
-  const visibleRecipes = Object.values(recipeGroups).flat();
+  }, [settlement, showLockedGear]);
+
+  const armouryTabs = useMemo(() => Object.keys(armouryData).sort((a, b) => {
+    const priority = ['Starting / Basic', 'Lantern Hoard', 'Bone Smith', 'Organ Grinder', 'Skinnery'];
+    const aPriority = priority.indexOf(a);
+    const bPriority = priority.indexOf(b);
+    if (aPriority !== -1 || bPriority !== -1) {
+      if (aPriority === -1) return 1;
+      if (bPriority === -1) return -1;
+      return aPriority - bPriority;
+    }
+    return a.localeCompare(b);
+  }), [armouryData]);
+
+  useEffect(() => {
+    if (armouryTabs.length > 0 && (!activeArmouryTab || !armouryTabs.includes(activeArmouryTab))) {
+      setActiveArmouryTab(armouryTabs[0]);
+    }
+  }, [armouryTabs, activeArmouryTab]);
+
+  const visibleRecipes = useMemo(() => {
+    if (!activeArmouryTab || !armouryData[activeArmouryTab]) return [];
+    return Object.values(armouryData[activeArmouryTab]).flat();
+  }, [armouryData, activeArmouryTab]);
   const livingSurvivors = settlement.survivors.filter(survivor => survivor.alive !== false);
   const livingMales = livingSurvivors.filter(survivor => survivor.gender === 'male');
   const livingFemales = livingSurvivors.filter(survivor => survivor.gender === 'female');
@@ -727,7 +764,7 @@ export default function SettlementScreen({
     >
       {settlement.pendingTimelineEvent
         ? 'Resolve the Lantern Year decision before hunting'
-        : `Hunt ${quarries[selectedQuarry]?.name} Level ${selectedLevel} with ${activeSurvivor?.name || 'no survivor'}`}
+        : `Hunt ${quarries[selectedQuarry]?.name} Level ${selectedLevel} with ${activeSurvivor ? getSurvivorDisplayName(activeSurvivor) : 'no survivor'}`}
     </button>
   );
 
@@ -811,7 +848,7 @@ export default function SettlementScreen({
                           <option value="">Choose a living survivor</option>
                           {livingSurvivors.map(survivor => (
                             <option value={survivor.id} key={`${choice.id}-${survivor.id}`}>
-                              {survivor.name}
+                              {getSurvivorDisplayName(survivor)}
                             </option>
                           ))}
                         </select>
@@ -901,7 +938,7 @@ export default function SettlementScreen({
         <div className="settlement-panel">
           <h3>Create Survivor</h3>
           <form className="survivor-form" onSubmit={submitSurvivor}>
-            <input value={survivorName} placeholder="Survivor name" onChange={event => setSurvivorName(event.target.value)} />
+            <input value={survivorName} placeholder="Founder name" onChange={event => setSurvivorName(event.target.value)} />
             <select value={survivorGender} onChange={event => setSurvivorGender(event.target.value)}>
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -951,6 +988,9 @@ export default function SettlementScreen({
             )}
             <button type="submit" disabled={livingSurvivors.length >= settlement.population}>Create Survivor</button>
           </form>
+          <p className="muted-text">
+            Founders keep one name. Children born through intimacy receive a given name and family name.
+          </p>
           {livingSurvivors.length >= settlement.population && (
             <p className="muted-text">Named survivors already match the settlement population.</p>
           )}
@@ -998,14 +1038,26 @@ export default function SettlementScreen({
           <h3>Settlement Stash</h3>
           <Stash stash={settlement.stash} />
           <HuntHints settlement={settlement} recipes={visibleRecipes} />
-          <h3>Settlement Armory</h3>
+
+          <div className="armoury-header">
+            <h3>Settlement Armoury</h3>
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={showLockedGear}
+                onChange={e => setShowLockedGear(e.target.checked)}
+              />
+              Show locked gear
+            </label>
+          </div>
+
           <div className="item-grid">
             {settlement.armory.map(gear => {
-              const recipe = equipmentList.find(item => item.id === gear.equipmentId);
+              const recipe = getEquipment(gear.equipmentId);
               return (
                 <article className="item-card" key={gear.instanceId}>
-                  <h4>{recipe?.name || gear.equipmentId}</h4>
-                  <p>{formatValueForDisplay(recipe?.passiveText)}</p>
+                  <h4>{recipe.name}</h4>
+                  <p>{formatValueForDisplay(recipe.passiveText)}</p>
                   <p className="muted-text">Free gear. Assign it from the pre-hunt Loadout screen.</p>
                 </article>
               );
@@ -1016,61 +1068,88 @@ export default function SettlementScreen({
           <h3>{activeSurvivor?.name || 'Active survivor'} Bound Gear</h3>
           <div className="item-grid">
             {(activeSurvivor?.boundGear || []).map(gear => {
-              const recipe = equipmentList.find(item => item.id === gear.equipmentId);
+              const recipe = getEquipment(gear.equipmentId);
               return (
                 <article className="item-card built" key={gear.instanceId}>
-                  <h4>{recipe?.name || gear.equipmentId}</h4>
-                  <p>{formatValueForDisplay(recipe?.passiveText)}</p>
+                  <h4>{recipe.name}</h4>
+                  <p>{formatValueForDisplay(recipe.passiveText)}</p>
                   <p className="muted-text">Bound equipment can only be removed from the Loadout screen and will be destroyed.</p>
                 </article>
               );
             })}
           </div>
 
-          {Object.entries(recipeGroups).map(([buildingId, recipes]) => (
-            <section className="recipe-group" key={buildingId}>
-              <h3>{innovations[buildingId]?.name || buildingId}</h3>
-              {recipes[0]?.quarryId && (
-                <p className="muted-text">
-                  Unlocked by: {quarries[recipes[0].quarryId]?.name || recipes[0].quarryId}
-                </p>
-              )}
-              <div className="item-grid">
-                {recipes.map(recipe => (
-                  <article className="item-card" key={recipe.id}>
-                    <p className="eyebrow">{recipe.slot}</p>
-                    <h4>{recipe.name}</h4>
-                    <p>
-                      <strong>Type:</strong> {recipe.weaponType || 'Non-weapon'} |{' '}
-                      <strong>Hands:</strong> {recipe.hands} | <strong>Speed:</strong> {recipe.speedStyle}
-                    </p>
-                    <p><strong>Keywords:</strong> {recipe.keywords?.join(', ') || 'Survival'}</p>
-                    <p>{formatValueForDisplay(recipe.description)}</p>
-                    <p className="effect-text">{formatModifierEffect(recipe.passiveText)}</p>
-                    {recipe.deckIdentity && (
-                      <p className="effect-text">Deck identity: {recipe.deckIdentity}</p>
-                    )}
-                    <p className="muted-text"><strong>Adds:</strong></p>
-                    <ul>
-                      {recipe.cardPackage.map(cardId => (
-                        <li key={cardId}>
-                          <strong>{cards[cardId]?.name || cardId}</strong>:{' '}
-                          {formatValueForDisplay(cards[cardId]?.description)}
-                          {cards[cardId]?.tags?.length
-                            ? ` [${cards[cardId].tags.filter(tag => tag !== 'quarrySpecific').join(', ')}]`
-                            : ''}
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="muted-text">[Requires: Build {innovations[recipe.buildingId]?.name}]</p>
-                    <CostList cost={recipe.cost} stash={settlement.stash} />
-                    <button type="button" disabled={!canAffordCost(recipe.cost, settlement.stash)} onClick={() => onCraft(recipe)}>Craft</button>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
-          {!visibleRecipes.length && <p>Build a crafting location to reveal its recipes.</p>}
+          <div className="sub-tabs">
+            {armouryTabs.map(tabId => (
+              <button
+                key={tabId}
+                type="button"
+                className={`tab-button ${activeArmouryTab === tabId ? 'active' : ''}`}
+                onClick={() => setActiveArmouryTab(tabId)}
+              >
+                {tabId}
+              </button>
+            ))}
+          </div>
+
+          {activeArmouryTab && armouryData[activeArmouryTab] ? (
+            <div className="armoury-tab-content">
+              {Object.entries(armouryData[activeArmouryTab]).map(([source, recipes]) => (
+                <section className="recipe-group" key={source}>
+                  <h3>{source === 'General' ? activeArmouryTab : `${quarries[source]?.name || source} craftables`}</h3>
+                  <div className="item-grid">
+                    {recipes.map(recipe => {
+                      const unlockState = getGearUnlockState(recipe, settlement);
+                      const isLocked = !unlockState.unlocked;
+                      return (
+                        <article className={`item-card ${isLocked ? 'locked' : ''}`} key={recipe.stableId || recipe.id}>
+                          <p className="eyebrow">{recipe.slot}</p>
+                          <h4>{getGearDisplayName(recipe)}</h4>
+                          {isLocked && <p className="locked-badge">Locked: {unlockState.reason}</p>}
+                          <p>
+                            <strong>Type:</strong> {recipe.weaponType || 'Non-weapon'} |{' '}
+                            <strong>Hands:</strong> {recipe.hands || 0} | <strong>Speed:</strong> {recipe.speedStyle || 'standard'}
+                          </p>
+                          <p><strong>Keywords:</strong> {recipe.keywords?.join(', ') || 'Survival'}</p>
+                          <p>{formatValueForDisplay(recipe.description || recipe.passiveText)}</p>
+                          <p className="effect-text">{formatModifierEffect(recipe.passiveText)}</p>
+                          {recipe.deckIdentity && (
+                            <p className="effect-text">Deck identity: {recipe.deckIdentity}</p>
+                          )}
+                          {recipe.cardPackage?.length > 0 && (
+                            <>
+                              <p className="muted-text"><strong>Adds:</strong></p>
+                              <ul>
+                                {recipe.cardPackage.map((cardId, index) => (
+                                  <li key={`${cardId}-${index}`}>
+                                    <strong>{cards[cardId]?.name || cardId}</strong>:{' '}
+                                    {formatValueForDisplay(cards[cardId]?.description)}
+                                  </li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+                          <CostList cost={recipe.cost} stash={settlement.stash} />
+                          {!isLocked && (
+                            <button
+                              type="button"
+                              disabled={!canAffordCost(recipe.cost, settlement.stash)}
+                              onClick={() => onCraft(recipe)}
+                            >
+                              Craft
+                            </button>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <p>No crafting recipes available in this category.</p>
+          )}
+          {!visibleRecipes.length && !showLockedGear && <p>Build a crafting location to reveal its recipes.</p>}
         </div>
       )}
 
@@ -1124,6 +1203,33 @@ export default function SettlementScreen({
             >
               Attempt Innovation
             </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setShowDeckInspection(!showDeckInspection)}
+            >
+              {showDeckInspection ? 'Hide Deck' : 'Inspect Innovation Deck'}
+            </button>
+
+            {showDeckInspection && (
+              <div className="deck-inspection item-card">
+                <h4>Innovation Deck Contents ({drawableInnovationIds.length})</h4>
+                <p className="muted-text">These innovations can be drawn during an attempt:</p>
+                <div className="deck-pool-list">
+                  {drawableInnovationIds.map(id => (
+                    <span key={id} className="status-tag">{innovationCards[id]?.name || id}</span>
+                  ))}
+                </div>
+                <h4>Discovered Innovations ({discoveredInnovationIds.length})</h4>
+                <div className="deck-pool-list">
+                  {discoveredInnovationIds.map(id => (
+                    <span key={id} className="status-tag met">{innovationCards[id]?.name || id}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {!drawableInnovationIds.length && (
               <p className="missing">
                 No available innovations. Unlock more through hunts, discoveries or timeline events.
@@ -1162,19 +1268,58 @@ export default function SettlementScreen({
           <h3>Population and Intimacy</h3>
           <p>Population: {settlement.population}</p>
           <p>Lantern Year: {settlement.lanternYear}</p>
-          <p>One attempt is allowed per Lantern Year. A disastrous roll can kill a participant.</p>
+
+          {(() => {
+            const projections = calculateIntimacyProjections(settlement, innovationCards);
+            return (
+              <div className="intimacy-transparency">
+                <div className="odds-breakdown">
+                  <h4>Intimacy Odds</h4>
+                  <p>Base Success: {(projections.baseSuccessChance * 100).toFixed(0)}%</p>
+                  <p>Base Tragedy Risk: {(projections.baseTragedyChance * 100).toFixed(0)}%</p>
+
+                  {projections.modifiers.length > 0 && (
+                    <ul className="modifier-list">
+                      {projections.modifiers.map((mod, idx) => (
+                        <li key={idx} className={mod.value > 0 ? 'bonus' : 'penalty'}>
+                          {mod.name}: {mod.value > 0 ? '+' : ''}{(mod.value * 100).toFixed(0)}% {mod.type}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="final-odds">
+                    <strong>Final Success Chance: {(projections.finalSuccessChance * 100).toFixed(0)}%</strong><br/>
+                    <strong>Final Tragedy Risk: {(projections.finalTragedyChance * 100).toFixed(0)}%</strong>
+                  </div>
+                </div>
+
+                <div className="how-to-improve">
+                  <h4>How to Improve Odds</h4>
+                  <ul>
+                    {!settlement.innovationDeckState.builtInnovationIds.includes('cooking') && <li>Innovate: Cooking (+10% success)</li>}
+                    {!settlement.innovationDeckState.builtInnovationIds.includes('language') && <li>Innovate: Language (+5% success)</li>}
+                    {!settlement.innovationDeckState.builtInnovationIds.includes('ammonia') && <li>Innovate: Ammonia (-10% tragedy)</li>}
+                    <li>Discovery: Certain landmarks may offer bonuses.</li>
+                  </ul>
+                </div>
+              </div>
+            );
+          })()}
+
+          <p className="muted-text">One attempt is allowed per Lantern Year. A disastrous roll can kill a participant.</p>
           {intimacyUsedThisYear && <p className="missing">Unavailable: intimacy was already attempted this Lantern Year.</p>}
           {!livingMales.length && <p className="missing">Unavailable: no living male survivor.</p>}
           {!livingFemales.length && <p className="missing">Unavailable: no living female survivor.</p>}
           <label className="field-label" htmlFor="intimacy-male">Male participant</label>
           <select id="intimacy-male" value={intimacyMaleId} onChange={event => setIntimacyMaleId(event.target.value)}>
             <option value="">Choose survivor</option>
-            {livingMales.map(survivor => <option key={survivor.id} value={survivor.id}>{survivor.name}</option>)}
+            {livingMales.map(survivor => <option key={survivor.id} value={survivor.id}>{getSurvivorDisplayName(survivor)}</option>)}
           </select>
           <label className="field-label" htmlFor="intimacy-female">Female participant</label>
           <select id="intimacy-female" value={intimacyFemaleId} onChange={event => setIntimacyFemaleId(event.target.value)}>
             <option value="">Choose survivor</option>
-            {livingFemales.map(survivor => <option key={survivor.id} value={survivor.id}>{survivor.name}</option>)}
+            {livingFemales.map(survivor => <option key={survivor.id} value={survivor.id}>{getSurvivorDisplayName(survivor)}</option>)}
           </select>
           <button
             type="button"
@@ -1183,6 +1328,10 @@ export default function SettlementScreen({
           >
             Attempt Intimacy
           </button>
+          <p className="muted-text">
+            Children inherit the birthing parent&apos;s family name when available, then the other
+            parent&apos;s. Two founders begin a new family line.
+          </p>
           {settlement.pendingSpecialChildTrait && (
             <div className="item-card">
               <h4>{childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.name}</h4>

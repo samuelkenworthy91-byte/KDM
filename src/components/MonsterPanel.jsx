@@ -34,6 +34,14 @@ export default function MonsterPanel({
       <p>Block: {monster.block}</p>
       {monster.level && <p>Quarry Level: {monster.level}</p>}
       {monster.tier && <p>Monster Tier: {monster.tier.charAt(0).toUpperCase() + monster.tier.slice(1)}</p>}
+      <div className="status-effects">
+        {monster.bleed > 0 && <span className="status-tag bleed" title="Bleed: Deals damage at the start of its intent phase.">Bleed {monster.bleed}</span>}
+        {monster.poison > 0 && <span className="status-tag poison" title="Poison: Deals damage over time.">Poison {monster.poison}</span>}
+        {monster.vulnerable > 0 && <span className="status-tag vulnerable" title="Vulnerable: Takes 50% more damage.">Vulnerable {monster.vulnerable}</span>}
+        {monster.staggered > 0 && <span className="status-tag staggered" title="Staggered: Deals 2 less damage.">Staggered {monster.staggered}</span>}
+        {monster.guarded > 0 && <span className="status-tag guarded" title="Guarded: Next 2 damage taken is reduced by 2.">Guarded {monster.guarded}</span>}
+        {monster.marked && <span className="status-tag marked" title="Marked: Certain attacks deal extra damage.">Marked</span>}
+      </div>
       {monster.passiveTell && (
         <p className="monster-passive">
           <strong>{hasMonsterBane ? 'Known behaviour:' : 'Creature nature:'}</strong>{' '}
