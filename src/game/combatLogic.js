@@ -514,6 +514,12 @@ export function playCard(cardIndex, state) {
     if ((state.cardsPlayedThisTurn || 0) === 0) bonus += effect.bonusIfFirstCard || 0;
     if ((state.attacksPlayedThisTurn || 0) === 1) bonus += effect.bonusIfSecondAttack || 0;
     if ((state.attacksPlayedThisTurn || 0) === 0) bonus += effect.bonusIfFirstAttack || 0;
+    if (
+      (state.attacksPlayedThisTurn || 0) === 0 &&
+      (state.blockGainedThisTurn || 0) === 0
+    ) {
+      bonus += effect.bonusIfFirstAttackWithoutBlock || 0;
+    }
     if (survivor.block > 0) bonus += effect.bonusIfBlock || 0;
     if ((state.blockGainedThisTurn || 0) > 0) bonus += effect.bonusIfBlockThisTurn || 0;
     if (monster.block <= 0) bonus += effect.bonusIfMonsterNoBlock || 0;

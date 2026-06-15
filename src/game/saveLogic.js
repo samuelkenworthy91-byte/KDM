@@ -7,7 +7,8 @@ import { equipment } from '../data/equipment.js';
 import { BASE_INNOVATION_POOL_IDS } from '../data/innovationCards.js';
 import {
   createWeaponProficiency,
-  isValidWeaponType
+  isValidWeaponType,
+  syncWeaponMasteryCards
 } from '../data/weaponProficiency.js';
 import { createHitLocations } from '../data/woundTables.js';
 import { syncFightingArtCards } from './survivorProgression.js';
@@ -315,7 +316,7 @@ export function normalizeSettlement(data = {}) {
         activeProficiencyType,
         boundGear
       };
-      return syncFightingArtCards(normalizedSurvivor);
+      return syncFightingArtCards(syncWeaponMasteryCards(normalizedSurvivor));
     })
     : [];
   const livingSurvivors = survivors.filter(survivor => survivor.alive !== false);

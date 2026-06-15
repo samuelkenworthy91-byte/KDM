@@ -33,6 +33,7 @@ import {
 import { resources } from '../data/resources.js';
 import {
   getActiveProficiencyPassive,
+  getWeaponMasteryCardId,
   weaponProficiencyDefinitions,
   weaponTypes
 } from '../data/weaponProficiency.js';
@@ -208,7 +209,9 @@ function SurvivorCard({
     ...starterCardIds.map(cardId => ({ cardId, source: 'Starter' })),
     ...(survivor.personalDeckAdditions || []).map(addition => ({
       cardId: getPersonalCardId(addition),
-      source: addition.sourceType || 'Personal',
+      source: addition.sourceType === 'weaponMastery'
+        ? 'Weapon Mastery'
+        : addition.sourceType || 'Personal',
       reason: addition.reason,
       locked: Boolean(addition.locked),
       addition
@@ -236,6 +239,10 @@ function SurvivorCard({
     level: 0,
     mastered: false
   };
+  const activeMasteryCardId = getWeaponMasteryCardId(activeProficiencyType);
+  const hasActiveMasteryCard = (survivor.personalDeckAdditions || []).some(addition =>
+    getPersonalCardId(addition) === activeMasteryCardId
+  );
   const monsterBanes = (survivor.fightingArts || [])
     .filter(id => id.startsWith('monsterBane_'))
     .map(id => ({ id, art: fightingArts[id], quarryId: id.replace('monsterBane_', '') }));
@@ -295,21 +302,41 @@ function SurvivorCard({
           <p>
             <strong>Active Proficiency: {weaponProficiencyDefinitions[activeProficiencyType]?.name}</strong>
             <br />
-            {activeProficiency.xp}/8 XP, Level {activeProficiency.level}
-            {activeProficiency.mastered ? ' (Mastered)' : ''}
+            {activeProficiency.xp}/8 XP
+            <br />
+            Level 1 at 2 XP: {activeProficiency.xp >= 2 ? 'Unlocked' : 'Locked'}
+            <br />
+            Level 2 at 5 XP: {activeProficiency.xp >= 5 ? 'Unlocked' : 'Locked'}
+            <br />
+            Mastery at 8 XP: {activeProficiency.mastered ? 'Unlocked' : 'Locked'}
+            {hasActiveMasteryCard && (
+              <>
+                <br />
+                Mastery card: {cards[activeMasteryCardId]?.name || 'Unknown / Legacy'}
+              </>
+            )}
             <br />
             <span className="muted-text">
               {getActiveProficiencyPassive(survivor.weaponProficiency, activeProficiencyType)}
             </span>
           </p>
-          <p className="muted-text">Inactive proficiencies are retained but do not grant cards or passives.</p>
+          <p className="muted-text">
+            Inactive proficiency XP is retained. Only the active, equipped weapon type grants its
+            cards and passives during a hunt.
+          </p>
           {weaponTypes.filter(type => type !== activeProficiencyType).map(type => {
             const progress = survivor.weaponProficiency?.[type] || { xp: 0, level: 0, mastered: false };
             const definition = weaponProficiencyDefinitions[type];
             return (
               <p key={type}>
-                <strong>{definition.name}:</strong> {progress.xp}/8 XP, Level {progress.level}
-                {progress.mastered ? ' (Mastered)' : ''}
+                <strong>{definition.name}:</strong> {progress.xp}/8 XP
+                {progress.mastered
+                  ? ` - Mastery: ${cards[getWeaponMasteryCardId(type)]?.name || 'Unknown / Legacy'}`
+                  : progress.level >= 2
+                    ? ' - Level 2'
+                    : progress.level >= 1
+                      ? ' - Level 1'
+                      : ''}
               </p>
             );
           })}
@@ -424,10 +451,20 @@ function SurvivorCard({
             </div>
           )) : <p className="muted-text">No bound gear cards.</p>}
           <h4>Active Proficiency Cards</h4>
-          <p className="muted-text">
-            {weaponProficiencyDefinitions[activeProficiencyType]?.name} is active. No proficiency
-            cards are granted at the current level; only its passive applies.
-          </p>
+          {hasActiveMasteryCard ? (
+            <div className="personal-card-row">
+              <DeckCardDetails
+                cardId={activeMasteryCardId}
+                source={`${weaponProficiencyDefinitions[activeProficiencyType]?.name} Mastery`}
+                suffix=" - Active while this proficiency is selected"
+              />
+            </div>
+          ) : (
+            <p className="muted-text">
+              {weaponProficiencyDefinitions[activeProficiencyType]?.name} is active. Its mastery
+              card unlocks at 8 XP; current passives still apply.
+            </p>
+          )}
           <h4>Trauma / Panic / Disorder Cards</h4>
           <p className="muted-text">
             {[

@@ -56,6 +56,24 @@ export const weaponProficiencyDefinitions = Object.fromEntries(
   }])
 );
 
+export const weaponMasteryCardIds = {
+  sword: 'masterySwordMarkedEcho',
+  axe: 'masteryAxeSunder',
+  dagger: 'masteryDaggerRedOpening',
+  spear: 'masterySpearHeldLine',
+  bow: 'masteryBowPredatorsArc',
+  club: 'masteryClubCrushingRebuke',
+  hammer: 'masteryHammerFaultLine',
+  grandWeapon: 'masteryGrandWeaponFinalArc',
+  katar: 'masteryKatarMarkedFrenzy',
+  fistAndTooth: 'masteryFistAndToothLastBreath',
+  shield: 'masteryShieldReturnedForce',
+  whip: 'masteryWhipBindingRead',
+  scythe: 'masteryScytheHarvestFear',
+  katana: 'masteryKatanaUnbrokenMoment',
+  strangeWeapon: 'masteryStrangeWeaponBlackRite'
+};
+
 export function getProficiencyLevel(xp = 0) {
   if (xp >= proficiencyThresholds.mastery) return 3;
   if (xp >= proficiencyThresholds.level2) return 2;
@@ -85,6 +103,63 @@ export function addWeaponProficiencyXp(existing, usedTypes = []) {
     };
   });
   return next;
+}
+
+function getPersonalCardId(addition) {
+  return typeof addition === 'string' ? addition : addition?.cardId;
+}
+
+function addMasteryCard(survivor, weaponType) {
+  const cardId = weaponMasteryCardIds[weaponType];
+  if (!cardId) return survivor;
+  const additions = survivor.personalDeckAdditions || [];
+  if (additions.some(addition => getPersonalCardId(addition) === cardId)) return survivor;
+  return {
+    ...survivor,
+    personalDeckAdditions: [
+      ...additions,
+      {
+        cardId,
+        sourceType: 'weaponMastery',
+        reason: `${weaponProficiencyDefinitions[weaponType].name} Mastery`,
+        locked: true
+      }
+    ]
+  };
+}
+
+export function applyWeaponProficiencyXp(survivor, usedTypes = []) {
+  const before = createWeaponProficiency(survivor.weaponProficiency);
+  const weaponProficiency = addWeaponProficiencyXp(before, usedTypes);
+  let next = { ...survivor, weaponProficiency };
+
+  [...new Set(usedTypes)].forEach(type => {
+    if (
+      before[type]?.xp < proficiencyThresholds.mastery &&
+      weaponProficiency[type]?.xp >= proficiencyThresholds.mastery
+    ) {
+      next = addMasteryCard(next, type);
+    }
+  });
+
+  return next;
+}
+
+export function syncWeaponMasteryCards(survivor) {
+  const proficiency = createWeaponProficiency(survivor.weaponProficiency);
+  return weaponTypes.reduce((next, type) => (
+    proficiency[type].mastered ? addMasteryCard(next, type) : next
+  ), {
+    ...survivor,
+    weaponProficiency: proficiency,
+    personalDeckAdditions: Array.isArray(survivor.personalDeckAdditions)
+      ? survivor.personalDeckAdditions
+      : []
+  });
+}
+
+export function getWeaponMasteryCardId(type) {
+  return weaponMasteryCardIds[type] || null;
 }
 
 export function isValidWeaponType(type) {

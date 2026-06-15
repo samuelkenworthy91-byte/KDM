@@ -43,7 +43,10 @@ import {
   shouldOfferMonsterBane
 } from './data/monsterSurvivorRewards.js';
 import { findSurvivorReward } from './data/survivorRewards.js';
-import { addWeaponProficiencyXp, getProficientWeaponSummary } from './data/weaponProficiency.js';
+import {
+  applyWeaponProficiencyXp,
+  getProficientWeaponSummary
+} from './data/weaponProficiency.js';
 import { genericResourceIds, resources as resourceData } from './data/resources.js';
 import { getQuarryDiscoveryEvent } from './data/quarryDiscoveryEvents.js';
 import { createMonsterWeakPoints, getBrokenWeakPointRewards } from './data/weakPoints.js';
@@ -1152,22 +1155,24 @@ export default function App() {
       },
       lanternYear: nextYear,
       survivors: current.survivors.map(survivor => survivor.id === survivorAfterFight.id
-        ? {
+        ? (() => {
+          const proficiencyReward = applyWeaponProficiencyXp({
+            ...survivorAfterFight,
+            personalDeckAdditions: survivorAfterFight.personalDeckAdditions || []
+          }, [activeProficiencyType]);
+          return {
           ...survivor,
           hp: healedSurvivorHp,
           survival: survivor.survival,
           traits: survivorAfterFight.traits,
           fightingArts: survivorAfterFight.fightingArts,
           deckAdditions: [],
-          personalDeckAdditions: survivorAfterFight.personalDeckAdditions || [],
+          personalDeckAdditions: proficiencyReward.personalDeckAdditions,
           injuries: survivorAfterFight.injuries || [],
           scars: survivorAfterFight.scars || [],
           disorders: survivorAfterFight.disorders || [],
           permanentModifiers: survivorAfterFight.permanentModifiers || {},
-          weaponProficiency: addWeaponProficiencyXp(
-            survivorAfterFight.weaponProficiency,
-            [activeProficiencyType]
-          ),
+          weaponProficiency: proficiencyReward.weaponProficiency,
           activeProficiencyType,
           lastHuntRewardContext: {
             quarryId: selectedQuarry,
@@ -1184,7 +1189,8 @@ export default function App() {
           },
           kills: survivorAfterFight.kills || 0,
           ...getHuntAgeProgression(survivor, current)
-        }
+          };
+        })()
         : survivor.alive === false ? survivor : {
           ...survivor,
           hp: Math.min(survivor.maxHp, survivor.hp + Math.ceil(survivor.maxHp / 3))
@@ -1298,14 +1304,11 @@ export default function App() {
           const returning = healedParty.find(item => item.id === survivor.id);
           if (!returning) return survivor;
           const activeProficiencyType = returning.activeProficiencyType || 'fistAndTooth';
+          const proficiencyReward = applyWeaponProficiencyXp(returning, [activeProficiencyType]);
           return {
             ...survivor,
-            ...returning,
+            ...proficiencyReward,
             alive: true,
-            weaponProficiency: addWeaponProficiencyXp(
-              returning.weaponProficiency,
-              [activeProficiencyType]
-            ),
             activeProficiencyType,
             lastHuntRewardContext: {
               quarryId: selectedQuarry,
@@ -2307,13 +2310,10 @@ export default function App() {
           };
         }
         if (safeRewardId === 'weaponPractice') {
-          return {
-            ...withHistory,
-            weaponProficiency: addWeaponProficiencyXp(
-              survivor.weaponProficiency,
-              [survivor.activeProficiencyType || 'fistAndTooth']
-            )
-          };
+          return applyWeaponProficiencyXp(
+            withHistory,
+            [survivor.activeProficiencyType || 'fistAndTooth']
+          );
         }
         if (monsterReward?.type === 'card') {
           return addPersonalCard(withHistory, safeRewardId, {

@@ -80,7 +80,8 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
   });
 
   const activeDeck = deck.filter(card =>
-    card.sourceType !== 'proficiency' || card.weaponType === activeProficiencyType
+    !['proficiency', 'weaponMastery'].includes(card.sourceType) ||
+    card.weaponType === activeProficiencyType
   );
   return [...activeDeck, ...getCardsFromIds(temporaryCards, 'Hunt event', 'event')];
 }
