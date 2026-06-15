@@ -151,6 +151,66 @@ export const memoryInnovations = {
   }
 };
 
+const actionDisplay = {
+  riteOfForgetting: {
+    playerSummary: 'Spend Memory to remove one unwanted eligible card from a survivor.',
+    howToUse: 'Choose a survivor and eligible personal or basic card in the Recovery tab.',
+    actionLocation: 'Settlement > Actions > Recovery',
+    whyItMatters: 'A smaller personal deck draws useful cards more reliably.',
+    unlockedTab: 'recovery'
+  },
+  painLessons: {
+    playerSummary: 'Turn one injury into a scar once per year.',
+    howToUse: 'Choose an injured survivor and one injury in the Recovery tab.',
+    actionLocation: 'Settlement > Actions > Recovery',
+    whyItMatters: 'The injury is transformed instead of remaining untreated.',
+    unlockedTab: 'recovery'
+  },
+  quietNight: {
+    playerSummary: 'Spend 1 Memory to remove Panic from one survivor.',
+    howToUse: 'Choose a survivor carrying Panic in the Recovery tab.',
+    actionLocation: 'Settlement > Actions > Recovery',
+    whyItMatters: 'Panic no longer clogs that survivor personal deck.',
+    unlockedTab: 'recovery'
+  },
+  weaponDrills: {
+    playerSummary: 'Spend 1 Memory to teach a survivor a basic training card.',
+    howToUse: 'Choose a survivor and training card in the Training tab.',
+    actionLocation: 'Settlement > Actions > Training',
+    whyItMatters: 'The learned technique permanently joins that survivor personal deck.',
+    unlockedTab: 'training'
+  },
+  taboo: {
+    playerSummary: 'Spend 2 Memory to permanently remove a curse or Panic.',
+    howToUse: 'Choose an affected survivor in the Recovery tab.',
+    actionLocation: 'Settlement > Actions > Recovery',
+    whyItMatters: 'Taboo removes a lasting deck burden once each year.',
+    unlockedTab: 'recovery'
+  },
+  shrineOfNames: {
+    playerSummary: 'Spend 2 Memory to give one living survivor +1 maximum HP.',
+    howToUse: 'Choose a living survivor in the Legacy tab.',
+    actionLocation: 'Settlement > Actions > Legacy',
+    whyItMatters: 'The survivor permanently becomes harder to kill.',
+    unlockedTab: 'legacy'
+  }
+};
+
+Object.values(memoryInnovations).forEach(innovation => {
+  Object.assign(innovation, {
+    playerSummary: innovation.effect,
+    howToUse: innovation.actionUnlocks.length
+      ? 'Use its action from Settlement > Actions.'
+      : 'This effect applies automatically once built.',
+    actionLocation: innovation.actionUnlocks.length
+      ? 'Settlement > Actions'
+      : 'Automatic settlement effect',
+    whyItMatters: innovation.description,
+    unlockedTab: null,
+    ...actionDisplay[innovation.id]
+  });
+});
+
 export const memoryInnovationList = Object.values(memoryInnovations);
 
 export const startingTraits = {

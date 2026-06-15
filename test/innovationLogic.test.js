@@ -11,6 +11,7 @@ import {
   drawInnovationCandidates,
   getInnovationDeckEntries
 } from '../src/game/innovationLogic.js';
+import { memoryInnovationList } from '../src/data/memoryInnovations.js';
 import { normalizeSettlement } from '../src/game/saveLogic.js';
 
 function settlement(overrides = {}) {
@@ -39,6 +40,34 @@ test('every innovation card has a summary, destination, and tutorial', () => {
     assert.ok(card.tutorialTitle, `${card.id} needs a tutorial title`);
     assert.ok(card.tutorialSteps.length, `${card.id} needs tutorial steps`);
     assert.ok(card.effects.length, `${card.id} needs an explained effect`);
+    assert.ok(card.playerSummary, `${card.id} needs a player summary`);
+    assert.ok(card.howToUse, `${card.id} needs usage instructions`);
+    assert.ok(card.actionLocation, `${card.id} needs an action location`);
+    assert.ok(card.whyItMatters, `${card.id} needs a reason to care`);
+  });
+});
+
+test('memory innovations expose plain-language action locations', () => {
+  memoryInnovationList.forEach(innovation => {
+    assert.ok(innovation.playerSummary, `${innovation.id} needs a player summary`);
+    assert.ok(innovation.howToUse, `${innovation.id} needs usage instructions`);
+    assert.ok(innovation.actionLocation, `${innovation.id} needs an action location`);
+    assert.ok(innovation.whyItMatters, `${innovation.id} needs a reason to care`);
+  });
+
+  const expectedTabs = {
+    weaponDrills: 'training',
+    riteOfForgetting: 'recovery',
+    painLessons: 'recovery',
+    quietNight: 'recovery',
+    taboo: 'recovery',
+    shrineOfNames: 'legacy'
+  };
+  Object.entries(expectedTabs).forEach(([id, tab]) => {
+    assert.equal(
+      memoryInnovationList.find(innovation => innovation.id === id)?.unlockedTab,
+      tab
+    );
   });
 });
 

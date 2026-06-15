@@ -33,6 +33,11 @@ const card = (
     unlocksBuildings,
     unlocks: options.unlocks || [...unlocksBuildings, ...unlocksRecipes],
     settlementBoostSummary: options.settlementBoostSummary || safeEffects[0] || description,
+    playerSummary: options.playerSummary || options.settlementBoostSummary || safeEffects[0] || description,
+    howToUse: options.howToUse || `Use this from ${uiDestination}.`,
+    actionLocation: options.actionLocation || uiDestination,
+    whyItMatters: options.whyItMatters || description,
+    unlockedTab: options.unlockedTab || null,
     mechanicalEffects: options.mechanicalEffects || {},
     tutorialTitle: options.tutorialTitle || `Using ${name}`,
     tutorialSteps: options.tutorialSteps || [
@@ -70,7 +75,10 @@ export const innovationCards = {
     { 
       addsToInnovationPool: ['symposium', 'oralTradition'], 
       tags: ['history', 'culture'],
-      mechanicalEffects: { intimacySuccessBonus: 0.05 }
+      mechanicalEffects: { intimacySuccessBonus: 0.05 },
+      playerSummary: 'Adds more ideas to the innovation deck and makes settlement records clearer.',
+      howToUse: 'Its deck additions and settlement bonuses apply automatically once owned.',
+      whyItMatters: 'Language opens cultural innovations and slightly improves successful intimacy.'
     }
   ),
   symposium: card(
@@ -150,7 +158,15 @@ export const innovationCards = {
     'trailSignals', 'Trail Signals', 'survival',
     'The settlement learns how to send more than one survivor into the dark without losing them immediately.',
     ['Maximum hunt party size becomes at least 2.', 'Adds Shared Burden to the innovation pool.'],
-    { addsToInnovationPool: ['sharedBurden'], tags: ['party', 'survival'] }
+    {
+      addsToInnovationPool: ['sharedBurden'],
+      tags: ['party', 'survival'],
+      playerSummary: 'Allows a larger hunt party so more survivors can travel together.',
+      howToUse: 'Choose additional survivors during hunt party preparation.',
+      actionLocation: 'Hunt > Party preparation',
+      whyItMatters: 'A larger party can share gear, wounds, and combat roles.',
+      unlockedTab: 'survival'
+    }
   ),
   sharedBurden: card(
     'sharedBurden', 'Shared Burden', 'survival',
@@ -174,7 +190,12 @@ export const innovationCards = {
   riteOfForgetting: card('riteOfForgetting', 'Rite of Forgetting', 'ritual', 'A lesson can be named and released into smoke.', ['Preserves Guided Reflection: forget one eligible personal or basic card per survivor each year for 1 Memory.'], {
     tags: ['memory'],
     unlocks: ['forgetCard'],
-    uiDestination: 'Settlement > Survivors > Survivor details > Personal Deck',
+    uiDestination: 'Settlement > Actions > Recovery',
+    playerSummary: 'Spend Memory to remove one unwanted eligible card from a survivor.',
+    howToUse: 'Choose a survivor and eligible personal or basic card in the Recovery tab.',
+    actionLocation: 'Settlement > Actions > Recovery',
+    whyItMatters: 'Removing weak cards makes that survivor draw their useful cards more reliably.',
+    unlockedTab: 'recovery',
     tutorialSteps: [
       'Open Settlement > Survivors and expand a survivor.',
       'Open Personal Cards and choose Forget beside an eligible personal or basic card.',
@@ -192,11 +213,23 @@ export const innovationCards = {
       'Children born through intimacy automatically receive one starting trait and one general fighting art.'
     ]
   }),
-  painLessons: card('painLessons', 'Pain Lessons', 'training', 'Wounds are studied until they become instruction.', ['Unlocks injury-to-scar treatment.'], { tags: ['treatment'] }),
+  painLessons: card('painLessons', 'Pain Lessons', 'training', 'Wounds are studied until they become instruction.', ['Unlocks injury-to-scar treatment.'], {
+    tags: ['treatment'],
+    playerSummary: 'Turn one survivor injury into a permanent scar once per year.',
+    howToUse: 'Choose an injured survivor and the injury to transform in the Recovery tab.',
+    actionLocation: 'Settlement > Actions > Recovery',
+    whyItMatters: 'The injury stops occupying the injury list, but its scar remains part of the survivor.',
+    unlockedTab: 'recovery'
+  }),
   monsterStories: card('monsterStories', 'Monster Stories', 'knowledge', 'Quarry tales reveal recurring weaknesses.', ['Monster Bane is more likely after victory.'], { tags: ['bane'] }),
   quietNight: card('quietNight', 'Quiet Night', 'recovery', 'One night is kept free of work and retelling.', ['Remove one Panic per Lantern Year and double healing from Memory-based rest.'], {
     tags: ['recovery'],
     unlocks: ['quietNight'],
+    playerSummary: 'Spend 1 Memory to remove Panic from one survivor once per year.',
+    howToUse: 'Choose a survivor carrying Panic in the Recovery tab.',
+    actionLocation: 'Settlement > Actions > Recovery',
+    whyItMatters: 'Removing Panic keeps it out of the survivor personal deck.',
+    unlockedTab: 'recovery',
     mechanicalEffects: { restHealingMultiplier: 2 },
     tutorialSteps: [
       'Open Settlement > Survivors and expand a survivor carrying Panic.',
@@ -207,14 +240,33 @@ export const innovationCards = {
   weaponDrills: card('weaponDrills', 'Weapon Drills', 'training', 'Repeated forms become dependable techniques.', ['Add one basic training card to a survivor each Lantern Year for 1 Memory.'], {
     tags: ['training'],
     unlocks: ['weaponDrills'],
+    playerSummary: 'Spend 1 Memory to teach a survivor one basic training card.',
+    howToUse: 'Choose a survivor and training card in the Training tab.',
+    actionLocation: 'Settlement > Actions > Training',
+    whyItMatters: 'Training permanently adds a dependable technique to that survivor personal deck.',
+    unlockedTab: 'training',
     tutorialSteps: [
       'Open Settlement > Survivors and expand the survivor to train.',
       'Choose one card under Weapon Drills.',
       'Training costs 1 Memory and the settlement may perform it once each Lantern Year.'
     ]
   }),
-  taboo: card('taboo', 'Taboo', 'law', 'One poisonous story is forbidden.', ['Remove one curse per Lantern Year.'], { tags: ['law'] }),
-  shrineOfNames: card('shrineOfNames', 'Shrine of Names', 'legacy', 'The living carry strength beneath recorded names.', ['Grant a survivor +1 max HP.'], { tags: ['legacy'] }),
+  taboo: card('taboo', 'Taboo', 'law', 'One poisonous story is forbidden.', ['Remove one curse per Lantern Year.'], {
+    tags: ['law'],
+    playerSummary: 'Spend 2 Memory to permanently remove one curse or Panic once per year.',
+    howToUse: 'Choose an affected survivor in the Recovery tab.',
+    actionLocation: 'Settlement > Actions > Recovery',
+    whyItMatters: 'Taboo removes a lasting burden when Quiet Night is too limited.',
+    unlockedTab: 'recovery'
+  }),
+  shrineOfNames: card('shrineOfNames', 'Shrine of Names', 'legacy', 'The living carry strength beneath recorded names.', ['Grant a survivor +1 max HP.'], {
+    tags: ['legacy'],
+    playerSummary: 'Spend 2 Memory to give one living survivor +1 maximum HP.',
+    howToUse: 'Choose the survivor to honor in the Legacy tab.',
+    actionLocation: 'Settlement > Actions > Legacy',
+    whyItMatters: 'The chosen survivor permanently becomes harder to kill.',
+    unlockedTab: 'legacy'
+  }),
   huntSongs: card('huntSongs', 'Hunt Songs', 'culture', 'Victories are sung into the rhythm of departure.', ['Gain +1 starting survival against known quarries.'], {
     tags: ['culture'],
     uiDestination: 'Hunt > Party preparation'

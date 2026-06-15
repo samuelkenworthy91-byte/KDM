@@ -79,7 +79,19 @@ import {
 } from '../game/survivorIdentity.js';
 import { canSpendMemories, getMemoryBalance } from '../game/memoryEconomy.js';
 
-const tabs = ['overview', 'survivors', 'armory', 'innovations', 'population', 'graveyard', 'quarries'];
+const baseTabs = ['overview', 'survivors', 'armory', 'innovations', 'population', 'graveyard', 'quarries'];
+
+function InnovationClarity({ innovation }) {
+  return (
+    <div className="innovation-clarity">
+      <p><strong>What it does:</strong> {innovation.playerSummary}</p>
+      <p><strong>How to use it:</strong> {innovation.howToUse}</p>
+      <p><strong>Use at:</strong> {innovation.actionLocation}</p>
+      <p><strong>Why it matters:</strong> {innovation.whyItMatters}</p>
+    </div>
+  );
+}
+
 function CostList({ cost, stash }) {
   const entries = formatCostWithMissing(cost, stash);
   if (!entries.length) return <p className="muted-text">Cost: None</p>;
@@ -670,6 +682,12 @@ export default function SettlementScreen({
   const [spendMemoryOnIntimacy, setSpendMemoryOnIntimacy] = useState(false);
   const [timelineNomineeId, setTimelineNomineeId] = useState('');
   const [showDeckInspection, setShowDeckInspection] = useState(false);
+  const [activeActionTab, setActiveActionTab] = useState('recovery');
+  const [actionSurvivorId, setActionSurvivorId] = useState('');
+  const [actionCardId, setActionCardId] = useState('');
+  const [actionBurdenCardId, setActionBurdenCardId] = useState('');
+  const [actionTrainingCardId, setActionTrainingCardId] = useState(trainingCardIds[0] || '');
+  const [actionInjuryId, setActionInjuryId] = useState('');
   const settlementStructures = innovationList.filter(item => !innovationCards[item.id]);
   const buildableInnovations = settlementStructures.filter(item =>
     !settlement.builtInnovations.includes(item.id) && canBuildUnlocked(item, settlement)
@@ -738,6 +756,58 @@ export default function SettlementScreen({
   const validMaleParticipant = livingMales.some(survivor => survivor.id === intimacyMaleId);
   const validFemaleParticipant = livingFemales.some(survivor => survivor.id === intimacyFemaleId);
   const activeSurvivor = livingSurvivors.find(survivor => survivor.id === settlement.activeSurvivorId);
+  const selectedActionSurvivor = livingSurvivors.find(survivor =>
+    survivor.id === actionSurvivorId
+  ) || activeSurvivor || livingSurvivors[0];
+  const builtActionIds = new Set(builtMemoryInnovations.flatMap(item => item.actionUnlocks || []));
+  const actionTabs = [
+    builtActionIds.has('weaponDrills') && 'training',
+    (hasEarlyForgettingAccess(settlement) ||
+      ['quietNight', 'taboo', 'painLessons'].some(id => builtActionIds.has(id))) && 'recovery',
+    builtActionIds.has('shrineOfNames') && 'legacy',
+    ownedInnovationEntries.some(item => item.unlockedTab === 'survival') && 'survival'
+  ].filter(Boolean);
+  const hasCentralActions = actionTabs.length > 0;
+  const settlementTabs = hasCentralActions
+    ? [...baseTabs.slice(0, 2), 'actions', ...baseTabs.slice(2)]
+    : baseTabs;
+  const forgettableActionCards = selectedActionSurvivor
+    ? [...new Set([
+      ...starterCardIds,
+      ...(selectedActionSurvivor.personalDeckAdditions || []).map(getPersonalCardId),
+      ...(selectedActionSurvivor.permanentNegativeCards || []).map(getPersonalCardId)
+    ].filter(Boolean))].filter(cardId =>
+      cardId !== 'panic' &&
+      getCardForgetEligibility({
+        settlement,
+        survivor: selectedActionSurvivor,
+        cardId,
+        card: cards[cardId],
+        addition: (selectedActionSurvivor.personalDeckAdditions || []).find(addition =>
+          getPersonalCardId(addition) === cardId
+        )
+      }).eligible
+    )
+    : [];
+  const selectedActionHasPanic = selectedActionSurvivor
+    ? [
+      ...(selectedActionSurvivor.personalDeckAdditions || []),
+      ...(selectedActionSurvivor.permanentNegativeCards || [])
+    ].some(addition =>
+      getPersonalCardId(addition) === 'panic' &&
+      !selectedActionSurvivor.forgottenCardIds?.includes('panic')
+    )
+    : false;
+  const removableBurdenCards = selectedActionSurvivor
+    ? [...new Set([
+      ...(selectedActionSurvivor.personalDeckAdditions || []).map(getPersonalCardId),
+      ...(selectedActionSurvivor.permanentNegativeCards || []).map(getPersonalCardId)
+    ].filter(cardId =>
+      cardId &&
+      cards[cardId]?.type === 'curse' &&
+      !selectedActionSurvivor.forgottenCardIds?.includes(cardId)
+    ))]
+    : [];
   const discoveredQuarries = quarryList.filter(quarry =>
     quarry.role === 'quarry' &&
     (settlement.discoveredQuarries.includes(quarry.id) || isQuarryUnlocked(quarry, settlement))
@@ -772,7 +842,46 @@ export default function SettlementScreen({
         !survivor.forgottenCardIds?.includes('panic')
       )
   );
+  const hasRemovableBurden = livingSurvivors.some(survivor =>
+    [...survivor.personalDeckAdditions, ...(survivor.permanentNegativeCards || [])]
+      .some(addition => {
+        const cardId = getPersonalCardId(addition);
+        return cards[cardId]?.type === 'curse' &&
+          !survivor.forgottenCardIds?.includes(cardId);
+      })
+  );
   const hasInjury = livingSurvivors.some(survivor => survivor.injuries.length > 0);
+
+  useEffect(() => {
+    if (selectedActionSurvivor && actionSurvivorId !== selectedActionSurvivor.id) {
+      setActionSurvivorId(selectedActionSurvivor.id);
+    }
+  }, [selectedActionSurvivor, actionSurvivorId]);
+
+  useEffect(() => {
+    if (actionTabs.length && !actionTabs.includes(activeActionTab)) {
+      setActiveActionTab(actionTabs[0]);
+    }
+  }, [actionTabs, activeActionTab]);
+
+  useEffect(() => {
+    if (!forgettableActionCards.includes(actionCardId)) {
+      setActionCardId(forgettableActionCards[0] || '');
+    }
+  }, [forgettableActionCards, actionCardId]);
+
+  useEffect(() => {
+    if (!removableBurdenCards.includes(actionBurdenCardId)) {
+      setActionBurdenCardId(removableBurdenCards[0] || '');
+    }
+  }, [removableBurdenCards, actionBurdenCardId]);
+
+  useEffect(() => {
+    const survivorInjuries = selectedActionSurvivor?.injuries || [];
+    if (!survivorInjuries.includes(actionInjuryId)) {
+      setActionInjuryId(survivorInjuries[0] || '');
+    }
+  }, [selectedActionSurvivor, actionInjuryId]);
 
   const getMemoryActionStatus = actionId => {
     if (actionId === 'forgetCard') {
@@ -782,9 +891,10 @@ export default function SettlementScreen({
         return 'Already used for every survivor this Lantern Year';
       }
       if (settlement.settlementMemory < EARLY_FORGETTING_COST) return 'Not enough Memory';
-      return 'Available in survivor details';
+      return 'Available in Actions';
     }
-    if (['quietNight', 'taboo'].includes(actionId) && !hasPanic) return 'No eligible Panic cards';
+    if (actionId === 'quietNight' && !hasPanic) return 'No eligible Panic cards';
+    if (actionId === 'taboo' && !hasRemovableBurden) return 'No eligible curse or Panic cards';
     if (actionId === 'painLessons' && !hasInjury) return 'No injuries to transform';
     if (isMemoryActionUsed(settlement, actionId)) return 'Already used this Lantern Year';
     const memoryCost = {
@@ -793,8 +903,8 @@ export default function SettlementScreen({
       taboo: 2,
       shrineOfNames: 2
     }[actionId] || 0;
-    if (settlement.settlementMemory < memoryCost) return 'Not enough settlementMemory';
-    return 'Available in survivor details';
+    if (settlement.settlementMemory < memoryCost) return 'Not enough Memory';
+    return 'Available in Actions';
   };
 
   const submitSurvivor = event => {
@@ -843,7 +953,7 @@ export default function SettlementScreen({
       </header>
 
       <nav className="settlement-tabs" aria-label="Settlement sections">
-        {tabs.map(tabId => (
+        {settlementTabs.map(tabId => (
           <button type="button" key={tabId} className={tab === tabId ? 'active' : ''} onClick={() => setTab(tabId)}>
             {tabId}
           </button>
@@ -864,7 +974,7 @@ export default function SettlementScreen({
               <strong>Memory Actions Available</strong>
               {settlement.builtMemoryInnovations
                 .flatMap(id => memoryInnovationList.find(item => item.id === id)?.actionUnlocks || [])
-                .filter(actionId => getMemoryActionStatus(actionId) === 'Available in survivor details').length}
+                .filter(actionId => getMemoryActionStatus(actionId) === 'Available in Actions').length}
             </span>
           </div>
           <details className="memory-ledger">
@@ -1072,8 +1182,8 @@ export default function SettlementScreen({
             {hasEarlyForgettingAccess(settlement) && (
               <p>
                 <strong>Guided Reflection ({EARLY_FORGETTING_COST} Memory):</strong>{' '}
-                {getMemoryActionStatus('forgetCard')}. Open a survivor&apos;s details and use
-                Forget beside an eligible personal or basic card.
+                {getMemoryActionStatus('forgetCard')}. Use the Recovery section in Actions, or
+                open a survivor&apos;s details.
               </p>
             )}
             {settlement.builtMemoryInnovations.flatMap(id => {
@@ -1110,6 +1220,242 @@ export default function SettlementScreen({
             ))}
           </div>
           {huntButton}
+        </div>
+      )}
+
+      {tab === 'actions' && hasCentralActions && (
+        <div className="settlement-panel">
+          <h3>Settlement Actions</h3>
+          <p className="muted-text">
+            These controls use the same survivor action rules as survivor details. Memory costs and
+            once-per-year limits are checked again when an action resolves.
+          </p>
+          <nav className="settlement-tabs" aria-label="Settlement action sections">
+            {actionTabs.map(actionTab => (
+              <button
+                type="button"
+                key={actionTab}
+                className={activeActionTab === actionTab ? 'active' : ''}
+                onClick={() => setActiveActionTab(actionTab)}
+              >
+                {actionTab}
+              </button>
+            ))}
+          </nav>
+
+          {activeActionTab !== 'survival' && (
+            <label className="field-label">
+              Survivor
+              <select
+                value={selectedActionSurvivor?.id || ''}
+                onChange={event => setActionSurvivorId(event.target.value)}
+              >
+                {!livingSurvivors.length && <option value="">No living survivors</option>}
+                {livingSurvivors.map(survivor => (
+                  <option key={survivor.id} value={survivor.id}>
+                    {getSurvivorDisplayName(survivor)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {activeActionTab === 'training' && (
+            <article className="item-card">
+              <h4>Weapon Drills</h4>
+              <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'weaponDrills')} />
+              <label className="field-label">
+                Training card
+                <select
+                  value={actionTrainingCardId}
+                  onChange={event => setActionTrainingCardId(event.target.value)}
+                >
+                  {trainingCardIds.map(cardId => (
+                    <option key={cardId} value={cardId}>
+                      {cards[cardId]?.name || 'Unknown / Legacy'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                disabled={!selectedActionSurvivor || !actionTrainingCardId ||
+                  getMemoryActionStatus('weaponDrills') !== 'Available in Actions'}
+                title={getMemoryActionStatus('weaponDrills')}
+                onClick={() => onWeaponDrill(selectedActionSurvivor.id, actionTrainingCardId)}
+              >
+                Teach {cards[actionTrainingCardId]?.name || 'training card'} (1 Memory)
+              </button>
+              {getMemoryActionStatus('weaponDrills') !== 'Available in Actions' && (
+                <p className="missing">{getMemoryActionStatus('weaponDrills')}</p>
+              )}
+            </article>
+          )}
+
+          {activeActionTab === 'recovery' && (
+            <div className="item-grid">
+              {hasEarlyForgettingAccess(settlement) && (
+                <article className="item-card">
+                  <h4>Rite of Forgetting / Guided Reflection</h4>
+                  <p>Spend 1 Memory to remove one eligible personal or basic card.</p>
+                  <p className="muted-text">
+                    Locked, unforgettable, gear, mastery, and Monster Bane cards cannot be removed.
+                  </p>
+                  <label className="field-label">
+                    Card to forget
+                    <select
+                      value={actionCardId}
+                      onChange={event => setActionCardId(event.target.value)}
+                    >
+                      {!forgettableActionCards.length && <option value="">No eligible cards</option>}
+                      {forgettableActionCards.map(cardId => (
+                        <option key={cardId} value={cardId}>
+                          {cards[cardId]?.name || 'Unknown / Legacy'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={!selectedActionSurvivor || !actionCardId ||
+                      getMemoryActionStatus('forgetCard') !== 'Available in Actions'}
+                    title={getMemoryActionStatus('forgetCard')}
+                    onClick={() => onForgetCard(selectedActionSurvivor.id, actionCardId)}
+                  >
+                    Forget selected card (1 Memory)
+                  </button>
+                  {(!actionCardId || getMemoryActionStatus('forgetCard') !== 'Available in Actions') && (
+                    <p className="missing">
+                      {!actionCardId ? 'This survivor has no eligible cards.' : getMemoryActionStatus('forgetCard')}
+                    </p>
+                  )}
+                </article>
+              )}
+
+              {builtActionIds.has('quietNight') && (
+                <article className="item-card">
+                  <h4>Quiet Night</h4>
+                  <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'quietNight')} />
+                  <button
+                    type="button"
+                    disabled={!selectedActionSurvivor || !selectedActionHasPanic ||
+                      getMemoryActionStatus('quietNight') !== 'Available in Actions'}
+                    title={!selectedActionHasPanic
+                      ? 'Selected survivor has no Panic'
+                      : getMemoryActionStatus('quietNight')}
+                    onClick={() => onMemoryCardRemoval('quietNight', selectedActionSurvivor.id, 'panic')}
+                  >
+                    Remove Panic (1 Memory)
+                  </button>
+                  {!selectedActionHasPanic && <p className="missing">Selected survivor has no Panic.</p>}
+                </article>
+              )}
+
+              {builtActionIds.has('taboo') && (
+                <article className="item-card">
+                  <h4>Taboo</h4>
+                  <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'taboo')} />
+                  <label className="field-label">
+                    Curse or Panic
+                    <select
+                      value={actionBurdenCardId}
+                      onChange={event => setActionBurdenCardId(event.target.value)}
+                    >
+                      {!removableBurdenCards.length && (
+                        <option value="">No removable burdens</option>
+                      )}
+                      {removableBurdenCards.map(cardId => (
+                        <option key={cardId} value={cardId}>
+                          {cards[cardId]?.name || 'Unknown / Legacy'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={!selectedActionSurvivor || !actionBurdenCardId ||
+                      getMemoryActionStatus('taboo') !== 'Available in Actions'}
+                    title={!actionBurdenCardId
+                      ? 'Selected survivor has no removable curse or Panic'
+                      : getMemoryActionStatus('taboo')}
+                    onClick={() => onMemoryCardRemoval(
+                      'taboo',
+                      selectedActionSurvivor.id,
+                      actionBurdenCardId
+                    )}
+                  >
+                    Remove curse or Panic (2 Memory)
+                  </button>
+                  {!actionBurdenCardId && (
+                    <p className="missing">Selected survivor has no removable curse or Panic.</p>
+                  )}
+                </article>
+              )}
+
+              {builtActionIds.has('painLessons') && (
+                <article className="item-card">
+                  <h4>Pain Lessons</h4>
+                  <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'painLessons')} />
+                  <label className="field-label">
+                    Injury
+                    <select
+                      value={actionInjuryId}
+                      onChange={event => setActionInjuryId(event.target.value)}
+                    >
+                      {!selectedActionSurvivor?.injuries?.length && (
+                        <option value="">No injuries</option>
+                      )}
+                      {(selectedActionSurvivor?.injuries || []).map(injuryId => (
+                        <option key={injuryId} value={injuryId}>
+                          {injuries[injuryId]?.name || 'Unknown / Legacy'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={!selectedActionSurvivor || !actionInjuryId ||
+                      getMemoryActionStatus('painLessons') !== 'Available in Actions'}
+                    title={getMemoryActionStatus('painLessons')}
+                    onClick={() => onPainLesson(selectedActionSurvivor.id, actionInjuryId)}
+                  >
+                    Turn injury into scar
+                  </button>
+                  {!actionInjuryId && <p className="missing">Selected survivor has no injuries.</p>}
+                </article>
+              )}
+            </div>
+          )}
+
+          {activeActionTab === 'legacy' && builtActionIds.has('shrineOfNames') && (
+            <article className="item-card">
+              <h4>Shrine of Names</h4>
+              <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'shrineOfNames')} />
+              <button
+                type="button"
+                disabled={!selectedActionSurvivor ||
+                  getMemoryActionStatus('shrineOfNames') !== 'Available in Actions'}
+                title={getMemoryActionStatus('shrineOfNames')}
+                onClick={() => onShrineOfNames(selectedActionSurvivor.id)}
+              >
+                Grant +1 maximum HP (2 Memory)
+              </button>
+              {getMemoryActionStatus('shrineOfNames') !== 'Available in Actions' && (
+                <p className="missing">{getMemoryActionStatus('shrineOfNames')}</p>
+              )}
+            </article>
+          )}
+
+          {activeActionTab === 'survival' && (
+            <div className="item-grid">
+              {ownedInnovationEntries.filter(item => item.unlockedTab === 'survival').map(item => (
+                <article className="item-card built" key={item.id}>
+                  <h4>{item.name}</h4>
+                  <InnovationClarity innovation={item} />
+                </article>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1311,6 +1657,18 @@ export default function SettlementScreen({
             {!rumouredInnovations.length && <p>No unresolved structure rumours.</p>}
           </section>
           <section className="memory-innovations-section">
+            <h3>Built Memory Innovations</h3>
+            <div className="item-grid">
+              {builtMemoryInnovations.map(item => (
+                <article className="item-card built" key={item.id}>
+                  <p className="eyebrow">{item.category}</p>
+                  <h4>{item.name}</h4>
+                  <InnovationClarity innovation={item} />
+                  <p><strong>Limit:</strong> {item.limit}</p>
+                </article>
+              ))}
+              {!builtMemoryInnovations.length && <p>No Memory innovations have been built.</p>}
+            </div>
             <h3>Innovation Deck</h3>
             <p>
               Spend 1 Memory and any 3 basic resources to draw up to 3 innovations,
@@ -1355,8 +1713,7 @@ export default function SettlementScreen({
                             <p className="eyebrow">Tier {item.tier} | {item.category}</p>
                             <h4>{item.name}</h4>
                             <p>{formatValueForDisplay(item.description)}</p>
-                            <p className="effect-text">{item.settlementBoostSummary}</p>
-                            <p><strong>Destination:</strong> {item.uiDestination}</p>
+                            <InnovationClarity innovation={item} />
                             <p><strong>Attempt cost:</strong> {item.memoryCost ?? 1} Memory plus shared draw resources</p>
                             {item.lockReason && <p className="missing">{item.lockReason}</p>}
                             <details>
@@ -1387,8 +1744,7 @@ export default function SettlementScreen({
                     <p className="eyebrow">Tier {item.tier} | {item.category}</p>
                     <h4>{item.name}</h4>
                     <p>{formatValueForDisplay(item.description)}</p>
-                    <p className="effect-text">{item.settlementBoostSummary}</p>
-                    <p><strong>Use at:</strong> {item.uiDestination}</p>
+                    <InnovationClarity innovation={item} />
                     <details>
                       <summary>{item.tutorialTitle}</summary>
                       {item.tutorialSteps.length ? (

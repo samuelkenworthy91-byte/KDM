@@ -1824,10 +1824,21 @@ export default function App() {
       const survivor = current.survivors.find(item => item.id === survivorId);
       if (!current.builtMemoryInnovations.includes(config.innovationId)) return current;
       if (current.memoryActionsUsedThisYear[actionId] === current.lanternYear) return current;
-      if (cardId !== 'panic') return current;
+      if (!survivor) return current;
+      const survivorBurdenIds = [
+        ...(survivor.personalDeckAdditions || []),
+        ...(survivor.permanentNegativeCards || [])
+      ].map(getPersonalCardId);
+      const removableCard = cards[cardId];
+      const validBurden = survivorBurdenIds.includes(cardId) &&
+        !survivor.forgottenCardIds?.includes(cardId) &&
+        removableCard?.type === 'curse';
+      if (actionId === 'quietNight' ? cardId !== 'panic' || !validBurden : !validBurden) {
+        return current;
+      }
       const spent = spendMemories(current, config.cost, {
         source: actionId,
-        description: `${config.method} removed Panic.`,
+        description: `${config.method} removed ${removableCard?.name || 'a burden'}.`,
         survivorIds: [survivorId]
       });
       if (!spent) return current;
