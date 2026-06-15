@@ -1,0 +1,3012 @@
+{
+  "assets": [
+    {
+      "id": "titleBackground",
+      "path": "assets/title/title_background.png",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false,
+      "use": "title screen background"
+    },
+    {
+      "id": "gameLogo",
+      "path": "assets/title/game_logo.png",
+      "width": 1200,
+      "height": 500,
+      "transparent": true,
+      "use": "game logo"
+    },
+    {
+      "id": "Saveslotempty",
+      "path": "assets/title/save_slot_empty.png",
+      "width": 900,
+      "height": 240,
+      "transparent": true,
+      "use": "title UI element"
+    },
+    {
+      "id": "Saveslotoccupied",
+      "path": "assets/title/save_slot_occupied.png",
+      "width": 900,
+      "height": 240,
+      "transparent": true,
+      "use": "title UI element"
+    },
+    {
+      "id": "Newsettlementbanner",
+      "path": "assets/title/new_settlement_banner.png",
+      "width": 1200,
+      "height": 300,
+      "transparent": true,
+      "use": "title UI element"
+    },
+    {
+      "id": "settlement_overview_bg",
+      "path": "assets/settlement/settlement_overview_bg.png",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false,
+      "use": "settlement overview background"
+    },
+    {
+      "id": "armory_bg",
+      "path": "assets/settlement/armory_bg.png",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false,
+      "use": "settlement armory background"
+    },
+    {
+      "id": "population_bg",
+      "path": "assets/settlement/population_bg.png",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false,
+      "use": "settlement population background"
+    },
+    {
+      "id": "graveyard_bg",
+      "path": "assets/settlement/graveyard_bg.png",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false,
+      "use": "settlement graveyard background"
+    },
+    {
+      "id": "innovation_bg",
+      "path": "assets/settlement/innovation_bg.png",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false,
+      "use": "settlement innovation background"
+    },
+    {
+      "id": "quarry_archive_bg",
+      "path": "assets/settlement/quarry_archive_bg.png",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false,
+      "use": "settlement archive background"
+    },
+    {
+      "id": "huntMapBg",
+      "path": "assets/map/hunt_map_bg.png",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false,
+      "use": "hunt map background"
+    },
+    {
+      "id": "node_fight",
+      "path": "assets/map/node_fight.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "map node claw"
+    },
+    {
+      "id": "node_elite",
+      "path": "assets/map/node_elite.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "map node claw"
+    },
+    {
+      "id": "node_event",
+      "path": "assets/map/node_event.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "map node strangeEye"
+    },
+    {
+      "id": "node_resource",
+      "path": "assets/map/node_resource.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "map node scrap"
+    },
+    {
+      "id": "node_rest",
+      "path": "assets/map/node_rest.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "map node organ"
+    },
+    {
+      "id": "node_boss",
+      "path": "assets/map/node_boss.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "map node bone"
+    },
+    {
+      "id": "node_locked",
+      "path": "assets/map/node_locked.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "map node horn"
+    },
+    {
+      "id": "node_completed",
+      "path": "assets/map/node_completed.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "map node circle"
+    },
+    {
+      "id": "mapPathLine",
+      "path": "assets/map/path_line.png",
+      "width": 512,
+      "height": 64,
+      "transparent": true,
+      "use": "map path line"
+    },
+    {
+      "id": "combatStageBg",
+      "path": "assets/creatures/combat_stage_bg.png",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false,
+      "use": "combat stage background"
+    },
+    {
+      "id": "combatPlayerPanel",
+      "path": "assets/ui/combat_player_panel.png",
+      "width": 700,
+      "height": 260,
+      "transparent": true,
+      "use": "player panel in combat"
+    },
+    {
+      "id": "combatMonsterPanel",
+      "path": "assets/ui/combat_monster_panel.png",
+      "width": 700,
+      "height": 260,
+      "transparent": true,
+      "use": "monster panel in combat"
+    },
+    {
+      "id": "survivalCommandBar",
+      "path": "assets/ui/survival_command_bar.png",
+      "width": 1000,
+      "height": 180,
+      "transparent": true,
+      "use": "survival command bar"
+    },
+    {
+      "id": "card_frame_attack",
+      "path": "assets/ui/cards/card_frame_attack.png",
+      "width": 512,
+      "height": 768,
+      "transparent": true,
+      "use": "card frame"
+    },
+    {
+      "id": "card_frame_skill",
+      "path": "assets/ui/cards/card_frame_skill.png",
+      "width": 512,
+      "height": 768,
+      "transparent": true,
+      "use": "card frame"
+    },
+    {
+      "id": "card_frame_survival",
+      "path": "assets/ui/cards/card_frame_survival.png",
+      "width": 512,
+      "height": 768,
+      "transparent": true,
+      "use": "card frame"
+    },
+    {
+      "id": "card_frame_curse",
+      "path": "assets/ui/cards/card_frame_curse.png",
+      "width": 512,
+      "height": 768,
+      "transparent": true,
+      "use": "card frame"
+    },
+    {
+      "id": "card_frame_gear",
+      "path": "assets/ui/cards/card_frame_gear.png",
+      "width": 512,
+      "height": 768,
+      "transparent": true,
+      "use": "card frame"
+    },
+    {
+      "id": "cardCostGem",
+      "path": "assets/ui/cards/card_cost_gem.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "use": "card cost gem"
+    },
+    {
+      "id": "cardSourceRibbon",
+      "path": "assets/ui/cards/card_source_ribbon.png",
+      "width": 512,
+      "height": 96,
+      "transparent": true,
+      "use": "card source ribbon"
+    },
+    {
+      "id": "tab_overview",
+      "path": "assets/ui/tabs/overview.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "UI tab overview"
+    },
+    {
+      "id": "tab_survivors",
+      "path": "assets/ui/tabs/survivors.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "UI tab survivors"
+    },
+    {
+      "id": "tab_armory",
+      "path": "assets/ui/tabs/armory.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "UI tab armory"
+    },
+    {
+      "id": "tab_innovations",
+      "path": "assets/ui/tabs/innovations.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "UI tab innovations"
+    },
+    {
+      "id": "tab_population",
+      "path": "assets/ui/tabs/population.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "UI tab population"
+    },
+    {
+      "id": "tab_graveyard",
+      "path": "assets/ui/tabs/graveyard.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "UI tab graveyard"
+    },
+    {
+      "id": "tab_quarries",
+      "path": "assets/ui/tabs/quarries.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "UI tab quarries"
+    },
+    {
+      "id": "tab_history",
+      "path": "assets/ui/tabs/history.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "UI tab history"
+    },
+    {
+      "id": "button_primary",
+      "path": "assets/ui/buttons/button_primary.png",
+      "width": 512,
+      "height": 160,
+      "transparent": true,
+      "use": "UI button"
+    },
+    {
+      "id": "button_danger",
+      "path": "assets/ui/buttons/button_danger.png",
+      "width": 512,
+      "height": 160,
+      "transparent": true,
+      "use": "UI button"
+    },
+    {
+      "id": "button_disabled",
+      "path": "assets/ui/buttons/button_disabled.png",
+      "width": 512,
+      "height": 160,
+      "transparent": true,
+      "use": "UI button"
+    },
+    {
+      "id": "button_small",
+      "path": "assets/ui/buttons/button_small.png",
+      "width": 256,
+      "height": 96,
+      "transparent": true,
+      "use": "UI button"
+    },
+    {
+      "id": "panel_dark",
+      "path": "assets/ui/panels/panel_dark.png",
+      "width": 1024,
+      "height": 768,
+      "transparent": true,
+      "use": "UI panel"
+    },
+    {
+      "id": "panel_gold",
+      "path": "assets/ui/panels/panel_gold.png",
+      "width": 1024,
+      "height": 768,
+      "transparent": true,
+      "use": "UI panel"
+    },
+    {
+      "id": "panel_warning",
+      "path": "assets/ui/panels/panel_warning.png",
+      "width": 1024,
+      "height": 768,
+      "transparent": true,
+      "use": "UI panel"
+    },
+    {
+      "id": "tooltip_panel",
+      "path": "assets/ui/panels/tooltip_panel.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "UI panel"
+    },
+    {
+      "id": "resource_cost_panel",
+      "path": "assets/ui/panels/resource_cost_panel.png",
+      "width": 768,
+      "height": 256,
+      "transparent": true,
+      "use": "UI panel"
+    },
+    {
+      "id": "survivor_male_base",
+      "path": "assets/survivors/survivor_male_base.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "survivor base or marker"
+    },
+    {
+      "id": "survivor_female_base",
+      "path": "assets/survivors/survivor_female_base.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "survivor base or marker"
+    },
+    {
+      "id": "survivor_other_base",
+      "path": "assets/survivors/survivor_other_base.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "survivor base or marker"
+    },
+    {
+      "id": "nameless_survivor",
+      "path": "assets/survivors/nameless_survivor.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "survivor base or marker"
+    },
+    {
+      "id": "wounded_survivor",
+      "path": "assets/survivors/wounded_survivor.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "survivor base or marker"
+    },
+    {
+      "id": "veteran_survivor",
+      "path": "assets/survivors/veteran_survivor.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "survivor base or marker"
+    },
+    {
+      "id": "dead_survivor_marker",
+      "path": "assets/survivors/dead_survivor_marker.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "survivor base or marker"
+    },
+    {
+      "id": "lanternEyed",
+      "path": "assets/survivors/traits/lanternEyed.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor trait icon"
+    },
+    {
+      "id": "boneStrong",
+      "path": "assets/survivors/traits/boneStrong.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor trait icon"
+    },
+    {
+      "id": "quietListener",
+      "path": "assets/survivors/traits/quietListener.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor trait icon"
+    },
+    {
+      "id": "markedByTheDark",
+      "path": "assets/survivors/traits/markedByTheDark.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor trait icon"
+    },
+    {
+      "id": "scarless",
+      "path": "assets/survivors/traits/scarless.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor trait icon"
+    },
+    {
+      "id": "luckyBirth",
+      "path": "assets/survivors/traits/luckyBirth.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor trait icon"
+    },
+    {
+      "id": "wolfSmile",
+      "path": "assets/survivors/traits/wolfSmile.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor trait icon"
+    },
+    {
+      "id": "monsterBane",
+      "path": "assets/survivors/traits/monsterBane.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor trait icon"
+    },
+    {
+      "id": "crackedRibs",
+      "path": "assets/survivors/conditions/crackedRibs.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "twistedAnkle",
+      "path": "assets/survivors/conditions/twistedAnkle.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "brokenArm",
+      "path": "assets/survivors/conditions/brokenArm.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "deepCut",
+      "path": "assets/survivors/conditions/deepCut.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "concussion",
+      "path": "assets/survivors/conditions/concussion.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "shatteredNerve",
+      "path": "assets/survivors/conditions/shatteredNerve.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "nightTerrors",
+      "path": "assets/survivors/conditions/nightTerrors.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "hoarder",
+      "path": "assets/survivors/conditions/hoarder.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "deathWish",
+      "path": "assets/survivors/conditions/deathWish.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "paranoia",
+      "path": "assets/survivors/conditions/paranoia.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "lanternFixation",
+      "path": "assets/survivors/conditions/lanternFixation.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "lionScar",
+      "path": "assets/survivors/conditions/lionScar.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "hornBruise",
+      "path": "assets/survivors/conditions/hornBruise.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "ashMarked",
+      "path": "assets/survivors/conditions/ashMarked.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "boneSetWrong",
+      "path": "assets/survivors/conditions/boneSetWrong.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "deadEyeCalm",
+      "path": "assets/survivors/conditions/deadEyeCalm.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survivor condition icon"
+    },
+    {
+      "id": "dodge",
+      "path": "assets/icons/survival/dodge.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survival action icon"
+    },
+    {
+      "id": "counter",
+      "path": "assets/icons/survival/counter.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survival action icon"
+    },
+    {
+      "id": "focus",
+      "path": "assets/icons/survival/focus.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survival action icon"
+    },
+    {
+      "id": "endure",
+      "path": "assets/icons/survival/endure.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survival action icon"
+    },
+    {
+      "id": "survival",
+      "path": "assets/icons/survival/survival.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "survival action icon"
+    },
+    {
+      "id": "hp",
+      "path": "assets/icons/status/hp.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "block",
+      "path": "assets/icons/status/block.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "energy",
+      "path": "assets/icons/status/energy.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "bleed",
+      "path": "assets/icons/status/bleed.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "marked",
+      "path": "assets/icons/status/marked.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "panic",
+      "path": "assets/icons/status/panic.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "survival",
+      "path": "assets/icons/status/survival.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "strength",
+      "path": "assets/icons/status/strength.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "injury",
+      "path": "assets/icons/status/injury.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "disorder",
+      "path": "assets/icons/status/disorder.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "scar",
+      "path": "assets/icons/status/scar.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "monsterBane",
+      "path": "assets/icons/status/monsterBane.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "lanternYear",
+      "path": "assets/icons/status/lanternYear.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "population",
+      "path": "assets/icons/status/population.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "memory",
+      "path": "assets/icons/status/memory.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "status icon"
+    },
+    {
+      "id": "saveSlotIcon",
+      "path": "assets/icons/save-slots/slot_icon.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "save slot icon"
+    },
+    {
+      "id": "bone",
+      "path": "assets/resources/bone.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "hide",
+      "path": "assets/resources/hide.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "sinew",
+      "path": "assets/resources/sinew.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "organ",
+      "path": "assets/resources/organ.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "claw",
+      "path": "assets/resources/claw.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "strangeEye",
+      "path": "assets/resources/strangeEye.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "scrap",
+      "path": "assets/resources/scrap.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "fur",
+      "path": "assets/resources/fur.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "horn",
+      "path": "assets/resources/horn.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "ichor",
+      "path": "assets/resources/ichor.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "monsterTooth",
+      "path": "assets/resources/monsterTooth.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource icon"
+    },
+    {
+      "id": "paleLionHide",
+      "path": "assets/resources/paleLionHide.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from paleHuntLion"
+    },
+    {
+      "id": "paleLionClaw",
+      "path": "assets/resources/paleLionClaw.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from paleHuntLion"
+    },
+    {
+      "id": "paleLionSinew",
+      "path": "assets/resources/paleLionSinew.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from paleHuntLion"
+    },
+    {
+      "id": "paleLionMane",
+      "path": "assets/resources/paleLionMane.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from paleHuntLion"
+    },
+    {
+      "id": "paleLionEye",
+      "path": "assets/resources/paleLionEye.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from paleHuntLion"
+    },
+    {
+      "id": "wailingHorn",
+      "path": "assets/resources/wailingHorn.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from wailingAntelope"
+    },
+    {
+      "id": "wailingOrgan",
+      "path": "assets/resources/wailingOrgan.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from wailingAntelope"
+    },
+    {
+      "id": "wailingHide",
+      "path": "assets/resources/wailingHide.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from wailingAntelope"
+    },
+    {
+      "id": "screamingSinew",
+      "path": "assets/resources/screamingSinew.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from wailingAntelope"
+    },
+    {
+      "id": "stomachStone",
+      "path": "assets/resources/stomachStone.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from wailingAntelope"
+    },
+    {
+      "id": "ashFeather",
+      "path": "assets/resources/ashFeather.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from ashPhoenix"
+    },
+    {
+      "id": "phoenixAsh",
+      "path": "assets/resources/phoenixAsh.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from ashPhoenix"
+    },
+    {
+      "id": "timeBone",
+      "path": "assets/resources/timeBone.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from ashPhoenix"
+    },
+    {
+      "id": "burntOrgan",
+      "path": "assets/resources/burntOrgan.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from ashPhoenix"
+    },
+    {
+      "id": "memoryGlass",
+      "path": "assets/resources/memoryGlass.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from ashPhoenix"
+    },
+    {
+      "id": "thunderGland",
+      "path": "assets/resources/thunderGland.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloatedGodling"
+    },
+    {
+      "id": "bloatedHide",
+      "path": "assets/resources/bloatedHide.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloatedGodling"
+    },
+    {
+      "id": "denseOrgan",
+      "path": "assets/resources/denseOrgan.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloatedGodling"
+    },
+    {
+      "id": "stormBone",
+      "path": "assets/resources/stormBone.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloatedGodling"
+    },
+    {
+      "id": "crackedMolar",
+      "path": "assets/resources/crackedMolar.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloatedGodling"
+    },
+    {
+      "id": "crimsonScale",
+      "path": "assets/resources/crimsonScale.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from crimsonCrocodile"
+    },
+    {
+      "id": "riverTooth",
+      "path": "assets/resources/riverTooth.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from crimsonCrocodile"
+    },
+    {
+      "id": "bloodMudOrgan",
+      "path": "assets/resources/bloodMudOrgan.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from crimsonCrocodile"
+    },
+    {
+      "id": "crocodileEye",
+      "path": "assets/resources/crocodileEye.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from crimsonCrocodile"
+    },
+    {
+      "id": "redLeather",
+      "path": "assets/resources/redLeather.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from crimsonCrocodile"
+    },
+    {
+      "id": "frogdogTongue",
+      "path": "assets/resources/frogdogTongue.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from frogdog"
+    },
+    {
+      "id": "rubberyHide",
+      "path": "assets/resources/rubberyHide.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from frogdog"
+    },
+    {
+      "id": "toxicGland",
+      "path": "assets/resources/toxicGland.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from frogdog"
+    },
+    {
+      "id": "wetBone",
+      "path": "assets/resources/wetBone.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from frogdog"
+    },
+    {
+      "id": "bulgingEye",
+      "path": "assets/resources/bulgingEye.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from frogdog"
+    },
+    {
+      "id": "silkGland",
+      "path": "assets/resources/silkGland.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from silkMatriarch"
+    },
+    {
+      "id": "chitinThread",
+      "path": "assets/resources/chitinThread.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from silkMatriarch"
+    },
+    {
+      "id": "venomSac",
+      "path": "assets/resources/venomSac.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from silkMatriarch"
+    },
+    {
+      "id": "webbedHide",
+      "path": "assets/resources/webbedHide.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from silkMatriarch"
+    },
+    {
+      "id": "spiderEye",
+      "path": "assets/resources/spiderEye.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from silkMatriarch"
+    },
+    {
+      "id": "bloomPetal",
+      "path": "assets/resources/bloomPetal.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloomKnight"
+    },
+    {
+      "id": "duelistThorn",
+      "path": "assets/resources/duelistThorn.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloomKnight"
+    },
+    {
+      "id": "polishedStem",
+      "path": "assets/resources/polishedStem.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloomKnight"
+    },
+    {
+      "id": "floralSinew",
+      "path": "assets/resources/floralSinew.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloomKnight"
+    },
+    {
+      "id": "knightSeed",
+      "path": "assets/resources/knightSeed.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from bloomKnight"
+    },
+    {
+      "id": "smogPipe",
+      "path": "assets/resources/smogPipe.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from smogSingers"
+    },
+    {
+      "id": "sootLung",
+      "path": "assets/resources/sootLung.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from smogSingers"
+    },
+    {
+      "id": "harmonyBone",
+      "path": "assets/resources/harmonyBone.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from smogSingers"
+    },
+    {
+      "id": "tarFeather",
+      "path": "assets/resources/tarFeather.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from smogSingers"
+    },
+    {
+      "id": "chokingMask",
+      "path": "assets/resources/chokingMask.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from smogSingers"
+    },
+    {
+      "id": "chitinPlate",
+      "path": "assets/resources/chitinPlate.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from chitinCrusader"
+    },
+    {
+      "id": "dungCore",
+      "path": "assets/resources/dungCore.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from chitinCrusader"
+    },
+    {
+      "id": "beetleHorn",
+      "path": "assets/resources/beetleHorn.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from chitinCrusader"
+    },
+    {
+      "id": "resinBlood",
+      "path": "assets/resources/resinBlood.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from chitinCrusader"
+    },
+    {
+      "id": "jewelWing",
+      "path": "assets/resources/jewelWing.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from chitinCrusader"
+    },
+    {
+      "id": "drakeScale",
+      "path": "assets/resources/drakeScale.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from drakeEmperor"
+    },
+    {
+      "id": "crystalBone",
+      "path": "assets/resources/crystalBone.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from drakeEmperor"
+    },
+    {
+      "id": "fireGland",
+      "path": "assets/resources/fireGland.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from drakeEmperor"
+    },
+    {
+      "id": "imperialHorn",
+      "path": "assets/resources/imperialHorn.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from drakeEmperor"
+    },
+    {
+      "id": "moltenEye",
+      "path": "assets/resources/moltenEye.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from drakeEmperor"
+    },
+    {
+      "id": "sunShell",
+      "path": "assets/resources/sunShell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from sunSovereign"
+    },
+    {
+      "id": "radiantEye",
+      "path": "assets/resources/radiantEye.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from sunSovereign"
+    },
+    {
+      "id": "solarIchor",
+      "path": "assets/resources/solarIchor.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from sunSovereign"
+    },
+    {
+      "id": "blindingScale",
+      "path": "assets/resources/blindingScale.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from sunSovereign"
+    },
+    {
+      "id": "warmPearl",
+      "path": "assets/resources/warmPearl.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from sunSovereign"
+    },
+    {
+      "id": "prideMane",
+      "path": "assets/resources/prideMane.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from prideKing"
+    },
+    {
+      "id": "kingClaw",
+      "path": "assets/resources/kingClaw.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from prideKing"
+    },
+    {
+      "id": "goldenFang",
+      "path": "assets/resources/goldenFang.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from prideKing"
+    },
+    {
+      "id": "regalHide",
+      "path": "assets/resources/regalHide.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from prideKing"
+    },
+    {
+      "id": "judgmentEye",
+      "path": "assets/resources/judgmentEye.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "resource from prideKing"
+    },
+    {
+      "id": "boneBlade",
+      "path": "assets/gear/boneBlade.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "boneHammer",
+      "path": "assets/gear/boneHammer.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "boneDarts",
+      "path": "assets/gear/boneDarts.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "hideWraps",
+      "path": "assets/gear/hideWraps.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "rawhideHood",
+      "path": "assets/gear/rawhideHood.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "rawhideVest",
+      "path": "assets/gear/rawhideVest.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "clawCharm",
+      "path": "assets/gear/clawCharm.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "monsterGrease",
+      "path": "assets/gear/monsterGrease.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "strangeEyeAmulet",
+      "path": "assets/gear/strangeEyeAmulet.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "hornMaul",
+      "path": "assets/gear/hornMaul.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "bloodPaint",
+      "path": "assets/gear/bloodPaint.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "lionFangKatar",
+      "path": "assets/gear/lionFangKatar.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "maneCloak",
+      "path": "assets/gear/maneCloak.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "catEyeCharm",
+      "path": "assets/gear/catEyeCharm.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "wailingHornBow",
+      "path": "assets/gear/wailingHornBow.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "stomachStoneCharm",
+      "path": "assets/gear/stomachStoneCharm.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "trampleBoots",
+      "path": "assets/gear/trampleBoots.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "ashFeatherMantle",
+      "path": "assets/gear/ashFeatherMantle.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "timeBoneBlade",
+      "path": "assets/gear/timeBoneBlade.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "memoryGlassEye",
+      "path": "assets/gear/memoryGlassEye.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "gear icon"
+    },
+    {
+      "id": "boneSmith",
+      "path": "assets/settlement/buildings/boneSmith.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "skinnery",
+      "path": "assets/settlement/buildings/skinnery.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "organGrinder",
+      "path": "assets/settlement/buildings/organGrinder.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "scoutTower",
+      "path": "assets/settlement/buildings/scoutTower.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "storytellerCircle",
+      "path": "assets/settlement/buildings/storytellerCircle.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "monsterArchive",
+      "path": "assets/settlement/buildings/monsterArchive.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "armoryRack",
+      "path": "assets/settlement/buildings/armoryRack.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "firstAidTent",
+      "path": "assets/settlement/buildings/firstAidTent.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "lionTrophyHall",
+      "path": "assets/settlement/buildings/lionTrophyHall.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "antelopeLarder",
+      "path": "assets/settlement/buildings/antelopeLarder.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "phoenixPyre",
+      "path": "assets/settlement/buildings/phoenixPyre.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "stormShrine",
+      "path": "assets/settlement/buildings/stormShrine.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "thunderWorkshop",
+      "path": "assets/settlement/buildings/thunderWorkshop.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "silkLoom",
+      "path": "assets/settlement/buildings/silkLoom.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "venomLab",
+      "path": "assets/settlement/buildings/venomLab.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "duelistGarden",
+      "path": "assets/settlement/buildings/duelistGarden.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "petalForge",
+      "path": "assets/settlement/buildings/petalForge.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "chitinFoundry",
+      "path": "assets/settlement/buildings/chitinFoundry.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "armourDoctrine",
+      "path": "assets/settlement/buildings/armourDoctrine.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "crystalForge",
+      "path": "assets/settlement/buildings/crystalForge.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "fireRite",
+      "path": "assets/settlement/buildings/fireRite.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "sunMirror",
+      "path": "assets/settlement/buildings/sunMirror.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "shellSanctum",
+      "path": "assets/settlement/buildings/shellSanctum.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "prideHall",
+      "path": "assets/settlement/buildings/prideHall.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "judgementRite",
+      "path": "assets/settlement/buildings/judgementRite.png",
+      "width": 768,
+      "height": 512,
+      "transparent": true,
+      "use": "settlement building icon"
+    },
+    {
+      "id": "language",
+      "path": "assets/settlement/innovations/language.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "symposium",
+      "path": "assets/settlement/innovations/symposium.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "ammonia",
+      "path": "assets/settlement/innovations/ammonia.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "cooking",
+      "path": "assets/settlement/innovations/cooking.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "bloodletting",
+      "path": "assets/settlement/innovations/bloodletting.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "graves",
+      "path": "assets/settlement/innovations/graves.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "oralTradition",
+      "path": "assets/settlement/innovations/oralTradition.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "sharedWarnings",
+      "path": "assets/settlement/innovations/sharedWarnings.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "deathArchive",
+      "path": "assets/settlement/innovations/deathArchive.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "shrineOfNames",
+      "path": "assets/settlement/innovations/shrineOfNames.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "clawLore",
+      "path": "assets/settlement/innovations/clawLore.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "hornCraft",
+      "path": "assets/settlement/innovations/hornCraft.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "stomachLore",
+      "path": "assets/settlement/innovations/stomachLore.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "ashRitual",
+      "path": "assets/settlement/innovations/ashRitual.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "timeKeeping",
+      "path": "assets/settlement/innovations/timeKeeping.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "preservedFood",
+      "path": "assets/settlement/innovations/preservedFood.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "communalMeal",
+      "path": "assets/settlement/innovations/communalMeal.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "innovation card icon"
+    },
+    {
+      "id": "paleHuntLionPortrait",
+      "path": "assets/creatures/quarries/paleHuntLion/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "paleHuntLionCombat",
+      "path": "assets/creatures/quarries/paleHuntLion/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "paleHuntLionSilhouette",
+      "path": "assets/creatures/quarries/paleHuntLion/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "paleHuntLionTell",
+      "path": "assets/creatures/quarries/paleHuntLion/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "wailingAntelopePortrait",
+      "path": "assets/creatures/quarries/wailingAntelope/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "wailingAntelopeCombat",
+      "path": "assets/creatures/quarries/wailingAntelope/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "wailingAntelopeSilhouette",
+      "path": "assets/creatures/quarries/wailingAntelope/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "wailingAntelopeTell",
+      "path": "assets/creatures/quarries/wailingAntelope/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "ashPhoenixPortrait",
+      "path": "assets/creatures/quarries/ashPhoenix/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "ashPhoenixCombat",
+      "path": "assets/creatures/quarries/ashPhoenix/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "ashPhoenixSilhouette",
+      "path": "assets/creatures/quarries/ashPhoenix/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "ashPhoenixTell",
+      "path": "assets/creatures/quarries/ashPhoenix/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "bloatedGodlingPortrait",
+      "path": "assets/creatures/quarries/bloatedGodling/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "bloatedGodlingCombat",
+      "path": "assets/creatures/quarries/bloatedGodling/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "bloatedGodlingSilhouette",
+      "path": "assets/creatures/quarries/bloatedGodling/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "bloatedGodlingTell",
+      "path": "assets/creatures/quarries/bloatedGodling/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "crimsonCrocodilePortrait",
+      "path": "assets/creatures/quarries/crimsonCrocodile/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "crimsonCrocodileCombat",
+      "path": "assets/creatures/quarries/crimsonCrocodile/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "crimsonCrocodileSilhouette",
+      "path": "assets/creatures/quarries/crimsonCrocodile/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "crimsonCrocodileTell",
+      "path": "assets/creatures/quarries/crimsonCrocodile/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "frogdogPortrait",
+      "path": "assets/creatures/quarries/frogdog/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "frogdogCombat",
+      "path": "assets/creatures/quarries/frogdog/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "frogdogSilhouette",
+      "path": "assets/creatures/quarries/frogdog/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "frogdogTell",
+      "path": "assets/creatures/quarries/frogdog/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "silkMatriarchPortrait",
+      "path": "assets/creatures/quarries/silkMatriarch/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "silkMatriarchCombat",
+      "path": "assets/creatures/quarries/silkMatriarch/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "silkMatriarchSilhouette",
+      "path": "assets/creatures/quarries/silkMatriarch/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "silkMatriarchTell",
+      "path": "assets/creatures/quarries/silkMatriarch/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "bloomKnightPortrait",
+      "path": "assets/creatures/quarries/bloomKnight/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "bloomKnightCombat",
+      "path": "assets/creatures/quarries/bloomKnight/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "bloomKnightSilhouette",
+      "path": "assets/creatures/quarries/bloomKnight/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "bloomKnightTell",
+      "path": "assets/creatures/quarries/bloomKnight/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "smogSingersPortrait",
+      "path": "assets/creatures/quarries/smogSingers/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "smogSingersCombat",
+      "path": "assets/creatures/quarries/smogSingers/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "smogSingersSilhouette",
+      "path": "assets/creatures/quarries/smogSingers/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "smogSingersTell",
+      "path": "assets/creatures/quarries/smogSingers/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "chitinCrusaderPortrait",
+      "path": "assets/creatures/quarries/chitinCrusader/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "chitinCrusaderCombat",
+      "path": "assets/creatures/quarries/chitinCrusader/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "chitinCrusaderSilhouette",
+      "path": "assets/creatures/quarries/chitinCrusader/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "chitinCrusaderTell",
+      "path": "assets/creatures/quarries/chitinCrusader/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "drakeEmperorPortrait",
+      "path": "assets/creatures/quarries/drakeEmperor/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "drakeEmperorCombat",
+      "path": "assets/creatures/quarries/drakeEmperor/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "drakeEmperorSilhouette",
+      "path": "assets/creatures/quarries/drakeEmperor/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "drakeEmperorTell",
+      "path": "assets/creatures/quarries/drakeEmperor/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "sunSovereignPortrait",
+      "path": "assets/creatures/quarries/sunSovereign/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "sunSovereignCombat",
+      "path": "assets/creatures/quarries/sunSovereign/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "sunSovereignSilhouette",
+      "path": "assets/creatures/quarries/sunSovereign/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "sunSovereignTell",
+      "path": "assets/creatures/quarries/sunSovereign/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "prideKingPortrait",
+      "path": "assets/creatures/quarries/prideKing/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry portrait"
+    },
+    {
+      "id": "prideKingCombat",
+      "path": "assets/creatures/quarries/prideKing/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "quarry combat sprite"
+    },
+    {
+      "id": "prideKingSilhouette",
+      "path": "assets/creatures/quarries/prideKing/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "quarry silhouette"
+    },
+    {
+      "id": "prideKingTell",
+      "path": "assets/creatures/quarries/prideKing/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "quarry tell icon"
+    },
+    {
+      "id": "cruelCollectorPortrait",
+      "path": "assets/creatures/nemesis/cruelCollector/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis portrait"
+    },
+    {
+      "id": "cruelCollectorCombat",
+      "path": "assets/creatures/nemesis/cruelCollector/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis combat sprite"
+    },
+    {
+      "id": "cruelCollectorSilhouette",
+      "path": "assets/creatures/nemesis/cruelCollector/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "nemesis silhouette"
+    },
+    {
+      "id": "cruelCollectorTell",
+      "path": "assets/creatures/nemesis/cruelCollector/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "nemesis tell icon"
+    },
+    {
+      "id": "wanderingKillerPortrait",
+      "path": "assets/creatures/nemesis/wanderingKiller/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis portrait"
+    },
+    {
+      "id": "wanderingKillerCombat",
+      "path": "assets/creatures/nemesis/wanderingKiller/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis combat sprite"
+    },
+    {
+      "id": "wanderingKillerSilhouette",
+      "path": "assets/creatures/nemesis/wanderingKiller/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "nemesis silhouette"
+    },
+    {
+      "id": "wanderingKillerTell",
+      "path": "assets/creatures/nemesis/wanderingKiller/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "nemesis tell icon"
+    },
+    {
+      "id": "maskedJudgePortrait",
+      "path": "assets/creatures/nemesis/maskedJudge/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis portrait"
+    },
+    {
+      "id": "maskedJudgeCombat",
+      "path": "assets/creatures/nemesis/maskedJudge/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis combat sprite"
+    },
+    {
+      "id": "maskedJudgeSilhouette",
+      "path": "assets/creatures/nemesis/maskedJudge/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "nemesis silhouette"
+    },
+    {
+      "id": "maskedJudgeTell",
+      "path": "assets/creatures/nemesis/maskedJudge/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "nemesis tell icon"
+    },
+    {
+      "id": "regalKnightPortrait",
+      "path": "assets/creatures/nemesis/regalKnight/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis portrait"
+    },
+    {
+      "id": "regalKnightCombat",
+      "path": "assets/creatures/nemesis/regalKnight/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis combat sprite"
+    },
+    {
+      "id": "regalKnightSilhouette",
+      "path": "assets/creatures/nemesis/regalKnight/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "nemesis silhouette"
+    },
+    {
+      "id": "regalKnightTell",
+      "path": "assets/creatures/nemesis/regalKnight/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "nemesis tell icon"
+    },
+    {
+      "id": "shadowStalkerPortrait",
+      "path": "assets/creatures/nemesis/shadowStalker/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis portrait"
+    },
+    {
+      "id": "shadowStalkerCombat",
+      "path": "assets/creatures/nemesis/shadowStalker/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis combat sprite"
+    },
+    {
+      "id": "shadowStalkerSilhouette",
+      "path": "assets/creatures/nemesis/shadowStalker/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "nemesis silhouette"
+    },
+    {
+      "id": "shadowStalkerTell",
+      "path": "assets/creatures/nemesis/shadowStalker/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "nemesis tell icon"
+    },
+    {
+      "id": "mirrorTyrantPortrait",
+      "path": "assets/creatures/nemesis/mirrorTyrant/portrait.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis portrait"
+    },
+    {
+      "id": "mirrorTyrantCombat",
+      "path": "assets/creatures/nemesis/mirrorTyrant/combat.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": false,
+      "use": "nemesis combat sprite"
+    },
+    {
+      "id": "mirrorTyrantSilhouette",
+      "path": "assets/creatures/nemesis/mirrorTyrant/silhouette.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "nemesis silhouette"
+    },
+    {
+      "id": "mirrorTyrantTell",
+      "path": "assets/creatures/nemesis/mirrorTyrant/tell.png",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "use": "nemesis tell icon"
+    },
+    {
+      "id": "strangeCarcass",
+      "path": "assets/events/strangeCarcass.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "lostSurvivor",
+      "path": "assets/events/lostSurvivor.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "lanternShrine",
+      "path": "assets/events/lanternShrine.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "beastTrail",
+      "path": "assets/events/beastTrail.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "whisperingFaces",
+      "path": "assets/events/whisperingFaces.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "blackRain",
+      "path": "assets/events/blackRain.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "boneField",
+      "path": "assets/events/boneField.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "woundedBeast",
+      "path": "assets/events/woundedBeast.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "oldGrave",
+      "path": "assets/events/oldGrave.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "lanternStorm",
+      "path": "assets/events/lanternStorm.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "goldenTracks",
+      "path": "assets/events/goldenTracks.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "collapsedLantern",
+      "path": "assets/events/collapsedLantern.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "screamingTree",
+      "path": "assets/events/screamingTree.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "whiteRain",
+      "path": "assets/events/whiteRain.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "deadSettlement",
+      "path": "assets/events/deadSettlement.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "crawlingPit",
+      "path": "assets/events/crawlingPit.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "dreamingChild",
+      "path": "assets/events/dreamingChild.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "brokenMask",
+      "path": "assets/events/brokenMask.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "freshKill",
+      "path": "assets/events/freshKill.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "perfectSilence",
+      "path": "assets/events/perfectSilence.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "event illustration"
+    },
+    {
+      "id": "firstNight",
+      "path": "assets/timeline/firstNight.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "sharedHunger",
+      "path": "assets/timeline/sharedHunger.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "deadAreCounted",
+      "path": "assets/timeline/deadAreCounted.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "whiteSmoke",
+      "path": "assets/timeline/whiteSmoke.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "strangerInTheDark",
+      "path": "assets/timeline/strangerInTheDark.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "childrenListen",
+      "path": "assets/timeline/childrenListen.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "huntCallsBack",
+      "path": "assets/timeline/huntCallsBack.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "nemesisShadow",
+      "path": "assets/timeline/nemesisShadow.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "settlementSchism",
+      "path": "assets/timeline/settlementSchism.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "longDark",
+      "path": "assets/timeline/longDark.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "watchingDark",
+      "path": "assets/timeline/watchingDark.png",
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "use": "timeline illustration"
+    },
+    {
+      "id": "foundingStone",
+      "path": "assets/cards/foundingStone.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "wildSwing",
+      "path": "assets/cards/wildSwing.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "scramble",
+      "path": "assets/cards/scramble.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "encourage",
+      "path": "assets/cards/encourage.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "panic",
+      "path": "assets/cards/panic.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "hack",
+      "path": "assets/cards/hack.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "carve",
+      "path": "assets/cards/carve.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "splinterStrike",
+      "path": "assets/cards/splinterStrike.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "skullCrack",
+      "path": "assets/cards/skullCrack.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "staggeringBlow",
+      "path": "assets/cards/staggeringBlow.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "guardBreak",
+      "path": "assets/cards/guardBreak.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "boneDart",
+      "path": "assets/cards/boneDart.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "pinningShot",
+      "path": "assets/cards/pinningShot.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "quickToss",
+      "path": "assets/cards/quickToss.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "duckAndRoll",
+      "path": "assets/cards/duckAndRoll.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "rawhideDodge",
+      "path": "assets/cards/rawhideDodge.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "readTheBeast",
+      "path": "assets/cards/readTheBeast.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "slipAway",
+      "path": "assets/cards/slipAway.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "clawStrike",
+      "path": "assets/cards/clawStrike.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "ripOpen",
+      "path": "assets/cards/ripOpen.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "savageFollowUp",
+      "path": "assets/cards/savageFollowUp.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "strangeGlimpse",
+      "path": "assets/cards/strangeGlimpse.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "seeThePattern",
+      "path": "assets/cards/seeThePattern.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "lanternFocus",
+      "path": "assets/cards/lanternFocus.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "boneFlurry",
+      "path": "assets/cards/boneFlurry.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "goringSwing",
+      "path": "assets/cards/goringSwing.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "braceMaul",
+      "path": "assets/cards/braceMaul.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "measuredStrike",
+      "path": "assets/cards/measuredStrike.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "steadyGuard",
+      "path": "assets/cards/steadyGuard.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    },
+    {
+      "id": "deepBreath",
+      "path": "assets/cards/deepBreath.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "use": "card artwork"
+    }
+  ]
+}
