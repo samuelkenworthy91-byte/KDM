@@ -49,6 +49,44 @@ export const childTraits = {
 
 export const childTraitList = Object.values(childTraits);
 
+export const birthTraitOptions = [
+  {
+    id: 'steadyChild',
+    name: 'Steady Child',
+    costMemory: 1,
+    description: 'Starts with +1 Survival.',
+    mechanicalEffect: { startingSurvival: 1 }
+  },
+  {
+    id: 'boneStrong',
+    name: 'Bone-Strong',
+    costMemory: 2,
+    description: 'Starts with +1 maximum HP.',
+    mechanicalEffect: { childTraitId: 'boneStrong' }
+  },
+  {
+    id: 'quietListener',
+    name: 'Quiet Listener',
+    costMemory: 1,
+    description: 'Starts with the Watchful trait, which clarifies the first event warning.',
+    mechanicalEffect: { startingTraitId: 'watchful' }
+  },
+  {
+    id: 'lanternEyed',
+    name: 'Lantern-Eyed',
+    costMemory: 2,
+    description: 'Starts with +1 Survival and ignores the first Panic gained each hunt.',
+    mechanicalEffect: { childTraitId: 'lanternEyed' }
+  },
+  {
+    id: 'familyLesson',
+    name: 'Family Lesson',
+    costMemory: 1,
+    description: 'Records a harmless lesson inherited from the newborn parents.',
+    mechanicalEffect: { familyLesson: true }
+  }
+];
+
 export function normalizeChildTraitId(value) {
   const aliases = {
     'Lantern-Touched': 'lanternEyed',

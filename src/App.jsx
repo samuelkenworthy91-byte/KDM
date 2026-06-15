@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import MapScreen from './components/MapScreen.jsx';
 import { cards, starterCardIds, trainingCardIds } from './data/cards.js';
-import { childTraitList, childTraits, normalizeChildTraitId } from './data/childTraits.js';
+import {
+  birthTraitOptions,
+  childTraitList,
+  childTraits,
+  normalizeChildTraitId
+} from './data/childTraits.js';
 import { getCreatureBehaviour } from './data/creatureBehaviours.js';
 import {
   equipment,
@@ -79,9 +84,9 @@ import {
   getDrawableInnovationIdsForSettlement
 } from './game/innovationLogic.js';
 import {
-  createBornSurvivorName,
   getSurvivorDisplayName
 } from './game/survivorIdentity.js';
+import { createPendingNewborn, getBirthTraitCost } from './game/newbornLogic.js';
 import {
   awardHuntReturnMemories,
   canSpendMemories,
@@ -140,6 +145,57 @@ import RunSummaryScreen from './screens/RunSummaryScreen.jsx';
 import SettlementScreen from './screens/SettlementScreen.jsx';
 import SurvivorProgressScreen from './screens/SurvivorProgressScreen.jsx';
 import TitleScreen from './screens/TitleScreen.jsx';
+
+function applyChildTrait(survivor, rawTraitId, recordInnate = true) {
+  const traitId = normalizeChildTraitId(rawTraitId);
+  const trait = childTraits[traitId];
+  if (!trait) return survivor;
+
+  const next = {
+    ...survivor,
+    traits: [...new Set([...(survivor.traits || []), traitId])],
+    innateTraits: recordInnate
+      ? [...new Set([...(survivor.innateTraits || []), traitId])]
+      : survivor.innateTraits || [],
+    survival: survivor.survival + (trait.mechanicalEffect.startingSurvival || 0),
+    maxHp: survivor.maxHp + (trait.mechanicalEffect.maxHp || 0),
+    hp: survivor.hp + (trait.mechanicalEffect.maxHp || 0),
+    strength: survivor.strength + (trait.mechanicalEffect.strength || 0)
+  };
+  if (trait.mechanicalEffect.permanentPanic) {
+    next.permanentNegativeCards = [
+      ...next.permanentNegativeCards,
+      { cardId: 'panic', sourceType: 'curse', reason: trait.name }
+    ];
+  }
+  if (trait.mechanicalEffect.randomFightingArt) {
+    const availableArts = generalFightingArts.filter(art =>
+      !['hardened', 'scarTissue'].includes(art.id)
+    );
+    if (availableArts.length) {
+      return learnFightingArt(
+        next,
+        availableArts[Math.floor(Math.random() * availableArts.length)].id,
+        `${trait.name} birth trait`
+      );
+    }
+  }
+  return next;
+}
+
+function applyNewSurvivorSettlementBonuses(survivor, settlement) {
+  const next = { ...survivor };
+  if (settlement.builtMemoryInnovations.includes('sharedWarnings')) next.survival += 1;
+  if (settlement.innovationDeckState.builtInnovationIds.includes('oralTradition')) {
+    next.survival += 1;
+  }
+  if (settlement.innovationDeckState.builtInnovationIds.includes('cooking')) {
+    next.maxHp += 1;
+    next.hp += 1;
+  }
+  next.survival = Math.min(next.maxSurvival, next.survival);
+  return next;
+}
 
 const RANDOM_MONSTER_PARTS = ['bone', 'hide', 'sinew', 'organ', 'claw', 'strangeEye'];
 const DEADLY_EVENT_IDS = new Set(['strangeCarcass', 'blackRain', 'woundedBeast', 'lanternStorm']);
@@ -2804,58 +2860,22 @@ export default function App() {
         ...options,
         generationType: 'founder'
       });
+      let nextSurvivor = survivor;
       if (options?.useSpecialTrait && current.pendingSpecialChildTrait) {
-        const traitId = normalizeChildTraitId(current.pendingSpecialChildTrait);
-        const trait = childTraits[traitId];
-        if (trait) {
-          survivor.traits.push(traitId);
-          survivor.survival += trait.mechanicalEffect.startingSurvival || 0;
-          if (trait.mechanicalEffect.maxHp) {
-            survivor.maxHp += trait.mechanicalEffect.maxHp;
-            survivor.hp += trait.mechanicalEffect.maxHp;
-          }
-          survivor.strength += trait.mechanicalEffect.strength || 0;
-          if (trait.mechanicalEffect.permanentPanic) {
-            survivor.permanentNegativeCards.push({
-              cardId: 'panic',
-              sourceType: 'curse',
-              reason: trait.name
-            });
-          }
-          if (trait.mechanicalEffect.randomFightingArt) {
-            const options = generalFightingArts.filter(art =>
-              !['hardened', 'scarTissue'].includes(art.id)
-            );
-            if (options.length) {
-              survivor.fightingArts.push(
-                options[Math.floor(Math.random() * options.length)].id
-              );
-            }
-          }
-        }
+        nextSurvivor = applyChildTrait(nextSurvivor, current.pendingSpecialChildTrait);
       }
       if (
         options?.startingTrait &&
         startingTraits[options.startingTrait] &&
         current.builtMemoryInnovations.includes('trialNames')
       ) {
-        survivor.traits.push(options.startingTrait);
+        nextSurvivor.traits.push(options.startingTrait);
       }
-      if (current.builtMemoryInnovations.includes('sharedWarnings')) {
-        survivor.survival += 1;
-      }
-      if (current.innovationDeckState.builtInnovationIds.includes('oralTradition')) {
-        survivor.survival += 1;
-      }
-      if (current.innovationDeckState.builtInnovationIds.includes('cooking')) {
-        survivor.maxHp += 1;
-        survivor.hp += 1;
-      }
-      survivor.survival = Math.min(survivor.maxSurvival, survivor.survival);
+      nextSurvivor = applyNewSurvivorSettlementBonuses(nextSurvivor, current);
       return {
         ...current,
-        survivors: [...current.survivors, survivor],
-        activeSurvivorId: current.activeSurvivorId || survivor.id,
+        survivors: [...current.survivors, nextSurvivor],
+        activeSurvivorId: current.activeSurvivorId || nextSurvivor.id,
         pendingSpecialChildTrait: options?.useSpecialTrait ? null : current.pendingSpecialChildTrait
       };
     });
@@ -2864,6 +2884,7 @@ export default function App() {
   const handleAttemptIntimacy = (maleId, femaleId, options = {}) => {
     updateSettlement(current => {
       if (current.lastIntimacyLanternYear === current.lanternYear) return current;
+      if (current.pendingNewborn) return current;
       const male = current.survivors.find(survivor => survivor.id === maleId && survivor.alive !== false && survivor.gender === 'male');
       const female = current.survivors.find(survivor => survivor.id === femaleId && survivor.alive !== false && survivor.gender === 'female');
       if (!male || !female || current.population <= 0) return current;
@@ -2888,7 +2909,7 @@ export default function App() {
       let deathId = null;
       let severeWoundId = null;
       let pendingSpecialChildTrait = current.pendingSpecialChildTrait;
-      let newborns = [];
+      let pendingNewborn = current.pendingNewborn;
       let finalRollValue = Math.floor(roll * 10) + 1; // For history display
 
       if (roll < tragedyChance) {
@@ -2904,6 +2925,9 @@ export default function App() {
       } else if (roll >= 1 - projections.finalSuccessChance) {
         // Success
         const successRoll = Math.random();
+        const innateTraitIds = current.pendingSpecialChildTrait
+          ? [normalizeChildTraitId(current.pendingSpecialChildTrait)]
+          : [];
         if (successRoll < 0.2) {
           populationChange = 2;
           outcome = 'Twins were born. Population increased by 2.';
@@ -2911,39 +2935,22 @@ export default function App() {
           populationChange = 1;
           pendingSpecialChildTrait =
             childTraitList[Math.floor(Math.random() * childTraitList.length)].id;
+          innateTraitIds.push(normalizeChildTraitId(pendingSpecialChildTrait));
           outcome = 'A special child was born. Population increased by 1.';
         } else {
           populationChange = 1;
           outcome = 'New life. Population increased by 1.';
         }
-        newborns = Array.from({ length: populationChange }, () => {
-          const identity = createBornSurvivorName(male, female, {
-            primaryParent: female
-          });
-          const newborn = createSurvivor(
-            identity.displayName,
-            Math.random() < 0.5 ? 'female' : 'male',
-            identity
-          );
-          if (!current.innovationDeckState.builtInnovationIds.includes('trialNames')) {
-            return newborn;
-          }
-          const traitIds = Object.keys(startingTraits);
-          const traitId = traitIds[Math.floor(Math.random() * traitIds.length)];
-          const fightingArt = generalFightingArts[
-            Math.floor(Math.random() * generalFightingArts.length)
-          ];
-          const trainedNewborn = fightingArt
-            ? learnFightingArt(newborn, fightingArt.id, 'Trial Names birth teaching')
-            : newborn;
-          return {
-            ...trainedNewborn,
-            traits: traitId ? [...new Set([...(trainedNewborn.traits || []), traitId])] : []
-          };
+        pendingNewborn = createPendingNewborn(male, female, {
+          primaryParent: female,
+          innateTraitIds,
+          birthLanternYear: current.lanternYear,
+          remainingBirths: populationChange
         });
-        if (newborns.length) {
-          outcome += ` ${newborns.map(getSurvivorDisplayName).join(' and ')} joined the settlement.`;
-        }
+        pendingSpecialChildTrait = null;
+        outcome += populationChange > 1
+          ? ' Name each newborn before they join the roster.'
+          : ' Name the newborn before they join the roster.';
       }
 
       const deathSurvivor = current.survivors.find(survivor => survivor.id === deathId);
@@ -2965,20 +2972,21 @@ export default function App() {
         lanternYear: current.lanternYear,
         participantIds: [male.id, female.id],
         participantNames: [getSurvivorDisplayName(male), getSurvivorDisplayName(female)],
-        newbornIds: newborns.map(survivor => survivor.id),
-        newbornNames: newborns.map(getSurvivorDisplayName),
+        newbornIds: pendingNewborn ? [pendingNewborn.id] : [],
+        newbornNames: [],
         roll,
         outcome,
         populationChange,
-        memoryAwarded: newborns.length ? 1 : 0,
+        memoryAwarded: pendingNewborn ? 1 : 0,
         memorySpentOnMitigation: options.mitigateRisk ? 1 : 0,
         deathName: deathSurvivor?.name || null
       };
-      const intimacyMemorySettlement = newborns.length
+      if (pendingNewborn) pendingNewborn.historyTimestamp = historyEntry.timestamp;
+      const intimacyMemorySettlement = pendingNewborn
         ? gainMemories(memorySettlement, 1, {
           source: 'successful-intimacy',
           description: 'A successful intimacy created a lasting settlement memory.',
-          survivorIds: [male.id, female.id, ...newborns.map(survivor => survivor.id)]
+          survivorIds: [male.id, female.id]
         })
         : memorySettlement;
       const resolvedSettlement = deathSurvivor
@@ -2994,7 +3002,7 @@ export default function App() {
         ...resolvedSettlement,
         population: Math.max(0, current.population + populationChange),
         deadSurvivors: current.deadSurvivors + (deathId ? 1 : 0),
-        survivors: [...nextSurvivors, ...newborns],
+        survivors: nextSurvivors,
         activeSurvivorId: deathId === current.activeSurvivorId
           ? nextLiving[0]?.id || null
           : current.activeSurvivorId,
@@ -3017,7 +3025,121 @@ export default function App() {
         }, ...current.graveHistory] : current.graveHistory,
         lastIntimacyLanternYear: current.lanternYear,
         intimacyHistory: [historyEntry, ...current.intimacyHistory],
+        pendingNewborn,
         pendingSpecialChildTrait
+      };
+    });
+  };
+
+  const handleConfirmNewborn = details => {
+    updateSettlement(current => {
+      const pending = current.pendingNewborn;
+      if (!pending) return current;
+      const firstName = details.firstName?.trim();
+      const familyName = details.familyName?.trim();
+      if (!firstName || !familyName) return current;
+
+      const selectedBirthTraits = [...new Set(details.purchasedBirthTraits || [])]
+        .map(id => birthTraitOptions.find(option => option.id === id))
+        .filter(option =>
+          option &&
+          (
+            !option.mechanicalEffect?.childTraitId ||
+            !pending.innateTraitIds.includes(option.mechanicalEffect.childTraitId)
+          )
+        );
+      const memoryCost = getBirthTraitCost(selectedBirthTraits.map(trait => trait.id));
+      const paidSettlement = memoryCost
+        ? spendMemories(current, memoryCost, {
+          source: 'newborn-traits',
+          description: `Birth traits were chosen for ${firstName} ${familyName}.`,
+          survivorIds: pending.parentIds
+        })
+        : current;
+      if (!paidSettlement) return current;
+
+      const parents = pending.parentIds
+        .map(parentId => current.survivors.find(survivor => survivor.id === parentId))
+        .filter(Boolean);
+      let newborn = createSurvivor(`${firstName} ${familyName}`, details.gender, {
+        firstName,
+        familyName,
+        appearance: details.appearance,
+        generationType: 'born',
+        generation: pending.generation,
+        parentIds: pending.parentIds,
+        parentNames: pending.parentNames,
+        birthLanternYear: pending.birthLanternYear,
+        bornFromIntimacy: true,
+        innateTraits: pending.innateTraitIds,
+        purchasedBirthTraits: selectedBirthTraits.map(trait => trait.id),
+        memorySpentAtBirth: memoryCost,
+        familyOrigin: parents.some(parent => parent.familyName === familyName)
+          ? `Inherited from ${getSurvivorDisplayName(
+            parents.find(parent => parent.familyName === familyName)
+          )}`
+          : `Founded by the child of ${pending.parentNames.join(' and ')}`
+      });
+      newborn.id = pending.id;
+      pending.innateTraitIds.forEach(traitId => {
+        newborn = applyChildTrait(newborn, traitId);
+      });
+      selectedBirthTraits.forEach(option => {
+        const effect = option.mechanicalEffect || {};
+        if (effect.startingSurvival) newborn.survival += effect.startingSurvival;
+        if (effect.childTraitId) {
+          newborn = applyChildTrait(newborn, effect.childTraitId, false);
+        }
+        if (effect.startingTraitId && startingTraits[effect.startingTraitId]) {
+          newborn.traits = [...new Set([...newborn.traits, effect.startingTraitId])];
+        }
+        if (effect.familyLesson) {
+          newborn.history = [
+            ...newborn.history,
+            `Family lesson inherited from ${pending.parentNames.join(' and ')}.`
+          ];
+        }
+      });
+
+      if (current.innovationDeckState.builtInnovationIds.includes('trialNames')) {
+        const traitIds = Object.keys(startingTraits);
+        const traitId = traitIds[Math.floor(Math.random() * traitIds.length)];
+        const fightingArt = generalFightingArts[
+          Math.floor(Math.random() * generalFightingArts.length)
+        ];
+        if (traitId) newborn.traits = [...new Set([...newborn.traits, traitId])];
+        if (fightingArt) {
+          newborn = learnFightingArt(newborn, fightingArt.id, 'Trial Names birth teaching');
+        }
+      }
+      newborn = applyNewSurvivorSettlementBonuses(newborn, current);
+
+      const remainingBirths = pending.remainingBirths - 1;
+      let nextPending = null;
+      if (remainingBirths > 0) {
+        nextPending = createPendingNewborn(parents[0], parents[1], {
+          primaryParent: parents[1],
+          innateTraitIds: pending.innateTraitIds,
+          birthLanternYear: pending.birthLanternYear,
+          remainingBirths,
+          historyTimestamp: pending.historyTimestamp
+        });
+      }
+
+      return {
+        ...paidSettlement,
+        survivors: [...current.survivors, newborn],
+        activeSurvivorId: current.activeSurvivorId || newborn.id,
+        pendingNewborn: nextPending,
+        intimacyHistory: current.intimacyHistory.map(entry =>
+          entry.timestamp === pending.historyTimestamp
+            ? {
+              ...entry,
+              newbornIds: [...new Set([...(entry.newbornIds || []), newborn.id])],
+              newbornNames: [...(entry.newbornNames || []), getSurvivorDisplayName(newborn)]
+            }
+            : entry
+        )
       };
     });
   };
@@ -3060,6 +3182,7 @@ export default function App() {
             onSelectSurvivor={survivorId => updateSettlement(current => ({ ...current, activeSurvivorId: survivorId }))}
             onStartHunt={prepareHunt}
             onAttemptIntimacy={handleAttemptIntimacy}
+            onConfirmNewborn={handleConfirmNewborn}
             onResolveDeath={handleResolveDeath}
             onRestSurvivor={handleRestSurvivor}
             onTreatInjury={handleTreatInjury}

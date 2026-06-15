@@ -23,7 +23,9 @@ function hashText(value) {
 }
 
 function getStoredGivenName(survivor = {}) {
-  return cleanName(survivor.givenName) || cleanName(survivor.name);
+  return cleanName(survivor.firstName) ||
+    cleanName(survivor.givenName) ||
+    cleanName(survivor.name);
 }
 
 export function getSurvivorDisplayName(survivor = {}) {
@@ -41,7 +43,8 @@ export function normalizeSurvivorIdentity(survivor = {}) {
   const hasGenerationMetadata = ['founder', 'born', 'legacy'].includes(survivor.generationType);
   const generationType = hasGenerationMetadata ? survivor.generationType : 'legacy';
   const familyName = cleanName(survivor.familyName) || null;
-  const givenName = cleanName(survivor.givenName) ||
+  const firstName = cleanName(survivor.firstName) ||
+    cleanName(survivor.givenName) ||
     (generationType === 'born' && familyName
       ? cleanName(survivor.name).replace(new RegExp(`\\s+${familyName}$`, 'i'), '')
       : cleanName(survivor.name)) ||
@@ -49,11 +52,30 @@ export function normalizeSurvivorIdentity(survivor = {}) {
   const normalized = {
     ...survivor,
     generationType,
-    givenName,
+    firstName,
+    givenName: firstName,
     familyName,
+    generation: Math.max(
+      1,
+      Number(survivor.generation) || (generationType === 'born' ? 2 : 1)
+    ),
     parentIds: Array.isArray(survivor.parentIds)
       ? survivor.parentIds.filter(Boolean).slice(0, 2)
-      : []
+      : [],
+    parentNames: Array.isArray(survivor.parentNames)
+      ? survivor.parentNames.filter(Boolean).slice(0, 2)
+      : [],
+    birthLanternYear: Number.isFinite(survivor.birthLanternYear)
+      ? survivor.birthLanternYear
+      : null,
+    bornFromIntimacy: Boolean(survivor.bornFromIntimacy || generationType === 'born'),
+    innateTraits: Array.isArray(survivor.innateTraits)
+      ? [...new Set(survivor.innateTraits.filter(Boolean))]
+      : [],
+    purchasedBirthTraits: Array.isArray(survivor.purchasedBirthTraits)
+      ? [...new Set(survivor.purchasedBirthTraits.filter(Boolean))]
+      : [],
+    memorySpentAtBirth: Math.max(0, Number(survivor.memorySpentAtBirth) || 0)
   };
 
   return {
@@ -79,11 +101,17 @@ export function createBornSurvivorName(parentA, parentB, options = {}) {
   ];
 
   return {
+    firstName: givenName,
     givenName,
     familyName,
     displayName: `${givenName} ${familyName}`,
     generationType: 'born',
     parentIds: [parentA?.id, parentB?.id].filter(Boolean),
+    parentNames: [getSurvivorDisplayName(parentA), getSurvivorDisplayName(parentB)],
+    generation: Math.max(
+      Number(parentA?.generation) || 1,
+      Number(parentB?.generation) || 1
+    ) + 1,
     familyOrigin: inheritedFamilyName
       ? `Inherited from ${getSurvivorDisplayName(primaryParent?.familyName
         ? primaryParent

@@ -96,11 +96,19 @@ export function createGearInstance(equipmentId) {
 
 export function createSurvivor(name = 'Nameless Survivor', gender = 'other', options = {}) {
   const identity = normalizeSurvivorIdentity({
-    name: name?.trim() || options.givenName || 'Nameless Survivor',
+    name: name?.trim() || options.firstName || options.givenName || 'Nameless Survivor',
     generationType: options.generationType || 'founder',
-    givenName: options.givenName || name,
+    firstName: options.firstName || options.givenName || name,
+    givenName: options.firstName || options.givenName || name,
     familyName: options.familyName || null,
+    generation: options.generation,
     parentIds: options.parentIds || [],
+    parentNames: options.parentNames || [],
+    birthLanternYear: options.birthLanternYear,
+    bornFromIntimacy: options.bornFromIntimacy,
+    innateTraits: options.innateTraits || [],
+    purchasedBirthTraits: options.purchasedBirthTraits || [],
+    memorySpentAtBirth: options.memorySpentAtBirth,
     familyOrigin: options.familyOrigin || null
   });
   return {
@@ -185,6 +193,7 @@ export const defaultSettlement = {
     injuryGained: false,
     disorderGained: false
   },
+  pendingNewborn: null,
   pendingSpecialChildTrait: null,
   timelineHistory: [],
   lastTimelineEvent: null,
@@ -482,6 +491,33 @@ export function normalizeSettlement(data = {}) {
         data.graveHistory?.some(grave => grave.disorders?.length)
       )
     },
+    pendingNewborn: data.pendingNewborn && typeof data.pendingNewborn === 'object'
+      ? {
+        id: data.pendingNewborn.id || `newborn-${Date.now()}`,
+        parentIds: Array.isArray(data.pendingNewborn.parentIds)
+          ? data.pendingNewborn.parentIds.filter(Boolean).slice(0, 2)
+          : [],
+        parentNames: Array.isArray(data.pendingNewborn.parentNames)
+          ? data.pendingNewborn.parentNames.filter(Boolean).slice(0, 2)
+          : [],
+        suggestedFamilyNames: Array.isArray(data.pendingNewborn.suggestedFamilyNames)
+          ? [...new Set(data.pendingNewborn.suggestedFamilyNames.filter(Boolean))]
+          : [],
+        suggestedFirstName: data.pendingNewborn.suggestedFirstName || '',
+        innateTraitIds: Array.isArray(data.pendingNewborn.innateTraitIds)
+          ? data.pendingNewborn.innateTraitIds
+              .map(id => CHILD_TRAIT_ALIASES[id] || id)
+              .filter(Boolean)
+          : [],
+        birthLanternYear: Number.isFinite(data.pendingNewborn.birthLanternYear)
+          ? data.pendingNewborn.birthLanternYear
+          : Number(data.lanternYear) || 0,
+        generation: Math.max(1, Number(data.pendingNewborn.generation) || 2),
+        remainingBirths: Math.max(1, Number(data.pendingNewborn.remainingBirths) || 1),
+        source: 'intimacy',
+        historyTimestamp: data.pendingNewborn.historyTimestamp || null
+      }
+      : null,
     pendingSpecialChildTrait:
       CHILD_TRAIT_ALIASES[data.pendingSpecialChildTrait] ||
       data.pendingSpecialChildTrait ||

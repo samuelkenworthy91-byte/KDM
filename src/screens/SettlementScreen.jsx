@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { cards, starterCardIds, trainingCardIds } from '../data/cards.js';
-import { childTraits, normalizeChildTraitId } from '../data/childTraits.js';
+import {
+  birthTraitOptions,
+  childTraits,
+  normalizeChildTraitId
+} from '../data/childTraits.js';
 import {
   equipmentCatalogList,
   equipmentList,
@@ -50,6 +54,7 @@ import {
 } from '../utils/gearNormalization.js';
 import { calculateIntimacyProjections } from '../game/eventLogic.js';
 import { getPersonalCardId } from '../game/deckLogic.js';
+import { getBirthTraitCost } from '../game/newbornLogic.js';
 import {
   EARLY_FORGETTING_COST,
   getCardForgetEligibility,
@@ -272,6 +277,15 @@ function SurvivorCard({
     <article className={`item-card ${active ? 'built' : ''}`}>
       <h4>{getSurvivorDisplayName(survivor)}</h4>
       <p className="muted-text survivor-identity-note">{getSurvivorGenerationText(survivor)}</p>
+      {survivor.bornFromIntimacy && (
+        <p className="muted-text">
+          Born in Lantern Year {survivor.birthLanternYear ?? 'Unknown / Legacy'} to{' '}
+          {survivor.parentNames?.join(' and ') || 'Unknown / Legacy'}.
+          {survivor.memorySpentAtBirth
+            ? ` ${survivor.memorySpentAtBirth} Memory was spent on birth traits.`
+            : ''}
+        </p>
+      )}
       <p>
         {survivor.gender || 'Unspecified'} | HP {survivor.hp}/{survivor.maxHp} | Survival{' '}
         {survivor.survival || 0}/{survivor.maxSurvival || 3}
@@ -658,6 +672,7 @@ export default function SettlementScreen({
   onSelectSurvivor,
   onStartHunt,
   onAttemptIntimacy,
+  onConfirmNewborn,
   onResolveDeath,
   onRestSurvivor,
   onTreatInjury,
@@ -682,6 +697,11 @@ export default function SettlementScreen({
   const [spendMemoryOnIntimacy, setSpendMemoryOnIntimacy] = useState(false);
   const [timelineNomineeId, setTimelineNomineeId] = useState('');
   const [showDeckInspection, setShowDeckInspection] = useState(false);
+  const [newbornFirstName, setNewbornFirstName] = useState('');
+  const [newbornFamilyName, setNewbornFamilyName] = useState('');
+  const [newbornGender, setNewbornGender] = useState('other');
+  const [newbornAppearance, setNewbornAppearance] = useState('');
+  const [newbornBirthTraits, setNewbornBirthTraits] = useState([]);
   const [activeActionTab, setActiveActionTab] = useState('recovery');
   const [actionSurvivorId, setActionSurvivorId] = useState('');
   const [actionCardId, setActionCardId] = useState('');
@@ -851,6 +871,17 @@ export default function SettlementScreen({
       })
   );
   const hasInjury = livingSurvivors.some(survivor => survivor.injuries.length > 0);
+  const newbornTraitCost = getBirthTraitCost(newbornBirthTraits);
+
+  useEffect(() => {
+    if (!settlement.pendingNewborn) return;
+    setTab('population');
+    setNewbornFirstName(settlement.pendingNewborn.suggestedFirstName || '');
+    setNewbornFamilyName(settlement.pendingNewborn.suggestedFamilyNames?.[0] || '');
+    setNewbornGender('other');
+    setNewbornAppearance('');
+    setNewbornBirthTraits([]);
+  }, [settlement.pendingNewborn?.id]);
 
   useEffect(() => {
     if (selectedActionSurvivor && actionSurvivorId !== selectedActionSurvivor.id) {
@@ -1774,6 +1805,140 @@ export default function SettlementScreen({
           <p>Population: {settlement.population}</p>
           <p>Lantern Year: {settlement.lanternYear}</p>
 
+          {settlement.pendingNewborn && (
+            <section className="item-card newborn-panel" role="dialog" aria-labelledby="newborn-title">
+              <p className="eyebrow">Birth Pending</p>
+              <h3 id="newborn-title">
+                Name the Newborn
+                {settlement.pendingNewborn.remainingBirths > 1
+                  ? ` (${settlement.pendingNewborn.remainingBirths} twins still waiting)`
+                  : ''}
+              </h3>
+              <p>
+                Parents: {settlement.pendingNewborn.parentNames.join(' and ') || 'Unknown / Legacy'}
+              </p>
+              <p>
+                Birth year: {settlement.pendingNewborn.birthLanternYear} | Generation:{' '}
+                {settlement.pendingNewborn.generation}
+              </p>
+              <div className="survivor-form">
+                <label className="field-label">
+                  First name
+                  <input
+                    value={newbornFirstName}
+                    onChange={event => setNewbornFirstName(event.target.value)}
+                    placeholder="First name"
+                  />
+                </label>
+                <label className="field-label">
+                  Family name
+                  <input
+                    value={newbornFamilyName}
+                    onChange={event => setNewbornFamilyName(event.target.value)}
+                    placeholder="Family name"
+                    list="suggested-family-names"
+                  />
+                  <datalist id="suggested-family-names">
+                    {settlement.pendingNewborn.suggestedFamilyNames.map(familyName => (
+                      <option value={familyName} key={familyName} />
+                    ))}
+                  </datalist>
+                </label>
+                <label className="field-label">
+                  Gender
+                  <select
+                    value={newbornGender}
+                    onChange={event => setNewbornGender(event.target.value)}
+                  >
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <label className="field-label">
+                  Appearance note (optional)
+                  <input
+                    value={newbornAppearance}
+                    onChange={event => setNewbornAppearance(event.target.value)}
+                    placeholder="Distinctive appearance"
+                  />
+                </label>
+              </div>
+
+              <h4>Innate Birth Traits</h4>
+              {settlement.pendingNewborn.innateTraitIds.length ? (
+                settlement.pendingNewborn.innateTraitIds.map(rawTraitId => {
+                  const traitId = normalizeChildTraitId(rawTraitId);
+                  const trait = childTraits[traitId];
+                  return (
+                    <article className="item-card built" key={rawTraitId}>
+                      <strong>{trait?.name || 'Unknown / Legacy'}</strong>
+                      <p>{trait?.description || 'This older birth trait has no current description.'}</p>
+                      <p className="effect-text">
+                        {formatModifierEffect(trait?.effectText || trait?.mechanicalEffect)}
+                      </p>
+                    </article>
+                  );
+                })
+              ) : <p className="muted-text">No innate special trait.</p>}
+
+              <h4>Optional Birth Traits</h4>
+              <p>
+                Available Memory: {memoryBalance} | Selected cost: {newbornTraitCost}
+              </p>
+              <div className="item-grid">
+                {birthTraitOptions.map(option => {
+                  const selected = newbornBirthTraits.includes(option.id);
+                  const alreadyInnate = option.mechanicalEffect?.childTraitId &&
+                    settlement.pendingNewborn.innateTraitIds.includes(
+                      option.mechanicalEffect.childTraitId
+                    );
+                  return (
+                    <label className="item-card" key={option.id}>
+                      <span>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={alreadyInnate}
+                          onChange={() => setNewbornBirthTraits(current => selected
+                            ? current.filter(id => id !== option.id)
+                            : [...current, option.id]
+                          )}
+                        />
+                        <strong>{option.name} ({option.costMemory} Memory)</strong>
+                      </span>
+                      <p>{option.description}</p>
+                      {alreadyInnate && <p className="muted-text">Already granted as an innate trait.</p>}
+                    </label>
+                  );
+                })}
+              </div>
+              {newbornTraitCost > memoryBalance && (
+                <p className="missing">Not enough Memory for the selected birth traits.</p>
+              )}
+              {!newbornFirstName.trim() && <p className="missing">A first name is required.</p>}
+              {!newbornFamilyName.trim() && <p className="missing">A family name is required.</p>}
+              <button
+                type="button"
+                className="primary-action"
+                disabled={
+                  !newbornFirstName.trim() ||
+                  !newbornFamilyName.trim() ||
+                  newbornTraitCost > memoryBalance
+                }
+                onClick={() => onConfirmNewborn({
+                  firstName: newbornFirstName,
+                  familyName: newbornFamilyName,
+                  gender: newbornGender,
+                  appearance: newbornAppearance,
+                  purchasedBirthTraits: newbornBirthTraits
+                })}
+              >
+                Add {newbornFirstName.trim() || 'Newborn'} {newbornFamilyName.trim()} to the Roster
+              </button>
+            </section>
+          )}
+
           {(() => {
             const projections = calculateIntimacyProjections(settlement, innovationCards);
             return (
@@ -1817,6 +1982,9 @@ export default function SettlementScreen({
           {intimacyUsedThisYear && <p className="missing">Unavailable: intimacy was already attempted this Lantern Year.</p>}
           {!livingMales.length && <p className="missing">Unavailable: no living male survivor.</p>}
           {!livingFemales.length && <p className="missing">Unavailable: no living female survivor.</p>}
+          {settlement.pendingNewborn && (
+            <p className="missing">Name the pending newborn before attempting intimacy again.</p>
+          )}
           <label className="field-label" htmlFor="intimacy-male">Male participant</label>
           <select id="intimacy-male" value={intimacyMaleId} onChange={event => setIntimacyMaleId(event.target.value)}>
             <option value="">Choose survivor</option>
@@ -1829,7 +1997,12 @@ export default function SettlementScreen({
           </select>
           <button
             type="button"
-            disabled={intimacyUsedThisYear || !validMaleParticipant || !validFemaleParticipant}
+            disabled={
+              intimacyUsedThisYear ||
+              Boolean(settlement.pendingNewborn) ||
+              !validMaleParticipant ||
+              !validFemaleParticipant
+            }
             onClick={() => {
               onAttemptIntimacy(intimacyMaleId, intimacyFemaleId, {
                 mitigateRisk: spendMemoryOnIntimacy
