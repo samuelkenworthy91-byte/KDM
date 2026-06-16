@@ -1,4 +1,4 @@
-import { gearCards } from './gearCards.js';
+import { legacyCompatibilityGearCards } from './gearCards.js';
 import { monsterRewardCards } from './monsterSurvivorRewards.js';
 import { fightingArtCards } from './fightingArtCards.js';
 import { overhaulCards } from './overhaul/cardRegistry.js';
@@ -58,34 +58,6 @@ export const cards = {
     effects: []
   },
 
-  hack: card('hack', 'Hack', 1, 'Deal 5 damage.', [{ type: 'damage', amount: 5 }], { type: 'attack' }),
-  carve: card('carve', 'Carve', 1, 'Deal 3 damage. Draw 1 card.', [{ type: 'damage', amount: 3 }, { type: 'draw', amount: 1 }], { type: 'attack' }),
-  skullCrack: card('skullCrack', 'Skull Crack', 1, 'Remove 4 monster block, then deal 4 damage.', [{ type: 'removeMonsterBlock', amount: 4 }, { type: 'damage', amount: 4 }], { type: 'attack', tags: ['breaker', 'headHunter'] }),
-  guardBreak: card('guardBreak', 'Guard Break', 1, 'Remove all monster block. Exhaust.', [{ type: 'removeAllMonsterBlock' }], { exhaust: true }),
-  boneDart: card('boneDart', 'Bone Dart', 0, 'Deal 2 damage. Draw 1. Exhaust.', [{ type: 'damage', amount: 2 }, { type: 'draw', amount: 1 }], { type: 'attack', exhaust: true }),
-  quickToss: card('quickToss', 'Quick Toss', 1, 'Deal 3 damage twice.', [{ type: 'damage', amount: 3 }, { type: 'damage', amount: 3 }], { type: 'attack' }),
-  brace: card('brace', 'Brace', 1, 'Gain 7 block.', [{ type: 'block', amount: 7 }]),
-  duckAndRoll: card('duckAndRoll', 'Duck and Roll', 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], { exhaust: true }),
-  rawhideDodge: card('rawhideDodge', 'Rawhide Dodge', 0, 'Gain 6 block. Exhaust.', [{ type: 'block', amount: 6 }], { exhaust: true }),
-  readTheBeast: card('readTheBeast', 'Read the Beast', 0, 'Gain 1 survival. Draw 1 card. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'draw', amount: 1 }], { exhaust: true }),
-  slipAway: card('slipAway', 'Slip Away', 0, 'Gain 4 block. Draw 1.', [{ type: 'block', amount: 4 }, { type: 'draw', amount: 1 }]),
-  clawStrike: card('clawStrike', 'Claw Strike', 1, 'Deal 4 damage. Your next attack deals +1.', [{ type: 'damage', amount: 4 }, { type: 'nextAttackBonus', amount: 1 }], { type: 'attack' }),
-  ripOpen: card('ripOpen', 'Rip Open', 1, 'Deal 6 damage.', [{ type: 'damage', amount: 6 }], { type: 'attack' }),
-  bloodRush: card('bloodRush', 'Blood Rush', 0, 'Gain 1 energy. Draw 1.', [{ type: 'energy', amount: 1 }, { type: 'draw', amount: 1 }]),
-  strangeGlimpse: card('strangeGlimpse', 'Strange Glimpse', 0, 'Draw 1. Exhaust.', [{ type: 'draw', amount: 1 }], { exhaust: true }),
-  seeThePattern: card('seeThePattern', 'See the Pattern', 0, 'Draw 2. Add 1 Panic to discard. Exhaust.', [{ type: 'draw', amount: 2 }, { type: 'addPanic', amount: 1 }], { exhaust: true }),
-  boneFlurry: card('boneFlurry', 'Bone Flurry', 2, 'Deal 3 damage three times.', [{ type: 'damage', amount: 3 }, { type: 'damage', amount: 3 }, { type: 'damage', amount: 3 }], { type: 'attack' }),
-  goringSwing: card('goringSwing', 'Goring Swing', 2, 'Deal 9 damage. Discard 1 other card if possible.', [{ type: 'damage', amount: 9 }, { type: 'discard', amount: 1 }], { type: 'attack' }),
-  braceMaul: card('braceMaul', 'Brace Maul', 1, 'Gain 7 block. Draw 1 card.', [{ type: 'block', amount: 7 }, { type: 'draw', amount: 1 }]),
-  savageFollowUp: card('savageFollowUp', 'Savage Follow-Up', 1, 'Deal 5 damage. Your next attack deals +1.', [{ type: 'damage', amount: 5 }, { type: 'nextAttackBonus', amount: 1 }], { type: 'attack' }),
-  hornShot: card('hornShot', 'Horn Shot', 1, 'Deal 5 damage. Draw 1.', [{ type: 'damage', amount: 5 }, { type: 'draw', amount: 1 }], { type: 'attack' }),
-  trample: card('trample', 'Trample', 2, 'Remove 3 block and deal 7 damage.', [{ type: 'removeMonsterBlock', amount: 3 }, { type: 'damage', amount: 7 }], { type: 'attack' }),
-  settle: card('settle', 'Settle', 0, 'Remove one Panic from discard. Draw 1.', [{ type: 'removePanic', amount: 1 }, { type: 'draw', amount: 1 }]),
-  ashCycle: card('ashCycle', 'Ash Cycle', 0, 'Draw 2, then discard 1.', [{ type: 'draw', amount: 2 }, { type: 'discard', amount: 1 }]),
-  delayedCut: card('delayedCut', 'Delayed Cut', 1, 'Deal 5 damage. Gain 1 energy.', [{ type: 'damage', amount: 5 }, { type: 'energy', amount: 1 }], { type: 'attack' }),
-  memoryFilter: card('memoryFilter', 'Memory Filter', 0, 'Draw 2. Exhaust.', [{ type: 'draw', amount: 2 }], { exhaust: true }),
-  lanternFocus: card('lanternFocus', 'Lantern Focus', 0, 'Gain 1 survival. Draw 1. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'draw', amount: 1 }], { exhaust: true }),
-  pinningShot: card('pinningShot', 'Pinning Shot', 1, 'Remove 3 monster block, then deal 3 damage.', [{ type: 'removeMonsterBlock', amount: 3 }, { type: 'damage', amount: 3 }, { type: 'markMonster' }], { type: 'attack', tags: ['ranged', 'precise', 'limbHunter'] }),
   measuredStrike: card(
     'measuredStrike',
     'Measured Strike',
@@ -150,45 +122,52 @@ export const cards = {
 
 Object.assign(cards, monsterRewardCards, fightingArtCards);
 
-export const legacyCompatibilityCardIds = [
-  'hack',
-  'carve',
-  'skullCrack',
-  'guardBreak',
-  'boneDart',
-  'quickToss',
-  'brace',
-  'duckAndRoll',
-  'rawhideDodge',
-  'readTheBeast',
-  'slipAway',
-  'clawStrike',
-  'ripOpen',
-  'bloodRush',
-  'strangeGlimpse',
-  'seeThePattern',
-  'boneFlurry',
-  'goringSwing',
-  'braceMaul',
-  'savageFollowUp',
-  'hornShot',
-  'trample',
-  'settle',
-  'ashCycle',
-  'delayedCut',
-  'memoryFilter',
-  'lanternFocus',
-  'pinningShot'
-];
+const legacyPlaceholderCards = {
+  hack: card('hack', 'Hack', 1, 'Deal 5 damage.', [{ type: 'damage', amount: 5 }], { type: 'attack' }),
+  carve: card('carve', 'Carve', 1, 'Deal 3 damage. Draw 1 card.', [{ type: 'damage', amount: 3 }, { type: 'draw', amount: 1 }], { type: 'attack' }),
+  skullCrack: card('skullCrack', 'Skull Crack', 1, 'Remove 4 monster block, then deal 4 damage.', [{ type: 'removeMonsterBlock', amount: 4 }, { type: 'damage', amount: 4 }], { type: 'attack', tags: ['breaker', 'headHunter'] }),
+  guardBreak: card('guardBreak', 'Guard Break', 1, 'Remove all monster block. Exhaust.', [{ type: 'removeAllMonsterBlock' }], { exhaust: true }),
+  boneDart: card('boneDart', 'Bone Dart', 0, 'Deal 2 damage. Draw 1. Exhaust.', [{ type: 'damage', amount: 2 }, { type: 'draw', amount: 1 }], { type: 'attack', exhaust: true }),
+  quickToss: card('quickToss', 'Quick Toss', 1, 'Deal 3 damage twice.', [{ type: 'damage', amount: 3 }, { type: 'damage', amount: 3 }], { type: 'attack' }),
+  brace: card('brace', 'Brace', 1, 'Gain 7 block.', [{ type: 'block', amount: 7 }]),
+  duckAndRoll: card('duckAndRoll', 'Duck and Roll', 0, 'Gain 3 block. Exhaust.', [{ type: 'block', amount: 3 }], { exhaust: true }),
+  rawhideDodge: card('rawhideDodge', 'Rawhide Dodge', 0, 'Gain 6 block. Exhaust.', [{ type: 'block', amount: 6 }], { exhaust: true }),
+  readTheBeast: card('readTheBeast', 'Read the Beast', 0, 'Gain 1 survival. Draw 1 card. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'draw', amount: 1 }], { exhaust: true }),
+  slipAway: card('slipAway', 'Slip Away', 0, 'Gain 4 block. Draw 1.', [{ type: 'block', amount: 4 }, { type: 'draw', amount: 1 }]),
+  clawStrike: card('clawStrike', 'Claw Strike', 1, 'Deal 4 damage. Your next attack deals +1.', [{ type: 'damage', amount: 4 }, { type: 'nextAttackBonus', amount: 1 }], { type: 'attack' }),
+  ripOpen: card('ripOpen', 'Rip Open', 1, 'Deal 6 damage.', [{ type: 'damage', amount: 6 }], { type: 'attack' }),
+  bloodRush: card('bloodRush', 'Blood Rush', 0, 'Gain 1 energy. Draw 1.', [{ type: 'energy', amount: 1 }, { type: 'draw', amount: 1 }]),
+  strangeGlimpse: card('strangeGlimpse', 'Strange Glimpse', 0, 'Draw 1. Exhaust.', [{ type: 'draw', amount: 1 }], { exhaust: true }),
+  seeThePattern: card('seeThePattern', 'See the Pattern', 0, 'Draw 2. Add 1 Panic to discard. Exhaust.', [{ type: 'draw', amount: 2 }, { type: 'addPanic', amount: 1 }], { exhaust: true }),
+  boneFlurry: card('boneFlurry', 'Bone Flurry', 2, 'Deal 3 damage three times.', [{ type: 'damage', amount: 3 }, { type: 'damage', amount: 3 }, { type: 'damage', amount: 3 }], { type: 'attack' }),
+  goringSwing: card('goringSwing', 'Goring Swing', 2, 'Deal 9 damage. Discard 1 other card if possible.', [{ type: 'damage', amount: 9 }, { type: 'discard', amount: 1 }], { type: 'attack' }),
+  braceMaul: card('braceMaul', 'Brace Maul', 1, 'Gain 7 block. Draw 1 card.', [{ type: 'block', amount: 7 }, { type: 'draw', amount: 1 }]),
+  savageFollowUp: card('savageFollowUp', 'Savage Follow-Up', 1, 'Deal 5 damage. Your next attack deals +1.', [{ type: 'damage', amount: 5 }, { type: 'nextAttackBonus', amount: 1 }], { type: 'attack' }),
+  hornShot: card('hornShot', 'Horn Shot', 1, 'Deal 5 damage. Draw 1.', [{ type: 'damage', amount: 5 }, { type: 'draw', amount: 1 }], { type: 'attack' }),
+  trample: card('trample', 'Trample', 2, 'Remove 3 block and deal 7 damage.', [{ type: 'removeMonsterBlock', amount: 3 }, { type: 'damage', amount: 7 }], { type: 'attack' }),
+  settle: card('settle', 'Settle', 0, 'Remove one Panic from discard. Draw 1.', [{ type: 'removePanic', amount: 1 }, { type: 'draw', amount: 1 }]),
+  ashCycle: card('ashCycle', 'Ash Cycle', 0, 'Draw 2, then discard 1.', [{ type: 'draw', amount: 2 }, { type: 'discard', amount: 1 }]),
+  delayedCut: card('delayedCut', 'Delayed Cut', 1, 'Deal 5 damage. Gain 1 energy.', [{ type: 'damage', amount: 5 }, { type: 'energy', amount: 1 }], { type: 'attack' }),
+  memoryFilter: card('memoryFilter', 'Memory Filter', 0, 'Draw 2. Exhaust.', [{ type: 'draw', amount: 2 }], { exhaust: true }),
+  lanternFocus: card('lanternFocus', 'Lantern Focus', 0, 'Gain 1 survival. Draw 1. Exhaust.', [{ type: 'survival', amount: 1 }, { type: 'draw', amount: 1 }], { exhaust: true }),
+  pinningShot: card('pinningShot', 'Pinning Shot', 1, 'Remove 3 monster block, then deal 3 damage.', [{ type: 'removeMonsterBlock', amount: 3 }, { type: 'damage', amount: 3 }, { type: 'markMonster' }], { type: 'attack', tags: ['ranged', 'precise', 'limbHunter'] })
+};
 
-legacyCompatibilityCardIds.forEach(cardId => {
-  if (!cards[cardId]) return;
-  cards[cardId] = {
-    ...cards[cardId],
-    sourceType: 'legacyCompatibility',
-    legacyCompatibility: true
-  };
-});
+export const legacyCompatibilityCards = Object.fromEntries(
+  Object.entries({
+    ...legacyPlaceholderCards,
+    ...legacyCompatibilityGearCards
+  }).map(([cardId, legacyCard]) => [
+    cardId,
+    {
+      ...legacyCard,
+      sourceType: 'legacyCompatibility',
+      legacyCompatibility: true
+    }
+  ])
+);
+
+export const legacyCompatibilityCardIds = Object.keys(legacyCompatibilityCards);
 
 Object.keys(cards).forEach(cardId => {
   const current = cards[cardId];

@@ -1,5 +1,5 @@
 import { cards } from './cards.js';
-import { gearCardPackages } from './gearCards.js';
+import { legacyCompatibilityGearCardPackages } from './gearCards.js';
 import {
   explicitGearKeywords,
   getGearMetadata,
@@ -29,7 +29,7 @@ const LOCATION_QUARRIES = {
 
 function recipe(id, name, buildingId, cost, description, cardPackage, passiveText, slot = 'gear', tags = []) {
   const quarryId = LOCATION_QUARRIES[buildingId] || null;
-  const resolvedCardPackage = gearCardPackages[id] || cardPackage;
+  const resolvedCardPackage = legacyCompatibilityGearCardPackages[id] || cardPackage;
   return {
     id,
     name,
@@ -50,8 +50,18 @@ function recipe(id, name, buildingId, cost, description, cardPackage, passiveTex
   };
 }
 
+export const legacyCompatibilityEquipmentIds = new Set([
+  'boneBlade',
+  'boneHammer',
+  'hideWraps',
+  'rawhideVest',
+  'rawhideBoots',
+  'monsterGrease',
+  'clawCharm'
+]);
+
 const currentEquipment = Object.fromEntries(
-  gearRegistry.map(item => [
+  gearRegistry.filter(item => !legacyCompatibilityEquipmentIds.has(item.id)).map(item => [
     item.id,
     {
       ...item,

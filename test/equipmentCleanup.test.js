@@ -4,15 +4,26 @@ import test from 'node:test';
 
 import gearSource from '../gear_master_overhaul.json' with { type: 'json' };
 import deckCardSource from '../all_deck_cards.json' with { type: 'json' };
-import { cards, legacyCompatibilityCardIds } from '../src/data/cards.js';
+import {
+  cards,
+  legacyCompatibilityCardIds,
+  legacyCompatibilityCards
+} from '../src/data/cards.js';
+import {
+  gearCardPackages,
+  legacyCompatibilityGearCardPackages
+} from '../src/data/gearCards.js';
+import { gearRegistry } from '../src/data/overhaul/gearRegistry.js';
 import {
   equipment,
   equipmentList,
   getEquipment,
+  legacyCompatibilityEquipment,
   validateEquipmentCardPackages,
   validateEquipmentIds
 } from '../src/data/equipment.js';
 import { canCraft } from '../src/game/craftingLogic.js';
+import { buildRunDeck } from '../src/game/deckLogic.js';
 import {
   createSurvivor,
   defaultSettlement,
@@ -28,6 +39,7 @@ const legacyRecipeIds = [
   'boneHammer',
   'hideWraps',
   'rawhideVest',
+  'rawhideBoots',
   'monsterGrease',
   'clawCharm'
 ];
@@ -70,16 +82,11 @@ test('v8 imported gear is craftable and old handcrafted gear is compatibility-on
   assert.equal(canCraft(current, current.cost), true);
   assert.equal(equipment.amberBow?.name, 'Amber Bow');
   legacyRecipeIds.forEach(id => {
-    if (equipment[id]) {
-      assert.equal(equipment[id].currentSource, 'v8GearRegistry');
-      assert.deepEqual(
-        equipment[id].cardPackage.filter(cardId => oldPlaceholderCardIds.includes(cardId)),
-        []
-      );
-      return;
-    }
+    assert.equal(equipment[id], undefined);
     assert.equal(equipmentList.some(item => item.id === id), false);
-    assert.match(getEquipment(id).name, /Legacy gear/);
+    if (legacyCompatibilityEquipment[id]) {
+      assert.match(getEquipment(id).name, /Legacy gear/);
+    }
   });
   assert.equal(getEquipment('removedGearId').name, 'Unknown / Legacy gear');
 });
@@ -123,30 +130,66 @@ test('Acid Tooth Knife uses v8 card ids, not old placeholder cards', () => {
   });
 });
 
-test('old placeholder cards are flagged legacy compatibility', () => {
+test('normal cards exclude old placeholder cards and keep them in compatibility only', () => {
   oldPlaceholderCardIds.forEach(cardId => {
     assert.ok(legacyCompatibilityCardIds.includes(cardId));
-    assert.equal(cards[cardId]?.sourceType, 'legacyCompatibility');
-    assert.equal(cards[cardId]?.legacyCompatibility, true);
+    assert.equal(cards[cardId], undefined);
+    assert.equal(legacyCompatibilityCards[cardId]?.sourceType, 'legacyCompatibility');
+    assert.equal(legacyCompatibilityCards[cardId]?.legacyCompatibility, true);
   });
 });
 
-test('Armoury grouping excludes hidden gear and never creates review tabs', () => {
+test('normal gear card packages exclude handcrafted packages', () => {
+  ['boneBlade', 'boneHammer', 'hideWraps', 'monsterGrease', 'clawCharm'].forEach(id => {
+    assert.equal(gearCardPackages[id], undefined);
+    assert.ok(legacyCompatibilityGearCardPackages[id]?.length > 0);
+  });
+});
+
+test('Armoury grouping uses v8 equipment and excludes handcrafted craftables', () => {
   const settlement = {
-    builtInnovations: ['boneSmith'],
+    builtInnovations: ['boneSmith', 'skinnery', 'organGrinder'],
     discoveredQuarries: []
   };
-  const normal = groupGearByArmouryTab(Object.values(equipment), settlement);
+  const normal = groupGearByArmouryTab(equipmentList, settlement);
   const review = groupGearByArmouryTab(Object.values(equipment), settlement, {
     includeHidden: true
   });
+  const normalRecipes = Object.values(normal).flatMap(sourceGroups => Object.values(sourceGroups).flat());
 
   assert.equal(normal['Legacy / Hidden Review'], undefined);
   assert.equal(review['Legacy / Hidden Review'], undefined);
+  assert.ok(normalRecipes.some(item => item.id === 'acidToothKnife'));
+  assert.ok(normalRecipes.some(item => item.id === 'amberBow'));
+  legacyRecipeIds.forEach(id => {
+    assert.equal(normalRecipes.some(item => item.id === id), false);
+  });
 });
 
 test('active gear packages resolve to runtime cards', () => {
   const validation = validateEquipmentCardPackages();
   assert.deepEqual(validation.missingCardIds, []);
   assert.deepEqual(validation.equipmentWithNoCardPackage, []);
+});
+
+test('normal equipment is sourced from v8 gear registry', () => {
+  const excludedCurrentIds = legacyRecipeIds.filter(id => gearRegistry.some(item => item.id === id));
+  assert.equal(equipmentList.length, gearRegistry.length - excludedCurrentIds.length);
+  assert.ok(equipmentList.length >= 300);
+  equipmentList.forEach(item => {
+    assert.equal(item.currentSource, 'v8GearRegistry');
+    assert.equal(item.deprecated, false);
+    assert.equal(item.hiddenFromCrafting, false);
+  });
+});
+
+test('legacy equipped gear resolves compatibility cards without adding them to normal cards', () => {
+  const survivor = createSurvivor('Legacy Fighter');
+  const deck = buildRunDeck({
+    survivor,
+    equippedGear: [{ instanceId: 'legacy-bone-blade', equipmentId: 'boneBlade' }]
+  });
+
+  assert.equal(cards.hack, undefined);
+  assert.ok(deck.some(card => card.legacyCompatibility));
 });

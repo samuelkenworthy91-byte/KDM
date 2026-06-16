@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cards } from '../src/data/cards.js';
-import { gearCards } from '../src/data/gearCards.js';
+import { cards, legacyCompatibilityCards } from '../src/data/cards.js';
 import { createCombatState } from '../src/game/combatLogic.js';
 import { getCardPreview } from '../src/utils/cardPreview.js';
 
@@ -40,16 +39,16 @@ function stateWith(card, overrides = {}) {
 }
 
 test('attack preview includes strength and monster block', () => {
-  const state = stateWith(cards.hack, { monster: { block: 4 } });
+  const state = stateWith(cards.foundingStone, { monster: { block: 4 } });
   const preview = getCardPreview({
-    card: cards.hack,
+    card: cards.foundingStone,
     survivor: state.survivor,
     combatState: state,
     monster: state.monster
   });
-  assert.equal(preview.finalDamage, 7);
+  assert.equal(preview.finalDamage, 8);
   assert.equal(preview.blockDamage, 4);
-  assert.equal(preview.monsterHpDamage, 3);
+  assert.equal(preview.monsterHpDamage, 4);
   assert.match(preview.modifierBreakdown.join(' '), /Strength/);
 });
 
@@ -62,7 +61,7 @@ test('unknown card shapes return a safe string preview', () => {
 });
 
 test('buckler block conversion preview and effect cap at 10 damage', () => {
-  const card = gearCards.shieldBash;
+  const card = legacyCompatibilityCards.shieldBash;
   const state = stateWith(card);
   state.survivor = { ...state.survivor, block: 50, strength: 0 };
   state.monster = { ...state.monster, hp: 50, maxHp: 50 };

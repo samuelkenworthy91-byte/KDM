@@ -1,5 +1,5 @@
-import { cards, starterCardIds } from '../data/cards.js';
-import { equipment } from '../data/equipment.js';
+import { cards, legacyCompatibilityCards, starterCardIds } from '../data/cards.js';
+import { equipment, getEquipment } from '../data/equipment.js';
 
 export function getStarterDeck() {
   return getCardsFromIds(starterCardIds, 'Starter deck', 'starter');
@@ -23,11 +23,16 @@ export function normalizePersonalCardAddition(addition, fallbackSourceType = 'pe
   };
 }
 
-export function getCardsFromIds(cardIds = [], source, sourceType) {
+function resolveCard(cardId, includeLegacyCompatibility = false) {
+  return cards[cardId] || (includeLegacyCompatibility ? legacyCompatibilityCards[cardId] : null);
+}
+
+export function getCardsFromIds(cardIds = [], source, sourceType, options = {}) {
+  const includeLegacyCompatibility = Boolean(options.includeLegacyCompatibility);
   return cardIds.flatMap(addition => {
     const normalized = normalizePersonalCardAddition(addition, sourceType);
     const cardId = normalized?.cardId;
-    const card = cards[cardId];
+    const card = resolveCard(cardId, includeLegacyCompatibility);
     if (!card) {
       console.warn(`Skipping missing card id "${cardId}"${source ? ` from ${source}` : ''}.`);
       return [];
@@ -51,11 +56,11 @@ export function getEquipmentCardIds(equippedGear = []) {
 
 function resolveEquippedGear(itemOrId) {
   if (typeof itemOrId === 'string') {
-    const item = equipment[itemOrId];
+    const item = equipment[itemOrId] || getEquipment(itemOrId);
     return item ? { item, gearInstanceId: itemOrId, equipmentId: itemOrId } : null;
   }
   if (itemOrId?.equipmentId) {
-    const item = equipment[itemOrId.equipmentId];
+    const item = equipment[itemOrId.equipmentId] || getEquipment(itemOrId.equipmentId);
     return item ? {
       item,
       gearInstanceId: itemOrId.instanceId || itemOrId.equipmentId,
@@ -87,8 +92,8 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
   const forgotten = new Set(survivor?.forgottenCardIds || []);
   const deck = [
     ...getStarterDeck(),
-    ...getCardsFromIds(personalIds, survivor?.name ? `${survivor.name}'s progress` : 'Survivor progress'),
-    ...getCardsFromIds(negativeIds, survivor?.name ? `${survivor.name}'s permanent burdens` : 'Permanent burdens', 'curse')
+    ...getCardsFromIds(personalIds, survivor?.name ? `${survivor.name}'s progress` : 'Survivor progress', undefined, { includeLegacyCompatibility: true }),
+    ...getCardsFromIds(negativeIds, survivor?.name ? `${survivor.name}'s permanent burdens` : 'Permanent burdens', 'curse', { includeLegacyCompatibility: true })
   ].filter(card => !forgotten.has(card.id));
   const activeProficiencyType = survivor?.activeProficiencyType || 'fistAndTooth';
 
@@ -96,14 +101,15 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
     const resolved = resolveEquippedGear(itemOrId);
     const item = resolved?.item;
     if (item) {
+      const includeLegacyCompatibility = Boolean(item.deprecated || item.hiddenFromCrafting || item.legacySource);
       const cardIds = (item.cardPackage || []).flatMap(cardId => {
-        const card = cards[cardId];
+        const card = resolveCard(cardId, includeLegacyCompatibility);
         const copies = card?.cardCopyEligible === false
           ? 1
           : getTrainedCopyCount(survivor, resolved.gearInstanceId, cardId);
         return Array.from({ length: copies }, () => cardId);
       });
-      deck.push(...getCardsFromIds(cardIds, item.name, 'gear').map(card => ({
+      deck.push(...getCardsFromIds(cardIds, item.name, 'gear', { includeLegacyCompatibility }).map(card => ({
         ...card,
         weaponType: item.weaponType || null,
         gearInstanceId: resolved.gearInstanceId,

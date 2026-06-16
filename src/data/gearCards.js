@@ -539,31 +539,31 @@ function profileCards(gearId, name, profile) {
   }
 }
 
-export const gearCards = {};
-export const gearCardPackages = {};
+export const legacyCompatibilityGearCards = {};
+export const legacyCompatibilityGearCardPackages = {};
 
 Object.entries(exactSets).forEach(([gearId, set]) => {
-  gearCardPackages[gearId] = set.map(card => card.id);
-  set.forEach(card => { gearCards[card.id] = card; });
+  legacyCompatibilityGearCardPackages[gearId] = set.map(card => card.id);
+  set.forEach(card => { legacyCompatibilityGearCards[card.id] = card; });
 });
 
 Object.entries(profiles).forEach(([gearId, [name, profile]]) => {
   const set = profileCards(gearId, name, profile);
-  gearCardPackages[gearId] = set.map(card => card.id);
-  set.forEach(card => { gearCards[card.id] = card; });
+  legacyCompatibilityGearCardPackages[gearId] = set.map(card => card.id);
+  set.forEach(card => { legacyCompatibilityGearCards[card.id] = card; });
 });
 
-Object.entries(gearCardPackages).forEach(([gearId, cardIds]) => {
+Object.entries(legacyCompatibilityGearCardPackages).forEach(([gearId, cardIds]) => {
   const weaponType = explicitWeaponTypes[gearId];
   if (!weaponType) return;
   cardIds.forEach(cardId => {
-    const card = gearCards[cardId];
+    const card = legacyCompatibilityGearCards[cardId];
     if (!card) return;
     card.tags = [...new Set([...card.tags, weaponType])];
   });
 });
 
-gearCards.swarmBite = gearCard(
+legacyCompatibilityGearCards.swarmBite = gearCard(
   'eggPouch',
   'swarmBite',
   'Swarm Bite',
@@ -572,3 +572,6 @@ gearCards.swarmBite = gearCard(
   [{ type: 'multiHitDamage', amount: 2, hits: 2 }],
   { type: 'attack', tags: ['attack', 'multiHit', 'exhaust'], exhaust: true }
 );
+
+export const gearCards = {};
+export const gearCardPackages = {};
