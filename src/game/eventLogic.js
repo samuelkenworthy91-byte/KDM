@@ -31,7 +31,102 @@ function getPool(pool, quarry) {
   return [...BASIC_IDS, ...MONSTER_IDS, ...RARE_IDS, ...quarryResources];
 }
 
+function resourceName(resourceId) {
+  return resources[resourceId]?.name || 'Unknown / Legacy';
+}
+
+function idLabel(id) {
+  return String(id || 'Unknown / Legacy')
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, letter => letter.toUpperCase());
+}
+
+function formatResourceGain(resourceId, amount = 1) {
+  return `Gain ${resourceName(resourceId)} x${amount}.`;
+}
+
+export function formatEventEffect(key, value, context = {}) {
+  switch (key) {
+    case 'gainResource':
+      return formatResourceGain(value.resourceId, value.amount || 1);
+    case 'gainRandomResource':
+      return `Gain ${value.amount || 1} random ${value.pool || 'hunt'} resource${(value.amount || 1) === 1 ? '' : 's'}.`;
+    case 'gainSettlementMemory':
+      return `Gain Settlement Memory x${value}.`;
+    case 'loseHp':
+      return `Lose HP x${value}.`;
+    case 'healHp':
+      return `Heal HP x${value}.`;
+    case 'healFull':
+      return 'Heal to full HP.';
+    case 'gainSurvival':
+      return `Gain Survival x${value}.`;
+    case 'addCardToDeck':
+      return `Add ${idLabel(value)} to the deck.`;
+    case 'addPanic':
+      return `Gain Panic ${value}.`;
+    case 'removePanic':
+      return `Remove Panic ${typeof value === 'number' ? value : 1}.`;
+    case 'gainFightingArt':
+      return `Gain fighting art: ${idLabel(value)}.`;
+    case 'gainRandomFightingArt':
+      return 'Gain a random fighting art.';
+    case 'gainTrait':
+      return value?.type === 'monsterBaneCurrent'
+        ? `Gain quarry knowledge for ${context.quarry?.name || 'the current quarry'}.`
+        : `Gain trait: ${idLabel(value)}.`;
+    case 'gainScar':
+    case 'addScar':
+      return `Gain scar: ${idLabel(value)}.`;
+    case 'addInjury':
+      return `Gain injury: ${idLabel(value)}.`;
+    case 'addDisorder':
+      return `Gain disorder: ${idLabel(value)}.`;
+    case 'gainTemporaryPassive':
+      return `Gain temporary passive: ${idLabel(value)}.`;
+    case 'nextCombatStartBlock':
+      return `Next combat: +${value} starting Block.`;
+    case 'nextCombatMonsterBonusHp':
+      return `Next combat: quarry +${value} HP.`;
+    case 'nextCombatEnergyPenalty':
+      return `Next combat: -${value} first-turn Energy.`;
+    case 'monsterStartsWounded':
+      return `The quarry starts wounded by ${value}.`;
+    case 'nextCombatMonsterEnrage':
+      return `Next combat: quarry attacks deal +${value}.`;
+    case 'nextCombatFirstAttackBonus':
+      return `Next combat: first attack deals +${value}.`;
+    case 'gainCreatureResource':
+      return 'Gain one resource from the current quarry.';
+    case 'addQuarryRumour':
+      return 'Record a quarry rumour.';
+    case 'pendingSpecialChildTrait':
+      return `Future newborn may gain ${idLabel(value)}.`;
+    case 'gravesMemoryBonus':
+      return `If the grave tradition applies, gain Settlement Memory x${value}.`;
+    case 'chance':
+      return `Chance ${value.percent}%: ${formatEventEffects(value.success, context).join(' ')} Otherwise: ${formatEventEffects(value.failure, context).join(' ')}`;
+    default:
+      if (typeof console !== 'undefined') console.warn(`Unknown event effect: ${key}`);
+      return `Unknown effect: ${key}`;
+  }
+}
+
+export function formatEventEffects(effects = {}, context = {}) {
+  return Object.entries(effects).map(([key, value]) => formatEventEffect(key, value, context));
+}
+
+function appendUnknownEffects(next, effects, handledKeys) {
+  Object.keys(effects || {}).forEach(key => {
+    if (!handledKeys.has(key)) {
+      next.appliedEffects.push(`Unknown effect: ${key}`);
+      if (typeof console !== 'undefined') console.warn(`Unknown event effect: ${key}`);
+    }
+  });
+}
+
 function applyEffects(effects, state, context) {
+  const handledKeys = new Set();
   const next = {
     runResources: [...state.runResources],
     runSurvivor: {
@@ -51,73 +146,84 @@ function applyEffects(effects, state, context) {
   };
 
   if (effects.gainResource) {
+    handledKeys.add('gainResource');
     const { resourceId, amount = 1 } = effects.gainResource;
     next.runResources.push(...Array(amount).fill(resourceId));
-    next.appliedEffects.push(`+${amount} ${resources[resourceId]?.name || resourceId}`);
+    next.appliedEffects.push(formatResourceGain(resourceId, amount));
   }
   if (effects.gainRandomResource) {
+    handledKeys.add('gainRandomResource');
     const { pool = 'any', amount = 1 } = effects.gainRandomResource;
     const choices = getPool(pool, context.quarry);
     for (let index = 0; index < amount; index += 1) {
       const resourceId = pick(choices);
       next.runResources.push(resourceId);
-      next.appliedEffects.push(`+1 ${resources[resourceId]?.name || resourceId}`);
+      next.appliedEffects.push(formatResourceGain(resourceId, 1));
     }
   }
   if (effects.gainSettlementMemory) {
-    const minimumDelta = -context.settlementMemory;
+    handledKeys.add('gainSettlementMemory');
+    const minimumDelta = -(Number(context.settlementMemory) || 0);
     const delta = Math.max(minimumDelta, effects.gainSettlementMemory);
     next.settlementMemoryDelta += delta;
-    next.appliedEffects.push(`${delta >= 0 ? '+' : ''}${delta} settlementMemory`);
+    next.appliedEffects.push(delta >= 0 ? `Gain Settlement Memory x${delta}.` : `Lose Settlement Memory x${Math.abs(delta)}.`);
   }
   if (effects.loseHp) {
+    handledKeys.add('loseHp');
     next.runSurvivor.hp = Math.max(0, next.runSurvivor.hp - effects.loseHp);
-    next.appliedEffects.push(`-${effects.loseHp} HP`);
+    next.appliedEffects.push(`Lose HP x${effects.loseHp}.`);
   }
   if (effects.healHp) {
+    handledKeys.add('healHp');
     const healed = next.runSurvivor.hp > 0
       ? Math.min(effects.healHp, next.runSurvivor.maxHp - next.runSurvivor.hp)
       : 0;
     next.runSurvivor.hp += healed;
-    next.appliedEffects.push(`+${healed} HP`);
+    next.appliedEffects.push(`Heal HP x${healed}.`);
   }
   if (effects.healFull) {
+    handledKeys.add('healFull');
     const healed = next.runSurvivor.hp > 0
       ? next.runSurvivor.maxHp - next.runSurvivor.hp
       : 0;
     if (next.runSurvivor.hp > 0) next.runSurvivor.hp = next.runSurvivor.maxHp;
-    next.appliedEffects.push(`Healed to full (+${healed} HP)`);
+    next.appliedEffects.push(`Heal to full HP. Restored ${healed}.`);
   }
   if (effects.gainSurvival) {
+    handledKeys.add('gainSurvival');
     next.runSurvivor.survival = Math.min(
       next.runSurvivor.maxSurvival || 3,
       (next.runSurvivor.survival || 0) + effects.gainSurvival
     );
-    next.appliedEffects.push(`+${effects.gainSurvival} Survival`);
+    next.appliedEffects.push(`Gain Survival x${effects.gainSurvival}.`);
   }
   if (effects.addCardToDeck) {
+    handledKeys.add('addCardToDeck');
     next.runSurvivor.personalDeckAdditions.push({
       cardId: effects.addCardToDeck,
       sourceType: 'event',
       reason: 'Hunt event'
     });
-    next.appliedEffects.push(`Card added: ${effects.addCardToDeck}`);
+    next.appliedEffects.push(`Add ${idLabel(effects.addCardToDeck)} to the deck.`);
   }
   if (effects.addPanic) {
+    handledKeys.add('addPanic');
     next.runSurvivor.personalDeckAdditions.push(...Array(effects.addPanic).fill(null).map(() => ({
       cardId: 'panic',
       sourceType: 'curse',
       reason: 'Hunt event'
     })));
-    next.appliedEffects.push(`Panic added${effects.addPanic > 1 ? ` x${effects.addPanic}` : ''}`);
+    next.appliedEffects.push(`Gain Panic ${effects.addPanic}.`);
   }
   if (effects.gainFightingArt) {
+    handledKeys.add('gainFightingArt');
     if (!next.runSurvivor.fightingArts.includes(effects.gainFightingArt)) {
       next.runSurvivor.fightingArts.push(effects.gainFightingArt);
       next.appliedEffects.push(`Fighting art gained: ${effects.gainFightingArt}`);
     }
   }
   if (effects.gainRandomFightingArt) {
+    handledKeys.add('gainRandomFightingArt');
     const available = generalFightingArts.filter(art =>
       !next.runSurvivor.fightingArts.includes(art.id)
     );
@@ -128,6 +234,7 @@ function applyEffects(effects, state, context) {
     }
   }
   if (effects.gainTrait) {
+    handledKeys.add('gainTrait');
     const trait = effects.gainTrait.type === 'monsterBaneCurrent'
       ? `monsterBane_${context.quarry.id}`
       : effects.gainTrait;
@@ -158,20 +265,23 @@ function applyEffects(effects, state, context) {
     }
   }
   if (effects.gainScar) {
+    handledKeys.add('gainScar');
     const scarId = scars[effects.gainScar] ? effects.gainScar : null;
     if (scarId && !next.runSurvivor.scars.includes(scarId)) {
       next.runSurvivor.scars.push(scarId);
       next.appliedEffects.push(`Scar gained: ${scars[scarId].name}`);
     }
   }
-  if (effects.addInjury && injuries[effects.addInjury]?.implemented) {
-    if (!next.runSurvivor.injuries.includes(effects.addInjury)) {
+  if (effects.addInjury) {
+    handledKeys.add('addInjury');
+    if (injuries[effects.addInjury]?.implemented && !next.runSurvivor.injuries.includes(effects.addInjury)) {
       next.runSurvivor.injuries.push(effects.addInjury);
       next.appliedEffects.push(`Injury gained: ${injuries[effects.addInjury].name}`);
     }
   }
-  if (effects.addScar && scars[effects.addScar]?.implemented) {
-    if (!next.runSurvivor.scars.includes(effects.addScar)) {
+  if (effects.addScar) {
+    handledKeys.add('addScar');
+    if (scars[effects.addScar]?.implemented && !next.runSurvivor.scars.includes(effects.addScar)) {
       next.runSurvivor.scars.push(effects.addScar);
       if (effects.addScar === 'boneSetWrong') {
         next.runSurvivor.maxHp += 1;
@@ -180,41 +290,50 @@ function applyEffects(effects, state, context) {
       next.appliedEffects.push(`Scar gained: ${scars[effects.addScar].name}`);
     }
   }
-  if (effects.addDisorder && disorders[effects.addDisorder]?.implemented) {
-    if (!next.runSurvivor.disorders.includes(effects.addDisorder)) {
+  if (effects.addDisorder) {
+    handledKeys.add('addDisorder');
+    if (disorders[effects.addDisorder]?.implemented && !next.runSurvivor.disorders.includes(effects.addDisorder)) {
       next.runSurvivor.disorders.push(effects.addDisorder);
       next.appliedEffects.push(`Disorder gained: ${disorders[effects.addDisorder].name}`);
     }
   }
   if (effects.gainTemporaryPassive) {
+    handledKeys.add('gainTemporaryPassive');
     next.runSurvivor.temporaryPassives.push(effects.gainTemporaryPassive);
     next.appliedEffects.push(`Temporary passive: ${effects.gainTemporaryPassive}`);
   }
   if (effects.nextCombatStartBlock) {
+    handledKeys.add('nextCombatStartBlock');
     next.runModifiers.nextCombatStartBlock = (next.runModifiers.nextCombatStartBlock || 0) + effects.nextCombatStartBlock;
-    next.appliedEffects.push(`Next combat: +${effects.nextCombatStartBlock} block`);
+    next.appliedEffects.push(`Next combat: +${effects.nextCombatStartBlock} starting Block.`);
   }
   if (effects.nextCombatMonsterBonusHp) {
+    handledKeys.add('nextCombatMonsterBonusHp');
     next.runModifiers.nextCombatMonsterBonusHp = (next.runModifiers.nextCombatMonsterBonusHp || 0) + effects.nextCombatMonsterBonusHp;
-    next.appliedEffects.push(`Next combat: monster +${effects.nextCombatMonsterBonusHp} HP`);
+    next.appliedEffects.push(`Next combat: quarry +${effects.nextCombatMonsterBonusHp} HP.`);
   }
   if (effects.nextCombatEnergyPenalty) {
+    handledKeys.add('nextCombatEnergyPenalty');
     next.runModifiers.nextCombatEnergyPenalty = (next.runModifiers.nextCombatEnergyPenalty || 0) + effects.nextCombatEnergyPenalty;
-    next.appliedEffects.push(`Next combat: -${effects.nextCombatEnergyPenalty} first-turn energy`);
+    next.appliedEffects.push(`Next combat: -${effects.nextCombatEnergyPenalty} first-turn Energy.`);
   }
   if (effects.monsterStartsWounded) {
+    handledKeys.add('monsterStartsWounded');
     next.runModifiers.monsterStartsWounded = (next.runModifiers.monsterStartsWounded || 0) + effects.monsterStartsWounded;
-    next.appliedEffects.push(`Next combat: monster starts wounded for ${effects.monsterStartsWounded}`);
+    next.appliedEffects.push(`The quarry starts wounded by ${effects.monsterStartsWounded}.`);
   }
   if (effects.nextCombatMonsterEnrage) {
+    handledKeys.add('nextCombatMonsterEnrage');
     next.runModifiers.monsterEnrage = (next.runModifiers.monsterEnrage || 0) + effects.nextCombatMonsterEnrage;
-    next.appliedEffects.push(`Next combat: monster attacks deal +${effects.nextCombatMonsterEnrage}`);
+    next.appliedEffects.push(`Next combat: quarry attacks deal +${effects.nextCombatMonsterEnrage}.`);
   }
   if (effects.nextCombatFirstAttackBonus) {
+    handledKeys.add('nextCombatFirstAttackBonus');
     next.runModifiers.firstAttackBonus = (next.runModifiers.firstAttackBonus || 0) + effects.nextCombatFirstAttackBonus;
-    next.appliedEffects.push(`Next combat: first attack deals +${effects.nextCombatFirstAttackBonus}`);
+    next.appliedEffects.push(`Next combat: first attack deals +${effects.nextCombatFirstAttackBonus}.`);
   }
   if (effects.removePanic) {
+    handledKeys.add('removePanic');
     if (next.runSurvivor.disorders.includes('hoarder')) {
       next.appliedEffects.push('Hoarder prevented Panic removal');
     } else {
@@ -230,37 +349,45 @@ function applyEffects(effects, state, context) {
         }
       }
       if (removedCount > 0) {
-        next.appliedEffects.push(`Removed ${removedCount} Panic`);
+        next.appliedEffects.push(`Remove Panic ${removedCount}.`);
       } else {
         next.appliedEffects.push('No Panic to remove');
       }
     }
   }
   if (effects.gainCreatureResource) {
+    handledKeys.add('gainCreatureResource');
     const choices = getPool('monster', context.quarry);
     const resourceId = pick(choices);
     next.runResources.push(resourceId);
-    next.appliedEffects.push(`+1 ${resources[resourceId]?.name || resourceId}`);
+    next.appliedEffects.push(formatResourceGain(resourceId, 1));
   }
   if (effects.addQuarryRumour) {
+    handledKeys.add('addQuarryRumour');
     next.quarryRumour = true;
-    next.appliedEffects.push('A new quarry rumour was recorded');
+    next.appliedEffects.push('Record a quarry rumour.');
   }
   if (effects.pendingSpecialChildTrait) {
+    handledKeys.add('pendingSpecialChildTrait');
     next.pendingSpecialChildTrait = effects.pendingSpecialChildTrait;
-    next.appliedEffects.push(`Pending child trait: ${effects.pendingSpecialChildTrait}`);
+    next.appliedEffects.push(`Future newborn may gain ${idLabel(effects.pendingSpecialChildTrait)}.`);
   }
-  if (effects.gravesMemoryBonus && context.hasGravesUpgrade) {
-    next.settlementMemoryDelta += effects.gravesMemoryBonus;
-    next.appliedEffects.push(`+${effects.gravesMemoryBonus} settlementMemory from grave tradition`);
+  if (effects.gravesMemoryBonus) {
+    handledKeys.add('gravesMemoryBonus');
+    if (context.hasGravesUpgrade) {
+      next.settlementMemoryDelta += effects.gravesMemoryBonus;
+      next.appliedEffects.push(`Gain Settlement Memory x${effects.gravesMemoryBonus} from grave tradition.`);
+    }
   }
   if (effects.chance) {
+    handledKeys.add('chance');
     const branch = Math.random() * 100 < effects.chance.percent
       ? effects.chance.success
       : effects.chance.failure;
     return applyEffects(branch, next, context);
   }
 
+  appendUnknownEffects(next, effects, handledKeys);
   return next;
 }
 
@@ -344,4 +471,3 @@ export function calculateIntimacyProjections(settlement, innovationCards) {
     ]
   };
 }
-

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveEvent } from '../src/game/eventLogic.js';
+import { events } from '../src/data/events.js';
+import { formatEventEffects, resolveEvent } from '../src/game/eventLogic.js';
 import { meetsLockedRequirement } from '../src/game/eventRequirementLogic.js';
 
 const mockSurvivor = (id, traits = [], boundGear = []) => ({
@@ -106,5 +107,56 @@ test('Event Resolution Logic', async (t) => {
     assert.strictEqual(result.outcomeText, 'Success!');
     assert.strictEqual(result.choiceId, 'automatic');
     assert.strictEqual(result.runSurvivor.survival, 1);
+    assert.deepEqual(result.appliedEffects, ['Gain Survival x1.']);
+  });
+
+  await t.test('fallback prevents all-locked event softlock', () => {
+    const result = resolveEvent({ id: 'lockedOut', choices: [] }, 'fallback', state, context);
+    assert.strictEqual(result.choiceId, 'fallback');
+    assert.strictEqual(result.runSurvivor.hp, 28);
+    assert.deepEqual(result.appliedEffects, ['Lose HP x2.']);
+  });
+
+  await t.test('readable effect formatter covers common preview text', () => {
+    assert.deepEqual(formatEventEffects({
+      gainResource: { resourceId: 'bone', amount: 1 },
+      gainSettlementMemory: 1,
+      nextCombatStartBlock: 2,
+      monsterStartsWounded: 2,
+      addPanic: 1
+    }, context), [
+      'Gain Bone x1.',
+      'Gain Settlement Memory x1.',
+      'Next combat: +2 starting Block.',
+      'The quarry starts wounded by 2.',
+      'Gain Panic 1.'
+    ]);
+  });
+
+  await t.test('unknown effects are reported safely', () => {
+    const result = resolveEvent({
+      id: 'unknownEffect',
+      choices: [{
+        id: 'try',
+        text: 'Try',
+        outcomeText: 'Something happens.',
+        effects: { mysteryEffect: 1 }
+      }]
+    }, {
+      id: 'try',
+      outcomeText: 'Something happens.',
+      effects: { mysteryEffect: 1 }
+    }, state, context);
+    assert.deepEqual(result.appliedEffects, ['Unknown effect: mysteryEffect']);
+  });
+
+  await t.test('events have readable long descriptions and bounded choice counts', () => {
+    assert.equal(events.filter(event => !event.longDescription).length, 0);
+    events.forEach(event => {
+      assert.ok(event.longDescription.length >= event.description.length, event.id);
+      if (event.mode !== 'automatic' && event.choices) {
+        assert.ok(event.choices.length >= 2 && event.choices.length <= 4, event.id);
+      }
+    });
   });
 });
