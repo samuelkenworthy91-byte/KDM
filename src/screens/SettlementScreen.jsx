@@ -811,7 +811,8 @@ export default function SettlementScreen({
     drawableInnovationIds.length > 0;
   const nextTimelineMilestone = getNextTimelineMilestone(settlement.lanternYear);
   const armouryData = useMemo(() => {
-    return groupGearByArmouryTab(equipmentList, settlement, {
+    const currentGear = equipmentList.filter(item => item.currentSource === 'v8GearRegistry');
+    return groupGearByArmouryTab(currentGear, settlement, {
       includeLocked: showLockedGear
     });
   }, [settlement, showLockedGear]);

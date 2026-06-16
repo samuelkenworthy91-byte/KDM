@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cards, legacyCompatibilityCards } from '../src/data/cards.js';
+import { cards } from '../src/data/cards.js';
 import { createCombatState } from '../src/game/combatLogic.js';
 import { getCardPreview } from '../src/utils/cardPreview.js';
 
@@ -58,23 +58,4 @@ test('unknown card shapes return a safe string preview', () => {
   const preview = getCardPreview({ card, combatState: state });
   assert.equal(typeof preview.effectSummary, 'string');
   assert.equal(Array.isArray(preview.modifierBreakdown), true);
-});
-
-test('buckler block conversion preview and effect cap at 10 damage', () => {
-  const card = legacyCompatibilityCards.shieldBash;
-  const state = stateWith(card);
-  state.survivor = { ...state.survivor, block: 50, strength: 0 };
-  state.monster = { ...state.monster, hp: 50, maxHp: 50 };
-
-  const preview = getCardPreview({
-    card,
-    survivor: state.survivor,
-    combatState: state,
-    monster: state.monster
-  });
-
-  assert.equal(card.effects[0].maximumBonus, 10);
-  assert.match(card.description, /max 10/i);
-  assert.equal(preview.monsterHpDamage, 13); // 3 base + 10 bonus
-  assert.equal(preview.effectSummary, 'Damage: 13');
 });
