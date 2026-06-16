@@ -1,4 +1,4 @@
-import gearDataRaw from '../../../.agents/gear-card-overhaul/gear_card_package_table.json' with { type: 'json' };
+import gearDataRaw from '../../../gear_master_overhaul.json' with { type: 'json' };
 import deckCardsRaw from '../../../all_deck_cards.json' with { type: 'json' };
 
 const locationMapping = {
@@ -54,6 +54,12 @@ function parseArray(value) {
     if (!trimmed) return [];
     try {
       const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch {
+      // Fall through to delimiter parsing.
+    }
+    try {
+      const parsed = JSON.parse(trimmed.replace(/'/g, '"'));
       if (Array.isArray(parsed)) return parsed.filter(Boolean);
     } catch {
       // Fall through to delimiter parsing.
@@ -187,6 +193,31 @@ function sanitizeCostForBuilding(cost, buildingId, item) {
   return Object.fromEntries(Object.entries(next).filter(([, amount]) => amount > 0));
 }
 
+function assertSourceDataIsValid() {
+  const failures = [];
+  if (!Array.isArray(gearDataRaw) || gearDataRaw.length === 0) {
+    failures.push('gear_master_overhaul.json is empty or invalid');
+  } else if (gearDataRaw.length < 300) {
+    failures.push(`gear_master_overhaul.json has ${gearDataRaw.length} rows; expected at least 300`);
+  }
+  if (!Array.isArray(deckCardsRaw) || deckCardsRaw.length === 0) {
+    failures.push('all_deck_cards.json is empty or invalid');
+  } else if (deckCardsRaw.length < 700) {
+    failures.push(`all_deck_cards.json has ${deckCardsRaw.length} rows; expected at least 700`);
+  }
+  if (!gearDataRaw.some(item => item?.ourGameName === 'Acid Tooth Knife' || item?.originalKdmName === 'ACID TOOTH DAGGER')) {
+    failures.push('Acid Tooth Knife is missing from gear_master_overhaul.json');
+  }
+  if (!gearDataRaw.some(item => item?.ourGameName === 'Amber Bow' || /AMBER BOW/i.test(item?.originalKdmName || ''))) {
+    failures.push('Amber Bow is missing from gear_master_overhaul.json');
+  }
+  if (failures.length) {
+    throw new Error(`[V8 gear source] ${failures.join('; ')}`);
+  }
+}
+
+assertSourceDataIsValid();
+
 function normalizeGear(item) {
   const rawName = item.ourGameName || item.name || item.auditDisplayName || item.originalKdmName;
   const displayName = cleanPhaseName(rawName);
@@ -273,6 +304,10 @@ export const gearRegistry = normalizedRows.reduce((items, item) => {
   existing.phase = null;
   return items;
 }, []);
+
+if (!gearRegistry.some(item => item.id === 'acidToothKnife')) {
+  throw new Error('[V8 gear source] acidToothKnife cannot be created from gear_master_overhaul.json');
+}
 
 export const gearById = gearRegistry.reduce((acc, item) => {
   acc[item.id] = item;

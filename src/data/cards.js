@@ -150,6 +150,46 @@ export const cards = {
 
 Object.assign(cards, monsterRewardCards, fightingArtCards);
 
+export const legacyCompatibilityCardIds = [
+  'hack',
+  'carve',
+  'skullCrack',
+  'guardBreak',
+  'boneDart',
+  'quickToss',
+  'brace',
+  'duckAndRoll',
+  'rawhideDodge',
+  'readTheBeast',
+  'slipAway',
+  'clawStrike',
+  'ripOpen',
+  'bloodRush',
+  'strangeGlimpse',
+  'seeThePattern',
+  'boneFlurry',
+  'goringSwing',
+  'braceMaul',
+  'savageFollowUp',
+  'hornShot',
+  'trample',
+  'settle',
+  'ashCycle',
+  'delayedCut',
+  'memoryFilter',
+  'lanternFocus',
+  'pinningShot'
+];
+
+legacyCompatibilityCardIds.forEach(cardId => {
+  if (!cards[cardId]) return;
+  cards[cardId] = {
+    ...cards[cardId],
+    sourceType: 'legacyCompatibility',
+    legacyCompatibility: true
+  };
+});
+
 Object.keys(cards).forEach(cardId => {
   const current = cards[cardId];
   const text = `${cardId} ${current.sourceGearId || ''} ${current.name || ''} ${(current.tags || []).join(' ')}`.toLowerCase();

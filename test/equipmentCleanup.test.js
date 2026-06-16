@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import gearSource from '../gear_master_overhaul.json' with { type: 'json' };
+import deckCardSource from '../all_deck_cards.json' with { type: 'json' };
+import { cards, legacyCompatibilityCardIds } from '../src/data/cards.js';
 import {
   equipment,
   equipmentList,
   getEquipment,
-  resolvedDuplicateRecipeIds,
   validateEquipmentCardPackages,
-  validateEquipmentIds,
-  validateGearVariety
+  validateEquipmentIds
 } from '../src/data/equipment.js';
 import { canCraft } from '../src/game/craftingLogic.js';
 import {
@@ -21,21 +23,43 @@ import {
   groupGearByArmouryTab
 } from '../src/utils/gearNormalization.js';
 
-const knownDuplicateIds = [
-  'maneCloak',
-  'catEyeCharm',
-  'wailingHornBow',
-  'stomachStoneCharm',
-  'trampleBoots',
-  'ashFeatherMantle',
-  'timeBoneBlade',
-  'memoryGlassEye'
+const legacyRecipeIds = [
+  'boneBlade',
+  'boneHammer',
+  'hideWraps',
+  'rawhideVest',
+  'monsterGrease',
+  'clawCharm'
 ];
+
+const oldPlaceholderCardIds = [
+  'hack',
+  'carve',
+  'guardBreak',
+  'boneDart',
+  'quickToss',
+  'rawhideDodge',
+  'clawStrike',
+  'ripOpen'
+];
+
+test('v8 source JSON files are populated and registry imports gear master', () => {
+  assert.ok(Array.isArray(gearSource));
+  assert.ok(Array.isArray(deckCardSource));
+  assert.ok(gearSource.length >= 300);
+  assert.ok(deckCardSource.length >= 700);
+  assert.ok(gearSource.some(item => item.ourGameName === 'Acid Tooth Knife'));
+  assert.ok(gearSource.some(item => item.ourGameName === 'Amber Bow'));
+
+  const registrySource = readFileSync(new URL('../src/data/overhaul/gearRegistry.js', import.meta.url), 'utf8');
+  assert.match(registrySource, /gear_master_overhaul\.json/);
+  assert.doesNotMatch(registrySource, /\.agents\/gear-card-overhaul\/gear_card_package_table\.json/);
+});
 
 test('equipment list has unique ids and resolves known source duplicates', () => {
   assert.deepEqual(validateEquipmentIds().duplicateIds, []);
-  assert.ok(resolvedDuplicateRecipeIds.length >= knownDuplicateIds.length);
   assert.equal(equipmentList.filter(item => item.id === 'acidToothKnife').length, 1);
+  assert.equal(equipmentList.filter(item => item.name === 'Amber Cello').length, 1);
 });
 
 test('v8 imported gear is craftable and old handcrafted gear is compatibility-only', () => {
@@ -44,9 +68,19 @@ test('v8 imported gear is craftable and old handcrafted gear is compatibility-on
   assert.equal(current.hiddenFromCrafting, false);
   assert.equal(equipmentList.some(item => item.id === current.id), true);
   assert.equal(canCraft(current, current.cost), true);
-  assert.equal(equipment.boneBlade.deprecated, true);
-  assert.equal(equipment.boneBlade.hiddenFromCrafting, true);
-  assert.equal(canCraft(equipment.boneBlade, { bone: 1, sinew: 1 }), false);
+  assert.equal(equipment.amberBow?.name, 'Amber Bow');
+  legacyRecipeIds.forEach(id => {
+    if (equipment[id]) {
+      assert.equal(equipment[id].currentSource, 'v8GearRegistry');
+      assert.deepEqual(
+        equipment[id].cardPackage.filter(cardId => oldPlaceholderCardIds.includes(cardId)),
+        []
+      );
+      return;
+    }
+    assert.equal(equipmentList.some(item => item.id === id), false);
+    assert.match(getEquipment(id).name, /Legacy gear/);
+  });
   assert.equal(getEquipment('removedGearId').name, 'Unknown / Legacy gear');
 });
 
@@ -73,6 +107,28 @@ test('old saves retain deprecated and unknown gear safely', () => {
   assert.equal(normalized.armory[0].equipmentId, 'boneBlade');
   assert.equal(normalized.survivors[0].boundGear.length, 2);
   assert.equal(getEquipment('removedGearId').name, 'Unknown / Legacy gear');
+});
+
+test('Acid Tooth Knife uses v8 card ids, not old placeholder cards', () => {
+  const acid = equipment.acidToothKnife;
+  assert.ok(acid);
+  assert.ok(acid.cardPackage.length > 0);
+  assert.deepEqual(
+    acid.cardPackage.filter(cardId => oldPlaceholderCardIds.includes(cardId)),
+    []
+  );
+  acid.cardPackage.forEach(cardId => {
+    assert.equal(cards[cardId]?.sourceType, 'gear');
+    assert.equal(cards[cardId]?.legacyCompatibility, undefined);
+  });
+});
+
+test('old placeholder cards are flagged legacy compatibility', () => {
+  oldPlaceholderCardIds.forEach(cardId => {
+    assert.ok(legacyCompatibilityCardIds.includes(cardId));
+    assert.equal(cards[cardId]?.sourceType, 'legacyCompatibility');
+    assert.equal(cards[cardId]?.legacyCompatibility, true);
+  });
 });
 
 test('Armoury grouping excludes hidden gear and never creates review tabs', () => {

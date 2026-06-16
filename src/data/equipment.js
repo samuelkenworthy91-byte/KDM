@@ -50,19 +50,21 @@ function recipe(id, name, buildingId, cost, description, cardPackage, passiveTex
   };
 }
 
-const legacyEquipment = Object.fromEntries(
+const currentEquipment = Object.fromEntries(
   gearRegistry.map(item => [
     item.id,
     {
       ...item,
       name: cleanGearDisplayName(item.name),
-      legacySource: 'importedGearRegistry'
+      deprecated: false,
+      hiddenFromCrafting: false,
+      legacySource: null,
+      currentSource: 'v8GearRegistry'
     }
   ])
 );
 
-export const equipment = {
-  ...legacyEquipment,
+export const legacyCompatibilityEquipment = {
   boneBlade: recipe('boneBlade', 'Bone Blade', 'boneSmith', { bone: 1, sinew: 1 }, 'A reliable cutting weapon.', ['hack', 'hack', 'carve'], 'Adds direct attack cards.', 'weapon'),
   boneHammer: recipe('boneHammer', 'Bone Hammer', 'boneSmith', { bone: 2, hide: 1 }, 'A heavy weapon for cracking defenses.', ['skullCrack', 'skullCrack', 'guardBreak'], 'Heavy block-breaking package.', 'weapon'),
   boneDarts: recipe('boneDarts', 'Bone Darts', 'boneSmith', { bone: 1, sinew: 1 }, 'Light throwing weapons.', ['boneDart', 'boneDart', 'quickToss'], 'Fast ranged attack package.', 'weapon'),
@@ -212,12 +214,12 @@ expandedWeaponRows.forEach(row => monsterRecipeRows.push(row));
 
 export const resolvedDuplicateRecipeIds = [];
 monsterRecipeRows.forEach(row => {
-  const existing = equipment[row[0]];
+  const existing = legacyCompatibilityEquipment[row[0]];
   if (existing && !existing.deprecated && !existing.hiddenFromCrafting) {
     resolvedDuplicateRecipeIds.push(row[0]);
     return;
   }
-  equipment[row[0]] = recipe(...row);
+  legacyCompatibilityEquipment[row[0]] = recipe(...row);
 });
 
 [
@@ -230,26 +232,18 @@ monsterRecipeRows.forEach(row => {
   ['warningHorn', 'Warning Horn', 'boneSmith', { bone: 1, horn: 1 }, 'A blunt signal tool for calling out a monster pattern.', ['warningCall'], 'Affects other survivors: clarifies the next party member’s tell.', 'signalTool', ['support', 'party']],
   ['rationBundle', 'Ration Bundle', 'organGrinder', { organ: 1, hide: 1 }, 'Food packed to be divided without argument.', ['shareRations'], 'Affects other survivors: heals the party at rest.', 'ration', ['support', 'party']]
 ].forEach(row => {
-  equipment[row[0]] = recipe(...row);
-  equipment[row[0]].supportGear = true;
-  equipment[row[0]].affectsOtherSurvivors = true;
+  legacyCompatibilityEquipment[row[0]] = recipe(...row);
+  legacyCompatibilityEquipment[row[0]].supportGear = true;
+  legacyCompatibilityEquipment[row[0]].affectsOtherSurvivors = true;
 });
 
-const currentGearIds = new Set(gearRegistry.map(item => item.id));
-Object.values(equipment).forEach(item => {
-  if (currentGearIds.has(item.id)) {
-    item.deprecated = false;
-    item.hiddenFromCrafting = false;
-    item.legacySource = null;
-    item.currentSource = 'v8GearRegistry';
-    return;
-  }
+Object.values(legacyCompatibilityEquipment).forEach(item => {
   item.deprecated = true;
   item.hiddenFromCrafting = true;
   item.legacySource = item.legacySource || 'handcraftedCompatibilityRecipe';
 });
 
-Object.values(equipment).forEach(item => {
+Object.values({ ...currentEquipment, ...legacyCompatibilityEquipment }).forEach(item => {
   item.name = cleanGearDisplayName(item.name);
   const metadata = getGearMetadata(item);
   item.weaponType = item.weaponType || metadata.weaponType;
@@ -258,6 +252,7 @@ Object.values(equipment).forEach(item => {
   item.speedStyle = metadata.speedStyle;
   item.styleTags = metadata.styleTags;
   item.keywords = [...new Set([
+    ...(item.keywords || []),
     ...metadata.keywords,
     (item.tags || []).includes('paleHuntLion') ? 'Predator' : null,
     (item.tags || []).includes('silkMatriarch') ? 'Web' : null,
@@ -280,17 +275,18 @@ Object.values(equipment).forEach(item => {
     !item.hiddenFromCrafting;
 });
 
+export const equipment = currentEquipment;
 export const equipmentList = dedupeGearList(Object.values(equipment));
 export const equipmentCatalogList = dedupeGearList(Object.values(equipment), {
   includeHidden: true
 });
 
 export function getEquipment(id) {
-  const item = equipment[id];
+  const item = equipment[id] || legacyCompatibilityEquipment[id];
   if (item) {
     return {
       ...item,
-      name: item.deprecated || item.hiddenFromCrafting
+      name: legacyCompatibilityEquipment[id] || item.deprecated || item.hiddenFromCrafting
         ? `${cleanGearDisplayName(item.name)} (Legacy gear)`
         : cleanGearDisplayName(item.name)
     };
