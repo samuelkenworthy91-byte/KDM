@@ -5,10 +5,11 @@
   "main": "electron/main.js",
   "description": "A roguelite deckbuilder inspired by dark monster‑hunting games.",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "test": "node --test",
     "build": "vite build",
-    "preview": "vite preview",
+    "build:web": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
     "desktop": "vite build --mode electron && electron .",
     "desktop:dev": "concurrently --kill-others-on-fail \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
     "dist:linux": "vite build --mode electron && electron-builder --linux AppImage",

@@ -37,7 +37,7 @@ KDM also appears in the Desktop Mode application menu under **Games**.
 1. Open Steam in Desktop Mode.
 2. Select **Games > Add a Non-Steam Game to My Library**.
 3. Select **Browse**.
-4. Choose `/home/deck/Games/KDM/KDM.AppImage`.
+4. Choose `~/Games/KDM/KDM.AppImage`.
 5. Select **Add Selected Programs**.
 
 You can then return to Gaming Mode and launch KDM from the Non-Steam section
