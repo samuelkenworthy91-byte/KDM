@@ -244,11 +244,22 @@ function InvalidPhaseScreen({ reason, onRecover }) {
 }
 
 function chooseHuntEvent(level) {
-  const deadlyEvents = events.filter(event => DEADLY_EVENT_IDS.has(event.id));
-  const saferEvents = events.filter(event => !DEADLY_EVENT_IDS.has(event.id));
-  const deadlyChance = level === 3 ? 0.6 : level === 2 ? 0.4 : 0.2;
-  const pool = Math.random() < deadlyChance ? deadlyEvents : saferEvents;
-  return pool[Math.floor(Math.random() * pool.length)];
+  const deadlyChance = level === 3 ? 0.35 : level === 2 ? 0.2 : 0.05;
+  const useExpansion = level >= 2 || Math.random() < 0.2;
+  
+  let pool = events.filter(e => e.section === 'core' || !e.section);
+  if (useExpansion) {
+    pool = events.filter(e => e.section === 'core' || e.section === 'expansion' || !e.section);
+  }
+  
+  // High level hunts can also draw from legacyOptional
+  if (level === 3) {
+    pool = events;
+  }
+
+  // Simple shuffle/select
+  const selected = pool[Math.floor(Math.random() * pool.length)];
+  return selected;
 }
 
 function createScaledMonster(quarryId, level, type, partySize = 1) {
@@ -2174,6 +2185,7 @@ export default function App() {
       { runResources, runSurvivor, runModifiers, settlementMemoryDelta: 0 },
       {
         quarry: quarries[selectedQuarry],
+        runParty,
         settlementMemory: settlement.settlementMemory,
         hasGravesUpgrade: settlement.builtInnovations.includes('storytellerCircle')
       }
@@ -3519,6 +3531,9 @@ export default function App() {
             }
             onChoose={handleEventChoice}
             onContinue={completeCurrentNode}
+            runParty={runParty}
+            settlement={settlement}
+            selectedQuarry={selectedQuarry}
           />
         ) : null;
       case 'rest':

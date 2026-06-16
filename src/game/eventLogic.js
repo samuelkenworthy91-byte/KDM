@@ -218,12 +218,19 @@ function applyEffects(effects, state, context) {
     if (next.runSurvivor.disorders.includes('hoarder')) {
       next.appliedEffects.push('Hoarder prevented Panic removal');
     } else {
-      const index = next.runSurvivor.personalDeckAdditions.findIndex(addition =>
-        (typeof addition === 'string' ? addition : addition.cardId) === 'panic'
-      );
-      if (index >= 0) {
-        next.runSurvivor.personalDeckAdditions.splice(index, 1);
-        next.appliedEffects.push('Removed 1 Panic');
+      const amount = typeof effects.removePanic === 'number' ? effects.removePanic : 1;
+      let removedCount = 0;
+      for (let i = 0; i < amount; i++) {
+        const index = next.runSurvivor.personalDeckAdditions.findIndex(addition =>
+          (typeof addition === 'string' ? addition : addition.cardId) === 'panic'
+        );
+        if (index >= 0) {
+          next.runSurvivor.personalDeckAdditions.splice(index, 1);
+          removedCount++;
+        }
+      }
+      if (removedCount > 0) {
+        next.appliedEffects.push(`Removed ${removedCount} Panic`);
       } else {
         next.appliedEffects.push('No Panic to remove');
       }
@@ -258,7 +265,27 @@ function applyEffects(effects, state, context) {
 }
 
 export function resolveEvent(event, choice, state, context) {
-  if (!event || !choice) return null;
+  if (!event) return null;
+  
+  if (event.mode === 'automatic') {
+    return {
+      eventId: event.id,
+      choiceId: 'automatic',
+      outcomeText: event.autoOutcome.outcomeText,
+      ...applyEffects(event.autoOutcome.effects || {}, { ...state, appliedEffects: [] }, context)
+    };
+  }
+
+  if (choice === 'fallback') {
+    return {
+      eventId: event.id,
+      choiceId: 'fallback',
+      outcomeText: 'With no other choice, the party forces a desperate route.',
+      ...applyEffects({ loseHp: 2 }, { ...state, appliedEffects: [] }, context)
+    };
+  }
+
+  if (!choice) return null;
   return {
     eventId: event.id,
     choiceId: choice.id,

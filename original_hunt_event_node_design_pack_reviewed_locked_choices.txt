@@ -1,0 +1,2466 @@
+KDM / Lantern Deckbuilder - Reviewed Original Hunt Event Node Design Pack
+================================================================================
+
+Revision purpose:
+This is a stronger version of the first original hunt event pack. It keeps the dark settlement-survival tone, but now supports two event shapes:
+
+1. Automatic outcome events
+   - The event resolves immediately when drawn.
+   - Use for weather, road hazards, sudden omens, unavoidable damage, sudden rewards, or mood-setting events where a choice would feel fake.
+
+2. Player choice events
+   - The event offers 2 to 4 choices.
+   - Some choices may be locked unless the hunting party has the right equipment, weapon type, gear tag, survivor trait, fighting art, innovation, injury/scar/disorder, or Monster Bane knowledge.
+
+Copyright/design note:
+The sourceSeed field records which old hunt-event title inspired the slot, but player-facing names, text, and mechanics are original. Do not copy Kingdom Death event names, prose, or rule text into the game.
+
+Repo-specific implementation target:
+- Target data file: src/data/events.js
+- Existing resolver: src/game/eventLogic.js
+- Existing hunt event UI: EventScreen / App event node flow
+- Existing gear data: src/data/equipment.js
+- Existing survivors and save normalisation: src/game/saveLogic.js
+
+Recommended expanded schema:
+
+Automatic event:
+{
+  id,
+  name,
+  description,
+  mode: 'automatic',
+  autoOutcome: { outcomeText, effects },
+  sourceSeed,
+  section
+}
+
+Choice event:
+{
+  id,
+  name,
+  description,
+  mode: 'choice',
+  choices: [
+    { id, text, outcomeText, effects },
+    { id, text, lockedUnless, lockedText, outcomeText, effects }
+  ],
+  sourceSeed,
+  section
+}
+
+Locked choice requirement shapes to support:
+- { type: 'partyHasWeaponType', weaponType: 'bow' }
+- { type: 'partyHasGearTag', tag: 'tool' }
+- { type: 'partyHasGearId', equipmentId: 'boneBlade' }
+- { type: 'partyHasTrait', traitId: 'steady' }
+- { type: 'partyHasFightingArt', fightingArtId: '...' }
+- { type: 'partyHasFightingArtTag', tag: 'survival' }
+- { type: 'partyHasCondition', conditionType: 'scar', conditionId: '...' }
+- { type: 'settlementHasInnovation', innovationId: 'monsterStories' }
+- { type: 'partyHasMonsterBaneForCurrentQuarry' }
+- { type: 'any', requirements: [...] }
+- { type: 'all', requirements: [...] }
+
+UI rule:
+Show locked choices greyed out with their lockedText. Do not hide them. The player should learn that gear, traits, fighting arts, and innovations open special hunt-event solutions.
+
+Resolver rule:
+If mode is automatic, resolve autoOutcome immediately and show the result text. If mode is choice or missing, show choices. Existing events without mode should keep working as normal choice events.
+
+Balance rule:
+Locked choices should usually be slightly safer, cleaner, or more tactically useful than the basic choices, but not always pure upside. A locked option can still have a cost if the reward is strong.
+
+SUPPORTED EFFECTS USED BELOW
+------------------------------------------------------------------------
+These entries mostly use effect keys already present in the current event resolver, such as gainResource, gainRandomResource, gainSettlementMemory, loseHp, healHp, gainSurvival, addPanic, removePanic, addInjury, addScar, addDisorder, nextCombatStartBlock, nextCombatFirstAttackBonus, nextCombatMonsterBonusHp, nextCombatMonsterEnrage, monsterStartsWounded, addQuarryRumour, gainRandomFightingArt, pendingSpecialChildTrait, and chance. If Codex/Gemini introduces any new key, it must add resolver support safely.
+
+REVIEWED EVENT LIST
+------------------------------------------------------------------------
+001. Ash-Wick Scatter
+sourceSeed: Broken Lanterns
+suggestedId: ashWickScatter
+section: core
+mode: choice
+description: A trail of cold lamp fragments makes the hunters choose between salvage and safety.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: gatherTheCoolGlass
+     text: Gather the cool glass
+     outcomeText: You collect useful fragments, but every reflection shows one of you dying.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "addPanic": 1}
+  2. id: walkWithoutLooking
+     text: Walk without looking
+     outcomeText: The party avoids the visions and keeps the route clear.
+     effects: {"gainSurvival": 1, "nextCombatStartBlock": 2}
+  3. id: readTheLanternShape
+     text: Read the lantern-shape
+     lockedUnless: {"type": "partyHasTrait", "traitId": "lanternEyed"}
+     lockedText: Requires trait: lanternEyed.
+     outcomeText: Lantern-bright eyes turn the omen into a usable warning.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+
+002. Body Under the Faces
+sourceSeed: Corpse
+suggestedId: bodyUnderTheFaces
+section: core
+mode: choice
+description: A body lies half-swallowed by stone faces, still clutching something warm.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: cutTheHandFree
+     text: Cut the hand free
+     outcomeText: The hand gives up supplies, and the corpse gives up a scream.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addPanic": 1}
+  2. id: nameTheDead
+     text: Name the dead
+     outcomeText: A made-up name settles the body and steadies the settlement story.
+     effects: {"gainSettlementMemory": 1, "healHp": 1}
+  3. id: listenPastTheFear
+     text: Listen past the fear
+     lockedUnless: {"type": "partyHasTrait", "traitId": "quietListener"}
+     lockedText: Requires trait: quietListener.
+     outcomeText: The quiet survivor hears the safe rhythm beneath the noise.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+
+003. Tumour Birds
+sourceSeed: Cancer Pigeons
+suggestedId: tumourBirds
+section: core
+mode: choice
+description: Pale birds with swollen throats hop around the path, pecking at lantern smoke.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: scatterThem
+     text: Scatter them
+     outcomeText: You drive them off and find what they were guarding.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatMonsterEnrage": 1}
+  2. id: stayStill
+     text: Stay still
+     outcomeText: They pass over you like a bad thought.
+     effects: {"gainSurvival": 1, "removePanic": 1}
+  3. id: forceThePassage
+     text: Force the passage
+     lockedUnless: {"type": "partyHasTrait", "traitId": "boneStrong"}
+     lockedText: Requires trait: boneStrong.
+     outcomeText: Bone-strong hands move what should have been immovable.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+  4. id: keepTheNightQuiet
+     text: Keep the night quiet
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "quietNight"}
+     lockedText: Requires innovation: quietNight.
+     outcomeText: The party refuses to name the omen, and it loses some of its grip.
+     effects: {"removePanic": 1, "healHp": 1}
+
+004. Hollow Bellies
+sourceSeed: Famine
+suggestedId: hollowBellies
+section: core
+mode: automatic
+description: The party hears stomachs growling from beneath the ground.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: No one speaks until the sound fades.
+  effects: {"nextCombatEnergyPenalty": 1, "gainSurvival": 1}
+
+005. Meat-Reed Plain
+sourceSeed: Flesh Fields
+suggestedId: meatReedPlain
+section: core
+mode: choice
+description: A field of warm red reeds bends toward the hunters.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: harvestTheSoftStems
+     text: Harvest the soft stems
+     outcomeText: The cut reeds bleed useful matter.
+     effects: {"gainRandomResource": {"pool": "monster", "amount": 1}, "loseHp": 1}
+  2. id: burnAPath
+     text: Burn a path
+     outcomeText: Smoke clears the field and the quarry trail sharpens.
+     effects: {"nextCombatFirstAttackBonus": 2, "addQuarryRumour": true}
+  3. id: reciteSharedWarnings
+     text: Recite shared warnings
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "sharedWarnings"}
+     lockedText: Requires innovation: sharedWarnings.
+     outcomeText: Warnings passed between generations turn the ambush into a lesson.
+     effects: {"gainSurvival": 1, "nextCombatStartBlock": 2}
+
+006. Blank Idol
+sourceSeed: Faceless Statue
+suggestedId: blankIdol
+section: core
+mode: automatic
+description: A huge idol without features waits beside the trail, holding out both hands.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The idol remembers the settlement.
+  effects: {"gainSettlementMemory": 1, "gainResource": {"resourceId": "scrap", "amount": 1}}
+
+007. Chewing Earth
+sourceSeed: Hungry Ground
+suggestedId: chewingEarth
+section: core
+mode: choice
+description: The floor clicks like teeth under every step.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: runAcross
+     text: Run across
+     outcomeText: You cross quickly, losing blood to the biting ground.
+     effects: {"loseHp": 2, "nextCombatFirstAttackBonus": 2}
+  2. id: moveOneStepAtATime
+     text: Move one step at a time
+     outcomeText: Patience reveals a safer route and a small find.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "gainSurvival": 1}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+008. Mourning Vapour
+sourceSeed: Wailing Smoke
+suggestedId: mourningVapour
+section: core
+mode: choice
+description: Smoke rises from nowhere and cries with voices the survivors almost know.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: breatheItIn
+     text: Breathe it in
+     outcomeText: The voice teaches a warning, then claws at memory.
+     effects: {"gainSettlementMemory": 1, "addPanic": 1}
+  2. id: coverTheLanterns
+     text: Cover the lanterns
+     outcomeText: The party keeps its fear contained.
+     effects: {"nextCombatStartBlock": 3}
+  3. id: listenPastTheFear
+     text: Listen past the fear
+     lockedUnless: {"type": "partyHasTrait", "traitId": "quietListener"}
+     lockedText: Requires trait: quietListener.
+     outcomeText: The quiet survivor hears the safe rhythm beneath the noise.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+
+009. False Dawn
+sourceSeed: Golden Light
+suggestedId: falseDawn
+section: core
+mode: choice
+description: A gold glow brightens the horizon where no sun exists.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: walkTowardIt
+     text: Walk toward it
+     outcomeText: The path is rich and cruel.
+     effects: {"gainRandomResource": {"pool": "rare", "amount": 1}, "nextCombatMonsterBonusHp": 5}
+  2. id: turnAway
+     text: Turn away
+     outcomeText: The hunters reject the lure and keep formation.
+     effects: {"gainSurvival": 1, "nextCombatStartBlock": 2}
+  3. id: forceThePassage
+     text: Force the passage
+     lockedUnless: {"type": "partyHasTrait", "traitId": "boneStrong"}
+     lockedText: Requires trait: boneStrong.
+     outcomeText: Bone-strong hands move what should have been immovable.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+010. The Bone Picker
+sourceSeed: Harvester
+suggestedId: theBonePicker
+section: core
+mode: choice
+description: A bent figure harvests teeth from the ground with a hooked tool.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: tradeAStory
+     text: Trade a story
+     outcomeText: The picker swaps a useful scrap for a memory.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "gainSettlementMemory": 1}
+  2. id: stealFromItsBasket
+     text: Steal from its basket
+     outcomeText: You gain more, but it marks your scent.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 2}, "nextCombatMonsterEnrage": 2}
+  3. id: snareTheMovement
+     text: Snare the movement
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "whip"}
+     lockedText: Requires weaponType: whip.
+     outcomeText: The lash catches motion before motion catches you.
+     effects: {"gainSurvival": 1, "monsterStartsWounded": 2}
+
+011. Steam Pile
+sourceSeed: Monster Droppings
+suggestedId: steamPile
+section: core
+mode: choice
+description: A fresh steaming pile pulses with half-digested trophies.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: digThroughIt
+     text: Dig through it
+     outcomeText: The stink rewards greedy hands.
+     effects: {"gainRandomResource": {"pool": "monster", "amount": 1}, "addPanic": 1}
+  2. id: studyThePile
+     text: Study the pile
+     outcomeText: Its contents reveal what the quarry has eaten.
+     effects: {"addQuarryRumour": true, "nextCombatFirstAttackBonus": 1}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+012. Thread Around the Ankle
+sourceSeed: Destiny-Bound
+suggestedId: threadAroundTheAnkle
+section: core
+mode: automatic
+description: A black thread coils round one hunter’s ankle and points onward.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The cut thread curls into a charm-like lesson.
+  effects: {"gainSettlementMemory": 1, "gainSurvival": 1}
+
+013. Too Much Light
+sourceSeed: Overload
+suggestedId: tooMuchLight
+section: core
+mode: choice
+description: The lanterns suddenly flare until sight becomes pain.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: shieldYourEyes
+     text: Shield your eyes
+     outcomeText: The party avoids the worst glare.
+     effects: {"nextCombatStartBlock": 4}
+  2. id: lookIntoIt
+     text: Look into it
+     outcomeText: The vision burns but reveals a strike.
+     effects: {"nextCombatFirstAttackBonus": 3, "addPanic": 1}
+  3. id: readTheLanternShape
+     text: Read the lantern-shape
+     lockedUnless: {"type": "partyHasTrait", "traitId": "lanternEyed"}
+     lockedText: Requires trait: lanternEyed.
+     outcomeText: Lantern-bright eyes turn the omen into a usable warning.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+
+014. Stranger at the Edge
+sourceSeed: Chance Encounter
+suggestedId: strangerAtTheEdge
+section: core
+mode: choice
+description: Another survivor shape appears ahead, waving with the wrong hand.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: approachOpenly
+     text: Approach openly
+     outcomeText: The stranger shares a route and vanishes.
+     effects: {"gainSettlementMemory": 1, "addQuarryRumour": true}
+  2. id: ambushTheShape
+     text: Ambush the shape
+     outcomeText: It bursts into useful remains.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addPanic": 1}
+  3. id: snareTheMovement
+     text: Snare the movement
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "whip"}
+     lockedText: Requires weaponType: whip.
+     outcomeText: The lash catches motion before motion catches you.
+     effects: {"gainSurvival": 1, "monsterStartsWounded": 2}
+
+015. Jaw Roots
+sourceSeed: Man-trap
+suggestedId: jawRoots
+section: core
+mode: choice
+description: Root-like jaws hide beneath dust, waiting for weight.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: springTheTrapWithASpear
+     text: Spring the trap with a spear
+     outcomeText: The jaws snap shut on nothing and expose buried bone.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatStartBlock": 1}
+  2. id: riskAShortcut
+     text: Risk a shortcut
+     outcomeText: Someone is bitten, but the party gains ground.
+     effects: {"loseHp": 2, "monsterStartsWounded": 2}
+  3. id: splitTheHazard
+     text: Split the hazard open
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "grandWeapon"}
+     lockedText: Requires weaponType: grandWeapon.
+     outcomeText: The huge weapon makes one terrible problem into two useful pieces.
+     effects: {"gainRandomResource": {"pool": "monster", "amount": 1}, "loseHp": 1}
+
+016. Sleeping While Walking
+sourceSeed: Night Terrors
+suggestedId: sleepingWhileWalking
+section: core
+mode: choice
+description: The hunters realise one of them has been dreaming aloud for an hour.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: wakeThemHard
+     text: Wake them hard
+     outcomeText: The dream breaks violently.
+     effects: {"addPanic": 1, "nextCombatStartBlock": 2}
+  2. id: letTheDreamFinish
+     text: Let the dream finish
+     outcomeText: A useful route is spoken in sleep.
+     effects: {"addQuarryRumour": true, "gainSettlementMemory": 1}
+  3. id: usePainAsInstruction
+     text: Use pain as instruction
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "painLessons"}
+     lockedText: Requires innovation: painLessons.
+     outcomeText: Old wounds tell the party which mistake not to repeat.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+017. The Near Face
+sourceSeed: Face-to-Face
+suggestedId: theNearFace
+section: core
+mode: choice
+description: A stone face rises close enough to fog with breath.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: speakToIt
+     text: Speak to it
+     outcomeText: It answers in the hunter’s own voice.
+     effects: {"gainSettlementMemory": 1, "addPanic": 1}
+  2. id: breakItsTeeth
+     text: Break its teeth
+     outcomeText: The face cracks and drops a hard prize.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatMonsterEnrage": 1}
+  3. id: holdItAtReach
+     text: Hold it at reach
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "spear"}
+     lockedText: Requires weaponType: spear.
+     outcomeText: Reach keeps the thing from deciding who it wants first.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+018. Ash Grass
+sourceSeed: Dead Weed
+suggestedId: ashGrass
+section: core
+mode: automatic
+description: A mat of dead grass rattles like old paper.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The fire forces the quarry trail into view.
+  effects: {"nextCombatFirstAttackBonus": 2}
+
+019. Black Breath
+sourceSeed: Exhalation of Darkness
+suggestedId: blackBreath
+section: core
+mode: choice
+description: A valley exhales darkness warm enough to sweat.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: holdYourBreathAndCross
+     text: Hold your breath and cross
+     outcomeText: The crossing is clean but exhausting.
+     effects: {"nextCombatEnergyPenalty": 1, "gainSurvival": 1}
+  2. id: walkWithTheBreath
+     text: Walk with the breath
+     outcomeText: The darkness hides the party’s approach.
+     effects: {"monsterStartsWounded": 2, "addPanic": 1}
+  3. id: readTheLanternShape
+     text: Read the lantern-shape
+     lockedUnless: {"type": "partyHasTrait", "traitId": "lanternEyed"}
+     lockedText: Requires trait: lanternEyed.
+     outcomeText: Lantern-bright eyes turn the omen into a usable warning.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+
+020. Thirsting Flats
+sourceSeed: Dry Lands
+suggestedId: thirstingFlats
+section: core
+mode: choice
+description: The path becomes cracked and thirsty, drinking spilled blood instantly.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: cutYourPalm
+     text: Cut your palm
+     outcomeText: The ground shows a shortcut after tasting you.
+     effects: {"loseHp": 1, "addQuarryRumour": true}
+  2. id: conserveStrength
+     text: Conserve strength
+     outcomeText: The party slows but arrives steadier.
+     effects: {"gainSurvival": 1, "nextCombatStartBlock": 2}
+  3. id: applyWeaponDrills
+     text: Apply weapon drills
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "weaponDrills"}
+     lockedText: Requires innovation: weaponDrills.
+     outcomeText: Training turns panic into practiced movement.
+     effects: {"nextCombatFirstAttackBonus": 2}
+
+021. Charcoal Warnings
+sourceSeed: Drawings
+suggestedId: charcoalWarnings
+section: core
+mode: choice
+description: Charcoal figures on stone show hunters making mistakes not yet made.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: copyTheDrawings
+     text: Copy the drawings
+     outcomeText: The settlement gains a warning diagram.
+     effects: {"gainSettlementMemory": 1, "nextCombatFirstAttackBonus": 1}
+  2. id: scrubThemAway
+     text: Scrub them away
+     outcomeText: The future loses interest for now.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+  3. id: hewThePath
+     text: Hew open a path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "axe"}
+     lockedText: Requires weaponType: axe.
+     outcomeText: You cut through the obstacle and learn where the quarry passed.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addQuarryRumour": true}
+  4. id: keepTheNightQuiet
+     text: Keep the night quiet
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "quietNight"}
+     lockedText: Requires innovation: quietNight.
+     outcomeText: The party refuses to name the omen, and it loses some of its grip.
+     effects: {"removePanic": 1, "healHp": 1}
+
+022. Sour Rain
+sourceSeed: Acid Rain
+suggestedId: sourRain
+section: core
+mode: choice
+description: Rain hisses on bone and leaves clear holes in the dust.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: collectItInASkull
+     text: Collect it in a skull
+     outcomeText: The dangerous liquid becomes a tool.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "loseHp": 1}
+  2. id: shelterUnderHides
+     text: Shelter under hides
+     outcomeText: The party waits it out safely.
+     effects: {"nextCombatStartBlock": 3}
+  3. id: answerWithStrangeness
+     text: Answer with strange weaponry
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "strangeWeapon"}
+     lockedText: Requires weaponType: strangeWeapon.
+     outcomeText: The weapon behaves as if it remembers this place.
+     effects: {"gainSettlementMemory": 1, "removePanic": 1}
+
+023. Clear Pool
+sourceSeed: Clean Water
+suggestedId: clearPool
+section: core
+mode: choice
+description: A still pool reflects the survivors as healthier strangers.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: drinkDeeply
+     text: Drink deeply
+     outcomeText: The water restores the body, but not the mind.
+     effects: {"healHp": 2, "addPanic": 1}
+  2. id: bottleItForLater
+     text: Bottle it for later
+     outcomeText: The settlement will remember where water can be trusted.
+     effects: {"gainSettlementMemory": 1}
+  3. id: consultTheCharm
+     text: Consult a charm or trinket
+     lockedUnless: {"type": "partyHasGearTag", "tag": "trinket"}
+     lockedText: Requires gearTag: trinket.
+     outcomeText: The little object twitches toward the safer answer.
+     effects: {"gainSettlementMemory": 1, "gainSurvival": 1}
+
+024. Borrowed Meal
+sourceSeed: Food from the Mouths of Others
+suggestedId: borrowedMeal
+section: core
+mode: automatic
+description: A nest of lesser things coughs up warm, edible scraps.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The food becomes settlement knowledge.
+  effects: {"gainSettlementMemory": 1, "gainRandomResource": {"pool": "basicOrMonster", "amount": 1}}
+
+025. Distant Giants
+sourceSeed: Titans in the Dark
+suggestedId: distantGiants
+section: core
+mode: choice
+description: Vast silhouettes move far away, rearranging the horizon.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: hideAndWatch
+     text: Hide and watch
+     outcomeText: Their steps reveal old paths.
+     effects: {"addQuarryRumour": true, "gainSettlementMemory": 1}
+  2. id: runBeforeTheyTurn
+     text: Run before they turn
+     outcomeText: The party escapes shaken but quickened.
+     effects: {"addPanic": 1, "nextCombatFirstAttackBonus": 2}
+  3. id: readTheLanternShape
+     text: Read the lantern-shape
+     lockedUnless: {"type": "partyHasTrait", "traitId": "lanternEyed"}
+     lockedText: Requires trait: lanternEyed.
+     outcomeText: Lantern-bright eyes turn the omen into a usable warning.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+
+026. Mouth in the Ground
+sourceSeed: Pit
+suggestedId: mouthInTheGround
+section: core
+mode: choice
+description: The path opens into a vertical black mouth.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: climbDown
+     text: Climb down
+     outcomeText: A prize waits on a ledge.
+     effects: {"gainRandomResource": {"pool": "rare", "amount": 1}, "loseHp": 2}
+  2. id: markTheEdge
+     text: Mark the edge
+     outcomeText: The party avoids disaster and records the hazard.
+     effects: {"gainSurvival": 1, "gainSettlementMemory": 1}
+  3. id: applyWeaponDrills
+     text: Apply weapon drills
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "weaponDrills"}
+     lockedText: Requires innovation: weaponDrills.
+     outcomeText: Training turns panic into practiced movement.
+     effects: {"nextCombatFirstAttackBonus": 2}
+
+027. Hooked Silhouettes
+sourceSeed: Man-stealers
+suggestedId: hookedSilhouettes
+section: core
+mode: choice
+description: Long-armed shapes move between rocks, carrying bags that kick.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: chaseThem
+     text: Chase them
+     outcomeText: The hunters recover supplies but draw attention.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 1}, "nextCombatMonsterEnrage": 1}
+  2. id: stayHidden
+     text: Stay hidden
+     outcomeText: Survival matters more than heroics.
+     effects: {"gainSurvival": 2}
+  3. id: crackTheHardPart
+     text: Crack the hard part
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "hammer"}
+     lockedText: Requires weaponType: hammer.
+     outcomeText: A heavy strike turns the obstacle into salvage.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+028. Mocking Carrion Bird
+sourceSeed: Trollbird
+suggestedId: mockingCarrionBird
+section: core
+mode: choice
+description: A huge carrion bird laughs with a human throat.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: throwStones
+     text: Throw stones
+     outcomeText: It drops something stolen.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatMonsterBonusHp": 3}
+  2. id: laughBack
+     text: Laugh back
+     outcomeText: The bird is offended into silence.
+     effects: {"gainSettlementMemory": 1, "removePanic": 1}
+  3. id: steadyTheLine
+     text: Steady the party
+     lockedUnless: {"type": "partyHasTrait", "traitId": "steady"}
+     lockedText: Requires trait: steady.
+     outcomeText: A steady survivor keeps the others from turning fear into mistakes.
+     effects: {"gainSurvival": 1, "removePanic": 1}
+
+029. The Unlit Smith
+sourceSeed: Dark Blacksmith
+suggestedId: theUnlitSmith
+section: core
+mode: choice
+description: Hammer blows ring from a forge with no flame.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: offerScrap
+     text: Offer scrap
+     outcomeText: The smith tempers a small advantage.
+     effects: {"nextCombatFirstAttackBonus": 3, "addPanic": 1, "gainSettlementMemory": 1}
+  2. id: watchFromAfar
+     text: Watch from afar
+     outcomeText: You learn the rhythm without paying.
+     effects: {"gainSettlementMemory": 1}
+  3. id: takeTheOpening
+     text: Take the dangerous opening
+     lockedUnless: {"type": "partyHasTrait", "traitId": "bold"}
+     lockedText: Requires trait: bold.
+     outcomeText: Boldness wins a reward before caution can object.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 1}, "loseHp": 1}
+
+030. Softened Faces
+sourceSeed: Rotten Faces
+suggestedId: softenedFaces
+section: core
+mode: automatic
+description: Stone faces ahead rot like fruit.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The party keeps clean footing.
+  effects: {"nextCombatStartBlock": 2, "gainSurvival": 1}
+
+031. Path That Blinks
+sourceSeed: Strange Path
+suggestedId: pathThatBlinks
+section: core
+mode: choice
+description: The trail appears only whenever no one looks directly at it.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: trustTheCornerOfYourEye
+     text: Trust the corner of your eye
+     outcomeText: The party advances strangely fast.
+     effects: {"monsterStartsWounded": 2, "addPanic": 1}
+  2. id: makeYourOwnPath
+     text: Make your own path
+     outcomeText: Hard work becomes reliable memory.
+     effects: {"gainSettlementMemory": 1, "gainResource": {"resourceId": "bone", "amount": 1}}
+  3. id: burnTheBadMemory
+     text: Burn the bad memory
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "riteOfForgetting"}
+     lockedText: Requires innovation: riteOfForgetting.
+     outcomeText: The ritual keeps the worst part from following the party home.
+     effects: {"removePanic": 1, "gainSettlementMemory": 1}
+
+032. Laughing Fit
+sourceSeed: Sudden Madness
+suggestedId: laughingFit
+section: core
+mode: choice
+description: One survivor begins laughing at something in the dark.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: restrainThem
+     text: Restrain them
+     outcomeText: The panic is contained roughly.
+     effects: {"addPanic": 1, "nextCombatStartBlock": 2}
+  2. id: letTheLaughSpread
+     text: Let the laugh spread
+     outcomeText: The whole party runs lighter, for now.
+     effects: {"gainSurvival": 2, "nextCombatEnergyPenalty": 1}
+  3. id: listenPastTheFear
+     text: Listen past the fear
+     lockedUnless: {"type": "partyHasTrait", "traitId": "quietListener"}
+     lockedText: Requires trait: quietListener.
+     outcomeText: The quiet survivor hears the safe rhythm beneath the noise.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+
+033. Name in the Teeth
+sourceSeed: It Whispers Your Name
+suggestedId: nameInTheTeeth
+section: core
+mode: choice
+description: A voice whispers a survivor’s name from between stones.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: answerIt
+     text: Answer it
+     outcomeText: The answer returns as a dangerous lesson.
+     effects: {"gainSettlementMemory": 2, "addPanic": 1}
+  2. id: refuseTheName
+     text: Refuse the name
+     outcomeText: Silence becomes armour.
+     effects: {"nextCombatStartBlock": 3}
+  3. id: advanceBehindTheShield
+     text: Advance behind a shield
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "shield"}
+     lockedText: Requires weaponType: shield.
+     outcomeText: The blow lands on prepared cover instead of skin.
+     effects: {"nextCombatStartBlock": 5}
+
+034. Weight of Hopelessness
+sourceSeed: Crippling Misery
+suggestedId: weightOfHopelessness
+section: core
+mode: choice
+description: A sadness settles so heavily that moving hurts.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: shareTheBurden
+     text: Share the burden
+     outcomeText: The party steadies one another.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+  2. id: pushThroughAlone
+     text: Push through alone
+     outcomeText: Pain becomes momentum.
+     effects: {"loseHp": 1, "nextCombatFirstAttackBonus": 3}
+  3. id: hewThePath
+     text: Hew open a path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "axe"}
+     lockedText: Requires weaponType: axe.
+     outcomeText: You cut through the obstacle and learn where the quarry passed.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addQuarryRumour": true}
+
+035. Cold Furnace
+sourceSeed: Broken Lantern Oven
+suggestedId: coldFurnace
+section: core
+mode: choice
+description: A dead furnace is packed with cracked lantern glass.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: rakeTheAshes
+     text: Rake the ashes
+     outcomeText: Useful salvage cuts the hands.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "loseHp": 1}
+  2. id: relightItBriefly
+     text: Relight it briefly
+     outcomeText: The flame teaches the settlement a trick.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 1}
+  3. id: takeTheOpening
+     text: Take the dangerous opening
+     lockedUnless: {"type": "partyHasTrait", "traitId": "bold"}
+     lockedText: Requires trait: bold.
+     outcomeText: Boldness wins a reward before caution can object.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 1}, "loseHp": 1}
+
+036. Fresh Sign
+sourceSeed: On the Trail
+suggestedId: freshSign
+section: core
+mode: automatic
+description: The quarry trail becomes unmistakable: warm prints, fresh blood, and disturbed dust.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The party prepares the opening.
+  effects: {"nextCombatFirstAttackBonus": 2, "gainSurvival": 1}
+
+037. No Same Stone Twice
+sourceSeed: Lost
+suggestedId: noSameStoneTwice
+section: core
+mode: choice
+description: The party realises every landmark has moved.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: followTheLanternSmoke
+     text: Follow the lantern smoke
+     outcomeText: The smoke knows the way, but not kindly.
+     effects: {"addPanic": 1, "addQuarryRumour": true}
+  2. id: campAndListen
+     text: Camp and listen
+     outcomeText: The lost path becomes a remembered route.
+     effects: {"gainSettlementMemory": 1, "healHp": 1}
+  3. id: snareTheMovement
+     text: Snare the movement
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "whip"}
+     lockedText: Requires weaponType: whip.
+     outcomeText: The lash catches motion before motion catches you.
+     effects: {"gainSurvival": 1, "monsterStartsWounded": 2}
+
+038. Many-Horned Grazer
+sourceSeed: Gregalope
+suggestedId: manyHornedGrazer
+section: core
+mode: choice
+description: A skittish many-horned creature feeds nearby.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: huntItQuietly
+     text: Hunt it quietly
+     outcomeText: The party gains meat and fear.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatMonsterBonusHp": 3}
+  2. id: driveItTowardTheQuarry
+     text: Drive it toward the quarry
+     outcomeText: The chaos wounds what waits ahead.
+     effects: {"monsterStartsWounded": 3}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+039. Thick Milk Fog
+sourceSeed: Heavy Mist
+suggestedId: thickMilkFog
+section: core
+mode: choice
+description: White mist presses down until voices sound buried.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: tieEveryoneTogether
+     text: Tie everyone together
+     outcomeText: No one is lost, but movement is slow.
+     effects: {"nextCombatEnergyPenalty": 1, "nextCombatStartBlock": 3}
+  2. id: moveByInstinct
+     text: Move by instinct
+     outcomeText: The party arrives suddenly and dangerously.
+     effects: {"nextCombatFirstAttackBonus": 3, "addPanic": 1}
+  3. id: holdItAtReach
+     text: Hold it at reach
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "spear"}
+     lockedText: Requires weaponType: spear.
+     outcomeText: Reach keeps the thing from deciding who it wants first.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+040. Borrowed Sleep
+sourceSeed: Dream
+suggestedId: borrowedSleep
+section: core
+mode: choice
+description: A survivor dreams while walking and wakes with wet eyes.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: recordTheDream
+     text: Record the dream
+     outcomeText: The settlement gains a new omen.
+     effects: {"gainSettlementMemory": 1, "addQuarryRumour": true}
+  2. id: shakeItAway
+     text: Shake it away
+     outcomeText: The dream fades with some fear.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+  3. id: steadyTheLine
+     text: Steady the party
+     lockedUnless: {"type": "partyHasTrait", "traitId": "steady"}
+     lockedText: Requires trait: steady.
+     outcomeText: A steady survivor keeps the others from turning fear into mistakes.
+     effects: {"gainSurvival": 1, "removePanic": 1}
+
+041. Dream With Teeth
+sourceSeed: Nightmare
+suggestedId: dreamWithTeeth
+section: core
+mode: choice
+description: The walking dream turns violent and everyone sees it.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: fightTheDream
+     text: Fight the dream
+     outcomeText: The party wakes bloodied but ready.
+     effects: {"loseHp": 1, "nextCombatFirstAttackBonus": 3}
+  2. id: fleeInsideIt
+     text: Flee inside it
+     outcomeText: The nightmare leaves panic behind.
+     effects: {"addPanic": 2, "monsterStartsWounded": 2}
+  3. id: shootTheWarningSign
+     text: Use a bow to test the path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "bow"}
+     lockedText: Requires weaponType: bow.
+     outcomeText: An arrow makes the hidden danger answer from a safer distance.
+     effects: {"gainSurvival": 1, "nextCombatFirstAttackBonus": 1}
+
+042. Crawling Surgeon
+sourceSeed: Surgeon
+suggestedId: crawlingSurgeon
+section: core
+mode: automatic
+description: A tiny masked thing offers treatment with too many tools.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: You keep your skin and take salvage.
+  effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "gainSettlementMemory": 1}
+
+043. Warm Kill Site
+sourceSeed: Fresh Kill
+suggestedId: warmKillSite
+section: core
+mode: choice
+description: A fresh carcass steams in a circle of quiet.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: harvestQuickly
+     text: Harvest quickly
+     outcomeText: You take parts before the owner returns.
+     effects: {"gainRandomResource": {"pool": "monster", "amount": 1}, "nextCombatMonsterEnrage": 1}
+  2. id: studyTheWounds
+     text: Study the wounds
+     outcomeText: The killer’s pattern becomes readable.
+     effects: {"nextCombatFirstAttackBonus": 2, "gainSettlementMemory": 1}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+044. Hands in the Dust
+sourceSeed: Opportunists
+suggestedId: handsInTheDust
+section: core
+mode: choice
+description: Small figures creep toward your packs whenever you blink.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: guardThePacks
+     text: Guard the packs
+     outcomeText: The party loses time but not supplies.
+     effects: {"nextCombatStartBlock": 2, "gainSurvival": 1}
+  2. id: setACounterAmbush
+     text: Set a counter-ambush
+     outcomeText: You catch one and take its bundle.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 1}, "addPanic": 1}
+  3. id: answerWithStrangeness
+     text: Answer with strange weaponry
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "strangeWeapon"}
+     lockedText: Requires weaponType: strangeWeapon.
+     outcomeText: The weapon behaves as if it remembers this place.
+     effects: {"gainSettlementMemory": 1, "removePanic": 1}
+
+045. Knife Valley
+sourceSeed: Jagged Valley
+suggestedId: knifeValley
+section: core
+mode: choice
+description: The trail drops through stone teeth.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: climbTheSharpWay
+     text: Climb the sharp way
+     outcomeText: The cuts are worth the high ground.
+     effects: {"loseHp": 1, "nextCombatFirstAttackBonus": 3}
+  2. id: takeTheLongWay
+     text: Take the long way
+     outcomeText: Slow travel keeps the party whole.
+     effects: {"healHp": 1, "gainSurvival": 1}
+  3. id: crackTheHardPart
+     text: Crack the hard part
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "hammer"}
+     lockedText: Requires weaponType: hammer.
+     outcomeText: A heavy strike turns the obstacle into salvage.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+  4. id: keepTheNightQuiet
+     text: Keep the night quiet
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "quietNight"}
+     lockedText: Requires innovation: quietNight.
+     outcomeText: The party refuses to name the omen, and it loses some of its grip.
+     effects: {"removePanic": 1, "healHp": 1}
+
+046. Black Current
+sourceSeed: River
+suggestedId: blackCurrent
+section: core
+mode: choice
+description: A dark river crosses the path, flowing uphill.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: wadeThrough
+     text: Wade through
+     outcomeText: The current steals warmth but uncovers a find.
+     effects: {"loseHp": 1, "gainRandomResource": {"pool": "basicOrMonster", "amount": 1}}
+  2. id: buildACrossing
+     text: Build a crossing
+     outcomeText: Care becomes a settlement lesson.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+  3. id: steadyTheLine
+     text: Steady the party
+     lockedUnless: {"type": "partyHasTrait", "traitId": "steady"}
+     lockedText: Requires trait: steady.
+     outcomeText: A steady survivor keeps the others from turning fear into mistakes.
+     effects: {"gainSurvival": 1, "removePanic": 1}
+
+047. Feeding Trees
+sourceSeed: Banquet Trees
+suggestedId: feedingTrees
+section: core
+mode: choice
+description: Trees with mouth-like knots offer hanging fruit.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: eatTheFruit
+     text: Eat the fruit
+     outcomeText: It restores flesh and invites dreams.
+     effects: {"healHp": 2, "addPanic": 1}
+  2. id: cutTheBranches
+     text: Cut the branches
+     outcomeText: The wood-like bone is useful.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatMonsterEnrage": 1}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+048. The Quiet Bet
+sourceSeed: Death Wager
+suggestedId: theQuietBet
+section: core
+mode: automatic
+description: A coin of bone spins in the air and will not fall.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The coin stops, disappointed.
+  effects: {"gainSurvival": 1, "removePanic": 1}
+
+049. Yellow Marsh
+sourceSeed: Pus Fields
+suggestedId: yellowMarsh
+section: core
+mode: choice
+description: The ground bubbles with yellow blisters.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: skimTheSurface
+     text: Skim the surface
+     outcomeText: The fluid is disgusting but useful.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addPanic": 1}
+  2. id: stepOnDryRidges
+     text: Step on dry ridges
+     outcomeText: The careful route keeps everyone stable.
+     effects: {"nextCombatStartBlock": 3}
+  3. id: letArmourTakeIt
+     text: Let armour take the punishment
+     lockedUnless: {"type": "partyHasGearTag", "tag": "armor"}
+     lockedText: Requires gearTag: armor.
+     outcomeText: The party trusts cured hide, bone, and plate instead of bare skin.
+     effects: {"nextCombatStartBlock": 4}
+
+050. Hanging Cage
+sourceSeed: Gibbet
+suggestedId: hangingCage
+section: core
+mode: choice
+description: A cage swings from a bone arch, knocking softly.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: openIt
+     text: Open it
+     outcomeText: The cage contains a warning and a little salvage.
+     effects: {"gainSettlementMemory": 1, "gainResource": {"resourceId": "scrap", "amount": 1}}
+  2. id: cutItDownFromAfar
+     text: Cut it down from afar
+     outcomeText: It crashes loudly enough to stir the quarry.
+     effects: {"monsterStartsWounded": 2, "nextCombatMonsterEnrage": 1}
+  3. id: shootTheWarningSign
+     text: Use a bow to test the path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "bow"}
+     lockedText: Requires weaponType: bow.
+     outcomeText: An arrow makes the hidden danger answer from a safer distance.
+     effects: {"gainSurvival": 1, "nextCombatFirstAttackBonus": 1}
+
+051. Lanternless Group
+sourceSeed: Refugees
+suggestedId: lanternlessGroup
+section: core
+mode: choice
+description: A small group begs to follow your lanterns.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: guideThemHomeward
+     text: Guide them homeward
+     outcomeText: Their gratitude becomes memory.
+     effects: {"gainSettlementMemory": 2, "nextCombatEnergyPenalty": 1}
+  2. id: takeTheirSupplies
+     text: Take their supplies
+     outcomeText: The settlement gains goods, not trust.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 1}, "addPanic": 1}
+  3. id: forceThePassage
+     text: Force the passage
+     lockedUnless: {"type": "partyHasTrait", "traitId": "boneStrong"}
+     lockedText: Requires trait: boneStrong.
+     outcomeText: Bone-strong hands move what should have been immovable.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+052. Whisper Flies
+sourceSeed: Madflies
+suggestedId: whisperFlies
+section: core
+mode: choice
+description: A cloud of flies repeats every fearful word spoken near it.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: staySilent
+     text: Stay silent
+     outcomeText: The party crosses with discipline.
+     effects: {"gainSurvival": 1, "nextCombatStartBlock": 2}
+  2. id: letThemSwarmTheLantern
+     text: Let them swarm the lantern
+     outcomeText: They burn and drop strange residue.
+     effects: {"gainResource": {"resourceId": "ichor", "amount": 1}, "addPanic": 1}
+  3. id: hewThePath
+     text: Hew open a path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "axe"}
+     lockedText: Requires weaponType: axe.
+     outcomeText: You cut through the obstacle and learn where the quarry passed.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addQuarryRumour": true}
+
+053. Mask Pedlar
+sourceSeed: Mask Salesman
+suggestedId: maskPedlar
+section: core
+mode: choice
+description: A hidden pedlar displays masks that twitch when ignored.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: buyWithAMemory
+     text: Buy with a memory
+     outcomeText: A mask whispers how to survive.
+     effects: {"gainSettlementMemory": -1, "gainSurvival": 2, "nextCombatStartBlock": 2}
+  2. id: stealAMask
+     text: Steal a mask
+     outcomeText: The mask keeps screaming in the pack.
+     effects: {"gainRandomResource": {"pool": "rare", "amount": 1}, "addPanic": 2}
+  3. id: answerWithStrangeness
+     text: Answer with strange weaponry
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "strangeWeapon"}
+     lockedText: Requires weaponType: strangeWeapon.
+     outcomeText: The weapon behaves as if it remembers this place.
+     effects: {"gainSettlementMemory": 1, "removePanic": 1}
+
+054. Needle-Bone Squall
+sourceSeed: Bone Storm
+suggestedId: needleBoneSquall
+section: core
+mode: automatic
+description: A storm of tiny bones strips across the plain.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: Speed costs blood.
+  effects: {"loseHp": 2, "monsterStartsWounded": 2}
+
+055. Living Mud
+sourceSeed: Mudslide
+suggestedId: livingMud
+section: core
+mode: choice
+description: A slope of mud rolls uphill toward the party.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: rideIt
+     text: Ride it
+     outcomeText: The party is carried closer to the quarry.
+     effects: {"monsterStartsWounded": 2, "addPanic": 1}
+  2. id: anchorDown
+     text: Anchor down
+     outcomeText: The mud leaves resources around your feet.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatEnergyPenalty": 1}
+  3. id: letArmourTakeIt
+     text: Let armour take the punishment
+     lockedUnless: {"type": "partyHasGearTag", "tag": "armor"}
+     lockedText: Requires gearTag: armor.
+     outcomeText: The party trusts cured hide, bone, and plate instead of bare skin.
+     effects: {"nextCombatStartBlock": 4}
+
+056. Picked Giant
+sourceSeed: Dead Monster
+suggestedId: pickedGiant
+section: core
+mode: choice
+description: The remains of a huge beast lie stripped by things with careful hands.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: takeWhatRemains
+     text: Take what remains
+     outcomeText: There is still something worth cutting.
+     effects: {"gainRandomResource": {"pool": "monster", "amount": 1}, "nextCombatMonsterEnrage": 1}
+  2. id: studyWhatKilledIt
+     text: Study what killed it
+     outcomeText: The party learns caution from the wounds.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+  3. id: applyWeaponDrills
+     text: Apply weapon drills
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "weaponDrills"}
+     lockedText: Requires innovation: weaponDrills.
+     outcomeText: Training turns panic into practiced movement.
+     effects: {"nextCombatFirstAttackBonus": 2}
+
+057. Thunder Belly Laugh
+sourceSeed: Gorm's Laughter
+suggestedId: thunderBellyLaugh
+section: core
+mode: choice
+description: A deep laugh rolls under the ground and makes stones jump.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: laughWithIt
+     text: Laugh with it
+     outcomeText: The sound shakes fear loose.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+  2. id: braceAgainstIt
+     text: Brace against it
+     outcomeText: The shaking reveals buried parts.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatEnergyPenalty": 1}
+  3. id: hewThePath
+     text: Hew open a path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "axe"}
+     lockedText: Requires weaponType: axe.
+     outcomeText: You cut through the obstacle and learn where the quarry passed.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addQuarryRumour": true}
+
+058. Warm Scent
+sourceSeed: Scent on the Wind
+suggestedId: warmScent
+section: core
+mode: choice
+description: A warm animal smell cuts through the dark.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: followTheScent
+     text: Follow the scent
+     outcomeText: The party finds the quarry’s recent passage.
+     effects: {"monsterStartsWounded": 2, "nextCombatFirstAttackBonus": 1}
+  2. id: maskYourOwnScent
+     text: Mask your own scent
+     outcomeText: The next fight begins on your terms.
+     effects: {"nextCombatStartBlock": 2, "gainSurvival": 1}
+  3. id: steadyTheLine
+     text: Steady the party
+     lockedUnless: {"type": "partyHasTrait", "traitId": "steady"}
+     lockedText: Requires trait: steady.
+     outcomeText: A steady survivor keeps the others from turning fear into mistakes.
+     effects: {"gainSurvival": 1, "removePanic": 1}
+
+059. Old Fight Marks
+sourceSeed: Signs of Battle
+suggestedId: oldFightMarks
+section: core
+mode: choice
+description: Broken weapons and dragged footprints mark a violent crossing.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: searchTheDebris
+     text: Search the debris
+     outcomeText: The old fight gives up materials.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "gainRandomResource": {"pool": "basicOrMonster", "amount": 2}}
+  2. id: recreateTheFight
+     text: Recreate the fight
+     outcomeText: The lesson sharpens the opening blow.
+     effects: {"nextCombatFirstAttackBonus": 3, "addPanic": 1}
+  3. id: snareTheMovement
+     text: Snare the movement
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "whip"}
+     lockedText: Requires weaponType: whip.
+     outcomeText: The lash catches motion before motion catches you.
+     effects: {"gainSurvival": 1, "monsterStartsWounded": 2}
+
+060. Crawling Fire
+sourceSeed: Wildfire
+suggestedId: crawlingFire
+section: core
+mode: automatic
+description: Blue fire crawls across the ground against the wind.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The fire hardens a useful piece.
+  effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "gainSettlementMemory": 1}
+
+061. Cold Strike
+sourceSeed: Frozen Lightning
+suggestedId: coldStrike
+section: core
+mode: choice
+description: A bolt of lightning hangs frozen in the air, humming softly.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: touchItWithScrap
+     text: Touch it with scrap
+     outcomeText: The charge makes a dangerous tool.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "addPanic": 1}
+  2. id: walkBeneathIt
+     text: Walk beneath it
+     outcomeText: The static wakes tired muscles.
+     effects: {"gainSurvival": 1, "nextCombatStartBlock": 2}
+  3. id: readTheLanternShape
+     text: Read the lantern-shape
+     lockedUnless: {"type": "partyHasTrait", "traitId": "lanternEyed"}
+     lockedText: Requires trait: lanternEyed.
+     outcomeText: Lantern-bright eyes turn the omen into a usable warning.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+
+062. Thin Gap
+sourceSeed: Space Between the Rocks
+suggestedId: thinGap
+section: core
+mode: choice
+description: Two rocks open a gap wider inside than outside.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: enterTheGap
+     text: Enter the gap
+     outcomeText: The space folds you nearer the quarry.
+     effects: {"monsterStartsWounded": 2, "addPanic": 1}
+  2. id: leaveAMarker
+     text: Leave a marker
+     outcomeText: The strange place becomes a future route.
+     effects: {"addQuarryRumour": true, "gainSettlementMemory": 1}
+  3. id: holdItAtReach
+     text: Hold it at reach
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "spear"}
+     lockedText: Requires weaponType: spear.
+     outcomeText: Reach keeps the thing from deciding who it wants first.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+063. Marching Feet
+sourceSeed: Feet
+suggestedId: marchingFeet
+section: core
+mode: choice
+description: Dozens of bare footprints appear ahead, all fresh and all your size.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: stepExactlyInsideThem
+     text: Step exactly inside them
+     outcomeText: The path carries you safely.
+     effects: {"gainSurvival": 2}
+  2. id: breakThePattern
+     text: Break the pattern
+     outcomeText: The footprints scatter into useful bone.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "addPanic": 1}
+  3. id: shootTheWarningSign
+     text: Use a bow to test the path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "bow"}
+     lockedText: Requires weaponType: bow.
+     outcomeText: An arrow makes the hidden danger answer from a safer distance.
+     effects: {"gainSurvival": 1, "nextCombatFirstAttackBonus": 1}
+
+064. Dry Fountain
+sourceSeed: Stone Fountain
+suggestedId: dryFountain
+section: core
+mode: choice
+description: A fountain of stone pours nothing into a full basin.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: cupTheNothing
+     text: Cup the nothing
+     outcomeText: Your hands come away full of impossible coolness.
+     effects: {"healHp": 2, "addPanic": 1}
+  2. id: chipTheBasin
+     text: Chip the basin
+     outcomeText: The fountain remembers the blow.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "gainSettlementMemory": 1}
+  3. id: snareTheMovement
+     text: Snare the movement
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "whip"}
+     lockedText: Requires weaponType: whip.
+     outcomeText: The lash catches motion before motion catches you.
+     effects: {"gainSurvival": 1, "monsterStartsWounded": 2}
+
+065. Watching Statue
+sourceSeed: Statue
+suggestedId: watchingStatue
+section: core
+mode: choice
+description: A statue turns only when no one admits it moved.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: stareItDown
+     text: Stare it down
+     outcomeText: It gives up first.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+  2. id: walkBehindIt
+     text: Walk behind it
+     outcomeText: You find offerings at its feet.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addPanic": 1}
+  3. id: splitTheHazard
+     text: Split the hazard open
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "grandWeapon"}
+     lockedText: Requires weaponType: grandWeapon.
+     outcomeText: The huge weapon makes one terrible problem into two useful pieces.
+     effects: {"gainRandomResource": {"pool": "monster", "amount": 1}, "loseHp": 1}
+
+066. Word That Hurts
+sourceSeed: Forbidden Word
+suggestedId: wordThatHurts
+section: core
+mode: automatic
+description: A word appears in the dust. Everyone knows not to say it.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The party keeps the danger unnamed.
+  effects: {"removePanic": 1, "nextCombatStartBlock": 2}
+
+067. Glistening Pools
+sourceSeed: Saliva Pools
+suggestedId: glisteningPools
+section: core
+mode: choice
+description: Pools of thick saliva tremble with trapped sparks.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: collectTheSlime
+     text: Collect the slime
+     outcomeText: The fluid will help craft or poison.
+     effects: {"gainResource": {"resourceId": "ichor", "amount": 1}, "addPanic": 1}
+  2. id: skirtTheEdge
+     text: Skirt the edge
+     outcomeText: The party learns what fed here.
+     effects: {"addQuarryRumour": true, "nextCombatFirstAttackBonus": 1}
+  3. id: crackTheHardPart
+     text: Crack the hard part
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "hammer"}
+     lockedText: Requires weaponType: hammer.
+     outcomeText: A heavy strike turns the obstacle into salvage.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+068. Known Face in Stone
+sourceSeed: A Familiar Face
+suggestedId: knownFaceInStone
+section: core
+mode: choice
+description: A stone face resembles someone back home.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: speakToItAsFamily
+     text: Speak to it as family
+     outcomeText: The answer comforts and wounds.
+     effects: {"gainSettlementMemory": 1, "addPanic": 1}
+  2. id: breakTheResemblance
+     text: Break the resemblance
+     outcomeText: The party refuses the omen.
+     effects: {"gainSurvival": 1, "nextCombatStartBlock": 2}
+  3. id: shootTheWarningSign
+     text: Use a bow to test the path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "bow"}
+     lockedText: Requires weaponType: bow.
+     outcomeText: An arrow makes the hidden danger answer from a safer distance.
+     effects: {"gainSurvival": 1, "nextCombatFirstAttackBonus": 1}
+
+069. Skipped Moment
+sourceSeed: Time Lapse
+suggestedId: skippedMoment
+section: core
+mode: choice
+description: The hunters blink and find their footprints already ahead of them.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: acceptTheLostTime
+     text: Accept the lost time
+     outcomeText: The quarry is closer than it should be.
+     effects: {"monsterStartsWounded": 2, "nextCombatEnergyPenalty": 1}
+  2. id: anchorTheMoment
+     text: Anchor the moment
+     outcomeText: Memory holds the party together.
+     effects: {"gainSettlementMemory": 1, "removePanic": 1}
+  3. id: keepTheNightQuiet
+     text: Keep the night quiet
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "quietNight"}
+     lockedText: Requires innovation: quietNight.
+     outcomeText: The party refuses to name the omen, and it loses some of its grip.
+     effects: {"removePanic": 1, "healHp": 1}
+
+070. Vault of the Best
+sourceSeed: Tomb of Excellence
+suggestedId: vaultOfTheBest
+section: core
+mode: choice
+description: A perfect tomb displays tools too clean for the dead.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: takeOneCarefully
+     text: Take one carefully
+     outcomeText: Excellence costs attention.
+     effects: {"gainRandomResource": {"pool": "rare", "amount": 1}, "addPanic": 1}
+  2. id: studyTheCraft
+     text: Study the craft
+     outcomeText: The lesson matters more than the tool.
+     effects: {"gainSettlementMemory": 2}
+  3. id: hewThePath
+     text: Hew open a path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "axe"}
+     lockedText: Requires weaponType: axe.
+     outcomeText: You cut through the obstacle and learn where the quarry passed.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addQuarryRumour": true}
+
+071. Nameless Relic
+sourceSeed: Found Relic
+suggestedId: namelessRelic
+section: core
+mode: choice
+description: Something old and deliberate rests in the dust.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: keepIt
+     text: Keep it
+     outcomeText: The relic hums with possible use.
+     effects: {"gainRandomResource": {"pool": "rare", "amount": 1}}
+  2. id: buryItAgain
+     text: Bury it again
+     outcomeText: The act steadies the party’s story.
+     effects: {"gainSettlementMemory": 1, "gainSurvival": 1}
+  3. id: answerWithStrangeness
+     text: Answer with strange weaponry
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "strangeWeapon"}
+     lockedText: Requires weaponType: strangeWeapon.
+     outcomeText: The weapon behaves as if it remembers this place.
+     effects: {"gainSettlementMemory": 1, "removePanic": 1}
+
+072. Waiting Game
+sourceSeed: Something to Pass the Time
+suggestedId: waitingGame
+section: core
+mode: automatic
+description: The hunt slows, and boredom becomes dangerous.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The next fight starts sharper.
+  effects: {"nextCombatFirstAttackBonus": 2}
+
+073. Sunless Ember
+sourceSeed: Golden Ember
+suggestedId: sunlessEmber
+section: core
+mode: choice
+description: A golden coal glows in a skull-shaped hollow.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: carryIt
+     text: Carry it
+     outcomeText: It warms the party and burns the pack.
+     effects: {"nextCombatStartBlock": 3, "loseHp": 1}
+  2. id: crushItIntoAsh
+     text: Crush it into ash
+     outcomeText: The ash becomes a ritual memory.
+     effects: {"gainSettlementMemory": 1, "gainResource": {"resourceId": "scrap", "amount": 1}}
+  3. id: advanceBehindTheShield
+     text: Advance behind a shield
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "shield"}
+     lockedText: Requires weaponType: shield.
+     outcomeText: The blow lands on prepared cover instead of skin.
+     effects: {"nextCombatStartBlock": 5}
+
+074. Horn-Slashed Stone
+sourceSeed: Antler-Gouged
+suggestedId: hornSlashedStone
+section: core
+mode: choice
+description: Deep horn marks scar a wall of faces.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: traceTheGouges
+     text: Trace the gouges
+     outcomeText: The pattern teaches evasive timing.
+     effects: {"gainSurvival": 1, "nextCombatStartBlock": 2}
+  2. id: pryOutLodgedFragments
+     text: Pry out lodged fragments
+     outcomeText: Useful shards remain in the cuts.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatMonsterEnrage": 1}
+  3. id: listenPastTheFear
+     text: Listen past the fear
+     lockedUnless: {"type": "partyHasTrait", "traitId": "quietListener"}
+     lockedText: Requires trait: quietListener.
+     outcomeText: The quiet survivor hears the safe rhythm beneath the noise.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+
+075. Wrong Step
+sourceSeed: Oops!
+suggestedId: wrongStep
+section: core
+mode: choice
+description: Someone steps exactly where everyone silently agreed not to.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: helpImmediately
+     text: Help immediately
+     outcomeText: The party recovers but loses momentum.
+     effects: {"healHp": 1, "nextCombatEnergyPenalty": 1}
+  2. id: useTheMistake
+     text: Use the mistake
+     outcomeText: The accident exposes a hidden route.
+     effects: {"addQuarryRumour": true, "addPanic": 1}
+  3. id: holdItAtReach
+     text: Hold it at reach
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "spear"}
+     lockedText: Requires weaponType: spear.
+     outcomeText: Reach keeps the thing from deciding who it wants first.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+076. Dream-Path
+sourceSeed: Dream the Way
+suggestedId: dreamPath
+section: core
+mode: choice
+description: A survivor suddenly remembers dreaming this exact route.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: trustTheMemory
+     text: Trust the memory
+     outcomeText: The dream guides you to an advantage.
+     effects: {"nextCombatFirstAttackBonus": 2, "gainSettlementMemory": 1}
+  2. id: fightTheDJVu
+     text: Fight the déjà vu
+     outcomeText: The party stays grounded.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+  3. id: usePainAsInstruction
+     text: Use pain as instruction
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "painLessons"}
+     lockedText: Requires innovation: painLessons.
+     outcomeText: Old wounds tell the party which mistake not to repeat.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+077. Soft Mouth Sink
+sourceSeed: Sinkhole
+suggestedId: softMouthSink
+section: core
+mode: choice
+description: The ground puckers and pulls downward.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: diveForTheGlint
+     text: Dive for the glint
+     outcomeText: A prize lies just below the surface.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "loseHp": 1}
+  2. id: formAChain
+     text: Form a chain
+     outcomeText: The party learns to save one another.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+  3. id: snareTheMovement
+     text: Snare the movement
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "whip"}
+     lockedText: Requires weaponType: whip.
+     outcomeText: The lash catches motion before motion catches you.
+     effects: {"gainSurvival": 1, "monsterStartsWounded": 2}
+
+078. Fallen Trophy-Taker
+sourceSeed: Dead Great Game Hunter
+suggestedId: fallenTrophyTaker
+section: core
+mode: automatic
+description: A dead hunter is surrounded by labelled bones from beasts you have not met.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The kit is useful and cursed by failure.
+  effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "addPanic": 1}
+
+079. Tiny Dying Miner
+sourceSeed: Dying Small Prospector
+suggestedId: tinyDyingMiner
+section: core
+mode: choice
+description: A tiny miner offers directions in exchange for being remembered.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: hearTheirLastRoute
+     text: Hear their last route
+     outcomeText: The route is useful and sad.
+     effects: {"addQuarryRumour": true, "gainSettlementMemory": 1}
+  2. id: takeThePick
+     text: Take the pick
+     outcomeText: The tool is crude but valuable.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "loseHp": 1}
+  3. id: hewThePath
+     text: Hew open a path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "axe"}
+     lockedText: Requires weaponType: axe.
+     outcomeText: You cut through the obstacle and learn where the quarry passed.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addQuarryRumour": true}
+
+080. Heart-Sick Stone
+sourceSeed: Lovelorn Rock
+suggestedId: heartSickStone
+section: core
+mode: choice
+description: A boulder sighs whenever anyone touches it.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: comfortIt
+     text: Comfort it
+     outcomeText: The stone gifts a soft, impossible warmth.
+     effects: {"healHp": 2, "gainSettlementMemory": 1}
+  2. id: ignoreItsSobbing
+     text: Ignore its sobbing
+     outcomeText: The party saves time but feels cruel.
+     effects: {"nextCombatFirstAttackBonus": 2, "addPanic": 1}
+  3. id: holdItAtReach
+     text: Hold it at reach
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "spear"}
+     lockedText: Requires weaponType: spear.
+     outcomeText: Reach keeps the thing from deciding who it wants first.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+081. Arms in the Soil
+sourceSeed: Field of Arms
+suggestedId: armsInTheSoil
+section: core
+mode: choice
+description: Human-like arms grow from the ground, reaching but not grabbing yet.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: pullOneFree
+     text: Pull one free
+     outcomeText: It leaves a useful bone and a terrible sound.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "addPanic": 1}
+  2. id: threadBetweenThem
+     text: Thread between them
+     outcomeText: The party avoids the grasping field.
+     effects: {"gainSurvival": 1, "nextCombatStartBlock": 2}
+  3. id: useTheRightTool
+     text: Use a carried tool
+     lockedUnless: {"type": "partyHasGearTag", "tag": "tool"}
+     lockedText: Requires gearTag: tool.
+     outcomeText: The right tool makes the grotesque work cleaner.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}}
+
+082. Biting Grass
+sourceSeed: Consuming Grass
+suggestedId: bitingGrass
+section: core
+mode: choice
+description: Grass blades chew at boots and old blood.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: cutAPath
+     text: Cut a path
+     outcomeText: The grass yields hide-like strands.
+     effects: {"gainResource": {"resourceId": "hide", "amount": 1}, "loseHp": 1}
+  2. id: stepWithTheWind
+     text: Step with the wind
+     outcomeText: The hunters learn the rhythm.
+     effects: {"gainSurvival": 2}
+  3. id: usePainAsInstruction
+     text: Use pain as instruction
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "painLessons"}
+     lockedText: Requires innovation: painLessons.
+     outcomeText: Old wounds tell the party which mistake not to repeat.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+083. Warm Red Pillar
+sourceSeed: Flesh Monolith
+suggestedId: warmRedPillar
+section: core
+mode: choice
+description: A monolith of meat beats like a distant heart.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: cutASample
+     text: Cut a sample
+     outcomeText: The flesh fights back.
+     effects: {"gainRandomResource": {"pool": "monster", "amount": 1}, "loseHp": 2}
+  2. id: listenToTheHeartbeat
+     text: Listen to the heartbeat
+     outcomeText: It predicts the next violence.
+     effects: {"nextCombatStartBlock": 2, "nextCombatFirstAttackBonus": 1}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+084. Wet Ledger
+sourceSeed: Scribe's Book
+suggestedId: wetLedger
+section: core
+mode: automatic
+description: A soaked book writes the party’s names before anyone opens it.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The pages become useful records later.
+  effects: {"gainSettlementMemory": 1, "gainSurvival": 1}
+
+085. The Dare Path
+sourceSeed: Test of Courage
+suggestedId: theDarePath
+section: core
+mode: choice
+description: A narrow path dares the hunters to cross without light.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: douseTheLanterns
+     text: Douse the lanterns
+     outcomeText: Courage brings a clean approach.
+     effects: {"nextCombatFirstAttackBonus": 3, "addPanic": 1}
+  2. id: keepTheLightHigh
+     text: Keep the light high
+     outcomeText: Caution wins over pride.
+     effects: {"nextCombatStartBlock": 3}
+  3. id: readTheLanternShape
+     text: Read the lantern-shape
+     lockedUnless: {"type": "partyHasTrait", "traitId": "lanternEyed"}
+     lockedText: Requires trait: lanternEyed.
+     outcomeText: Lantern-bright eyes turn the omen into a usable warning.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+
+086. Sour Burrows
+sourceSeed: Putrid Tunnels
+suggestedId: sourBurrows
+section: core
+mode: choice
+description: Low tunnels breathe rot into the hunters’ faces.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: crawlThrough
+     text: Crawl through
+     outcomeText: The shortcut is foul and profitable.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addPanic": 1}
+  2. id: collapseTheEntrance
+     text: Collapse the entrance
+     outcomeText: The path behind becomes safer.
+     effects: {"gainSettlementMemory": 1, "monsterStartsWounded": 1}
+  3. id: listenPastTheFear
+     text: Listen past the fear
+     lockedUnless: {"type": "partyHasTrait", "traitId": "quietListener"}
+     lockedText: Requires trait: quietListener.
+     outcomeText: The quiet survivor hears the safe rhythm beneath the noise.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+
+087. Crying Wall
+sourceSeed: Weeping Faces
+suggestedId: cryingWall
+section: core
+mode: choice
+description: A wall of faces weeps dark water.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: collectTheTears
+     text: Collect the tears
+     outcomeText: They cool wounds but taste of grief.
+     effects: {"healHp": 2, "addPanic": 1}
+  2. id: singBackToThem
+     text: Sing back to them
+     outcomeText: The wall remembers your settlement.
+     effects: {"gainSettlementMemory": 1, "removePanic": 1}
+  3. id: forceThePassage
+     text: Force the passage
+     lockedUnless: {"type": "partyHasTrait", "traitId": "boneStrong"}
+     lockedText: Requires trait: boneStrong.
+     outcomeText: Bone-strong hands move what should have been immovable.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+  4. id: advanceBehindTheShield
+     text: Advance behind a shield
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "shield"}
+     lockedText: Requires weaponType: shield.
+     outcomeText: The blow lands on prepared cover instead of skin.
+     effects: {"nextCombatStartBlock": 5}
+
+088. Blade in the Idol
+sourceSeed: The Sword and the Statue
+suggestedId: bladeInTheIdol
+section: core
+mode: choice
+description: A blade is buried through a statue’s chest.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: pullTheBlade
+     text: Pull the blade
+     outcomeText: The statue punishes theft but leaves metal behind.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "loseHp": 1}
+  2. id: pushItDeeper
+     text: Push it deeper
+     outcomeText: The idol’s wound becomes your opening lesson.
+     effects: {"nextCombatFirstAttackBonus": 2, "gainSettlementMemory": 1}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+089. Polishing Birds
+sourceSeed: Cleaner Birds
+suggestedId: polishingBirds
+section: core
+mode: choice
+description: Small birds clean old blood from stones with needle beaks.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: letThemCleanYourWounds
+     text: Let them clean your wounds
+     outcomeText: It hurts but helps.
+     effects: {"healHp": 2, "loseHp": 1}
+  2. id: followThemToCarrion
+     text: Follow them to carrion
+     outcomeText: They lead you to leftovers.
+     effects: {"gainRandomResource": {"pool": "monster", "amount": 1}, "nextCombatMonsterEnrage": 1}
+  3. id: takeTheOpening
+     text: Take the dangerous opening
+     lockedUnless: {"type": "partyHasTrait", "traitId": "bold"}
+     lockedText: Requires trait: bold.
+     outcomeText: Boldness wins a reward before caution can object.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 1}, "loseHp": 1}
+
+090. Last-Lantern Glow
+sourceSeed: Light on the Horizon
+suggestedId: lastLanternGlow
+section: core
+mode: automatic
+description: A far light suggests safety, settlement, or bait.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The party becomes harder to find.
+  effects: {"nextCombatStartBlock": 3}
+
+091. First Footprint
+sourceSeed: The Beginning
+suggestedId: firstFootprint
+section: core
+mode: choice
+description: A perfect first footprint appears in untouched dust.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: stepBesideIt
+     text: Step beside it
+     outcomeText: The hunt feels newly possible.
+     effects: {"gainSurvival": 2}
+  2. id: eraseIt
+     text: Erase it
+     outcomeText: The party refuses whatever began here.
+     effects: {"removePanic": 1, "gainSettlementMemory": 1}
+  3. id: advanceBehindTheShield
+     text: Advance behind a shield
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "shield"}
+     lockedText: Requires weaponType: shield.
+     outcomeText: The blow lands on prepared cover instead of skin.
+     effects: {"nextCombatStartBlock": 5}
+
+092. Bad Omen Start
+sourceSeed: Failed Start
+suggestedId: badOmenStart
+section: core
+mode: choice
+description: The trail immediately splits, collapses, and laughs.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: admitTheBadOmen
+     text: Admit the bad omen
+     outcomeText: Naming failure makes it manageable.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 1}
+  2. id: forceTheHuntOnward
+     text: Force the hunt onward
+     outcomeText: Stubbornness cuts a path.
+     effects: {"loseHp": 1, "nextCombatFirstAttackBonus": 2}
+  3. id: listenPastTheFear
+     text: Listen past the fear
+     lockedUnless: {"type": "partyHasTrait", "traitId": "quietListener"}
+     lockedText: Requires trait: quietListener.
+     outcomeText: The quiet survivor hears the safe rhythm beneath the noise.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+
+093. Voice Under Stone
+sourceSeed: Lost Survivor
+suggestedId: voiceUnderStone
+section: core
+mode: choice
+description: A living voice calls from under a stone face.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: freeThem
+     text: Free them
+     outcomeText: They cannot join, but their story survives.
+     effects: {"gainSettlementMemory": 1, "gainSurvival": 1}
+  2. id: takeTheirSuppliesFirst
+     text: Take their supplies first
+     outcomeText: The party gains resources and shame.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 1}, "addPanic": 1}
+  3. id: hewThePath
+     text: Hew open a path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "axe"}
+     lockedText: Requires weaponType: axe.
+     outcomeText: You cut through the obstacle and learn where the quarry passed.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addQuarryRumour": true}
+
+094. Heaving Slop
+sourceSeed: Sickening Mess
+suggestedId: heavingSlop
+section: core
+mode: choice
+description: A pile of half-living waste churns beside the path.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: rummageInIt
+     text: Rummage in it
+     outcomeText: Useful matter sticks to your arms.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addPanic": 1}
+  2. id: burnItClean
+     text: Burn it clean
+     outcomeText: The smoke hardens resolve.
+     effects: {"nextCombatStartBlock": 2, "gainSettlementMemory": 1}
+  3. id: usePainAsInstruction
+     text: Use pain as instruction
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "painLessons"}
+     lockedText: Requires innovation: painLessons.
+     outcomeText: Old wounds tell the party which mistake not to repeat.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+095. Blue-Lipped Wanderer
+sourceSeed: Grim and Frostbitten
+suggestedId: blueLippedWanderer
+section: core
+mode: choice
+description: A frostbitten wanderer stares through the party.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: shareWarmth
+     text: Share warmth
+     outcomeText: Kindness costs time and leaves a lesson.
+     effects: {"gainSettlementMemory": 1, "nextCombatEnergyPenalty": 1}
+  2. id: takeTheFrozenBundle
+     text: Take the frozen bundle
+     outcomeText: The bundle contains something useful.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "addPanic": 1}
+  3. id: takeTheOpening
+     text: Take the dangerous opening
+     lockedUnless: {"type": "partyHasTrait", "traitId": "bold"}
+     lockedText: Requires trait: bold.
+     outcomeText: Boldness wins a reward before caution can object.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 1}, "loseHp": 1}
+
+096. Hooded Figure
+sourceSeed: Cloaked Stranger
+suggestedId: hoodedFigure
+section: core
+mode: automatic
+description: A cloaked figure offers advice without showing hands.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: It asks only to be remembered.
+  effects: {"gainSettlementMemory": 1, "addQuarryRumour": true}
+
+097. Stone That Breathes
+sourceSeed: Living Stone
+suggestedId: stoneThatBreathes
+section: core
+mode: choice
+description: A boulder slowly inhales around trapped bones.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: waitForTheExhale
+     text: Wait for the exhale
+     outcomeText: Bones slide free.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "gainSurvival": 1}
+  2. id: crackItOpen
+     text: Crack it open
+     outcomeText: The stone screams but gives more.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatMonsterEnrage": 1}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+098. Eyes in the Dark
+sourceSeed: Bloody Eyes
+suggestedId: eyesInTheDark
+section: core
+mode: choice
+description: Wet red eyes open around the path.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: meetTheirStare
+     text: Meet their stare
+     outcomeText: The fear sharpens into focus.
+     effects: {"addPanic": 1, "nextCombatFirstAttackBonus": 3}
+  2. id: lowerYourGaze
+     text: Lower your gaze
+     outcomeText: The party passes guarded and quiet.
+     effects: {"nextCombatStartBlock": 3}
+  3. id: listenPastTheFear
+     text: Listen past the fear
+     lockedUnless: {"type": "partyHasTrait", "traitId": "quietListener"}
+     lockedText: Requires trait: quietListener.
+     outcomeText: The quiet survivor hears the safe rhythm beneath the noise.
+     effects: {"removePanic": 1, "gainSurvival": 1}
+
+099. Falling Teeth Gate
+sourceSeed: Portcullis
+suggestedId: fallingTeethGate
+section: core
+mode: choice
+description: A gate of stone teeth slams down across the route.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: liftItTogether
+     text: Lift it together
+     outcomeText: The party is exhausted but united.
+     effects: {"nextCombatEnergyPenalty": 1, "gainSettlementMemory": 1}
+  2. id: breakAToothLoose
+     text: Break a tooth loose
+     outcomeText: The gate opens angry and incomplete.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "monsterStartsWounded": 1}
+  3. id: crackTheHardPart
+     text: Crack the hard part
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "hammer"}
+     lockedText: Requires weaponType: hammer.
+     outcomeText: A heavy strike turns the obstacle into salvage.
+     effects: {"gainResource": {"resourceId": "bone", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+100. End-Shape Omen
+sourceSeed: The Finale
+suggestedId: endShapeOmen
+section: core
+mode: choice
+description: The path briefly shows the shape of a final battle no one understands.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: lookUntilItEnds
+     text: Look until it ends
+     outcomeText: The vision is unbearable and useful.
+     effects: {"gainSettlementMemory": 2, "addPanic": 2}
+  2. id: turnEveryLanternAway
+     text: Turn every lantern away
+     outcomeText: The party keeps some innocence.
+     effects: {"removePanic": 1, "gainSurvival": 2}
+  3. id: usePainAsInstruction
+     text: Use pain as instruction
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "painLessons"}
+     lockedText: Requires innovation: painLessons.
+     outcomeText: Old wounds tell the party which mistake not to repeat.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+101. Infant Beside the Blade
+sourceSeed: Baby and the Sword
+suggestedId: infantBesideTheBlade
+section: expansion
+mode: choice
+description: A wrapped infant sleeps beside a weapon too large for any child.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: carryTheChildSOmenHome
+     text: Carry the child’s omen home
+     outcomeText: The settlement gains a pending birth-marked trait.
+     effects: {"pendingSpecialChildTrait": "lanternEyed", "gainSettlementMemory": 1}
+  2. id: takeOnlyTheBladeShard
+     text: Take only the blade-shard
+     outcomeText: You avoid responsibility, not consequence.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "addPanic": 1}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+102. Armoured Dead
+sourceSeed: Dead Warrior
+suggestedId: armouredDead
+section: expansion
+mode: automatic
+description: A dead warrior kneels upright, still guarding the trail.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: Useful pieces come away with a curse.
+  effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "addPanic": 1}
+
+103. Wanted Thing
+sourceSeed: Object of Desire
+suggestedId: wantedThing
+section: expansion
+mode: choice
+description: Each hunter sees a different perfect object half-buried nearby.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: letOneSurvivorTakeIt
+     text: Let one survivor take it
+     outcomeText: Desire becomes strength and trouble.
+     effects: {"gainRandomResource": {"pool": "rare", "amount": 1}, "addPanic": 1}
+  2. id: leaveItUntouched
+     text: Leave it untouched
+     outcomeText: Restraint becomes a settlement story.
+     effects: {"gainSettlementMemory": 2}
+  3. id: burnTheBadMemory
+     text: Burn the bad memory
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "riteOfForgetting"}
+     lockedText: Requires innovation: riteOfForgetting.
+     outcomeText: The ritual keeps the worst part from following the party home.
+     effects: {"removePanic": 1, "gainSettlementMemory": 1}
+
+104. Buried Edge
+sourceSeed: Sword in the Stone
+suggestedId: buriedEdge
+section: expansion
+mode: choice
+description: A blade is wedged in a black stone, humming like a trapped insect.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: pullTogether
+     text: Pull together
+     outcomeText: The blade refuses, but metal flakes free.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "nextCombatFirstAttackBonus": 2}
+  2. id: swearToReturn
+     text: Swear to return
+     outcomeText: The vow steadies the party.
+     effects: {"gainSettlementMemory": 1, "gainSurvival": 1}
+  3. id: shootTheWarningSign
+     text: Use a bow to test the path
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "bow"}
+     lockedText: Requires weaponType: bow.
+     outcomeText: An arrow makes the hidden danger answer from a safer distance.
+     effects: {"gainSurvival": 1, "nextCombatFirstAttackBonus": 1}
+
+105. Black Pot
+sourceSeed: Cauldron
+suggestedId: blackPot
+section: legacyOptional
+mode: choice
+description: A huge pot bubbles without fire and smells like childhood.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: tasteTheBroth
+     text: Taste the broth
+     outcomeText: The body heals while the mind recoils.
+     effects: {"healHp": 3, "addPanic": 1}
+  2. id: pourItOut
+     text: Pour it out
+     outcomeText: Something in the pot thanks you by sinking into memory.
+     effects: {"gainSettlementMemory": 1, "gainResource": {"resourceId": "bone", "amount": 1}}
+  3. id: splitTheHazard
+     text: Split the hazard open
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "grandWeapon"}
+     lockedText: Requires weaponType: grandWeapon.
+     outcomeText: The huge weapon makes one terrible problem into two useful pieces.
+     effects: {"gainRandomResource": {"pool": "monster", "amount": 1}, "loseHp": 1}
+
+106. Bright Blood Trail
+sourceSeed: Glowing Blood
+suggestedId: brightBloodTrail
+section: legacyOptional
+mode: choice
+description: A line of glowing blood leads away from the quarry path.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: followTheGlow
+     text: Follow the glow
+     outcomeText: The trail reveals a rare remnant.
+     effects: {"gainRandomResource": {"pool": "rare", "amount": 1}, "nextCombatMonsterBonusHp": 4}
+  2. id: smearItOnWeapons
+     text: Smear it on weapons
+     outcomeText: The next strike burns brighter.
+     effects: {"nextCombatFirstAttackBonus": 3, "loseHp": 1}
+  3. id: usePainAsInstruction
+     text: Use pain as instruction
+     lockedUnless: {"type": "settlementHasInnovation", "innovationId": "painLessons"}
+     lockedText: Requires innovation: painLessons.
+     outcomeText: Old wounds tell the party which mistake not to repeat.
+     effects: {"nextCombatStartBlock": 3, "gainSurvival": 1}
+
+107. Black Slick Fields
+sourceSeed: Oil Fields
+suggestedId: blackSlickFields
+section: legacyOptional
+mode: choice
+description: Oil pools shine under the lanternlight like open eyes.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: skimTheOil
+     text: Skim the oil
+     outcomeText: The substance can be used later.
+     effects: {"gainResource": {"resourceId": "ichor", "amount": 1}, "addPanic": 1}
+  2. id: igniteAPool
+     text: Ignite a pool
+     outcomeText: The fire blocks pursuit and reveals the trail.
+     effects: {"monsterStartsWounded": 2, "nextCombatStartBlock": 1}
+  3. id: takeTheOpening
+     text: Take the dangerous opening
+     lockedUnless: {"type": "partyHasTrait", "traitId": "bold"}
+     lockedText: Requires trait: bold.
+     outcomeText: Boldness wins a reward before caution can object.
+     effects: {"gainRandomResource": {"pool": "any", "amount": 1}, "loseHp": 1}
+
+108. Silent Camp
+sourceSeed: Quarantine Camp
+suggestedId: silentCamp
+section: legacyOptional
+mode: automatic
+description: A ring of abandoned shelters bears warning marks.
+designerNote: Automatic road hazard: no player choice; resolves immediately when drawn.
+autoOutcome:
+  outcomeText: The settlement learns what not to touch.
+  effects: {"gainSettlementMemory": 2}
+
+109. Lantern Graveyard
+sourceSeed: Scattered Lanterns
+suggestedId: lanternGraveyard
+section: legacyOptional
+mode: choice
+description: Dozens of dead lanterns lie scattered like fallen stars.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: collectTheLeastBroken
+     text: Collect the least broken
+     outcomeText: Scrap and glass fill the pack.
+     effects: {"gainResource": {"resourceId": "scrap", "amount": 1}, "gainSettlementMemory": 1}
+  2. id: relightOne
+     text: Relight one
+     outcomeText: The single flame guides the next approach.
+     effects: {"nextCombatFirstAttackBonus": 2, "nextCombatStartBlock": 1}
+  3. id: readTheLanternShape
+     text: Read the lantern-shape
+     lockedUnless: {"type": "partyHasTrait", "traitId": "lanternEyed"}
+     lockedText: Requires trait: lanternEyed.
+     outcomeText: Lantern-bright eyes turn the omen into a usable warning.
+     effects: {"gainSettlementMemory": 1, "nextCombatStartBlock": 2}
+
+110. Crying Flame
+sourceSeed: Wailing Fire
+suggestedId: cryingFlame
+section: legacyOptional
+mode: choice
+description: A fire wails like a child whenever the wind dies.
+designerNote: Player choice event. Locked options should be visible but disabled with lockedText unless the party qualifies.
+choices:
+  1. id: feedItBone
+     text: Feed it bone
+     outcomeText: It quiets and leaves hot ash.
+     effects: {"gainSettlementMemory": 3, "addPanic": 1}
+  2. id: carryACoal
+     text: Carry a coal
+     outcomeText: The coal is helpful and hateful.
+     effects: {"nextCombatStartBlock": 3, "addPanic": 1}
+  3. id: cutTheSmallOpening
+     text: Cut through the small opening
+     lockedUnless: {"type": "partyHasWeaponType", "weaponType": "dagger"}
+     lockedText: Requires weaponType: dagger.
+     outcomeText: A quick blade finds the seam before the dark closes it.
+     effects: {"gainRandomResource": {"pool": "basicOrMonster", "amount": 1}, "nextCombatFirstAttackBonus": 1}
+
+
+
+PASTE-READY IMPLEMENTATION PROMPT FOR CODEX / GEMINI
+================================================================================
+
+Create a branch:
+
+feature/reviewed-hunt-events-automatic-and-locked-choices
+
+Goal:
+Add this reviewed hunt event pack to the game. Events may now be automatic or choice-based. Choice events can show up to 4 choices. Some choices are locked unless the hunting party has the right weapon type, gear tag, equipment, trait, fighting art, condition, Monster Bane, or settlement innovation.
+
+Repo-specific instructions:
+This is a React/Vite app. Do not create a parallel event engine. Extend the existing system.
+
+Use the existing structure:
+- Hunt event data: src/data/events.js
+- Hunt event resolver: src/game/eventLogic.js
+- Event UI: existing EventScreen and App event node flow
+- Main state flow: src/App.jsx
+- Gear lookup: src/data/equipment.js
+- Save/survivor normalisation: src/game/saveLogic.js
+
+Implementation tasks:
+1. Extend src/data/events.js to include these reviewed original events.
+2. Support event.mode:
+   - mode: 'automatic' resolves autoOutcome immediately.
+   - mode: 'choice' displays choices.
+   - missing mode defaults to existing choice behaviour for backwards compatibility.
+3. Add locked choice support.
+   - Locked choices appear in the UI but are disabled.
+   - Display lockedText below the disabled choice.
+   - When requirements are met, the choice becomes clickable.
+4. Add a helper such as canUseEventChoice(choice, { settlement, runSurvivor, runParty, quarry, equipment }).
+5. Support requirement types listed at the top of this file.
+6. For party checks, inspect the whole runParty, not just the first survivor.
+7. For gear checks, inspect boundGear on all living party members and look up equipment[gear.equipmentId].
+8. For weapon type checks, use item.weaponType.
+9. For gear tag checks, use item.tags, item.slot, item.role, and item.keywords as reasonable matches.
+10. For trait/fighting art/condition checks, inspect every living party member.
+11. Automatic events must still show a readable result screen, not silently apply effects.
+12. Do not copy sourceSeed to player-facing UI. It is a design reference only.
+13. Keep existing events working.
+14. Run npm run build.
+
+Acceptance tests:
+- Existing old events still work.
+- Automatic events resolve without presenting choices and show outcome text.
+- Choice events can show 2, 3, or 4 choices.
+- Locked choices are visible but disabled with a reason.
+- A party with the required gear/trait/fighting art/innovation can use the locked choice.
+- Event effects still apply to runSurvivor, runParty, runResources, runModifiers, settlement memory, and quarry rumours correctly.
+- No event crashes if a referenced trait, item, or innovation is missing; it should simply keep the choice locked.
+
+Report back with:
+1. Files changed.
+2. Number of events added.
+3. Requirement types implemented.
+4. Any events or requirements skipped.
+5. Browser test steps.
+6. Whether safe to commit.
