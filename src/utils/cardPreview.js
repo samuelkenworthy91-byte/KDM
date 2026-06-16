@@ -103,12 +103,43 @@ function summaryFor(preview, card, selectedWeakPoint) {
   if (preview.drawCount) return `Draw ${preview.drawCount}`;
   if (preview.panicAdded < 0) return `Remove ${Math.abs(preview.panicAdded)} Panic`;
   if (preview.panicAdded > 0) return `Add ${preview.panicAdded} Panic`;
+  const statusSummary = statusEffectsSummary(card);
+  if (statusSummary) return statusSummary;
   const partyEffect = card?.effects?.find(effect => effect.type === 'partyEffect');
   if (partyEffect) {
     const target = partyEffect.target === 'nextPartyMember' ? 'Next ally' : partyEffect.target;
     return `${target}: +${partyEffect.value} ${partyEffect.effectType}`;
   }
   return card?.description || 'Effect preview unavailable';
+}
+
+function statusEffectsSummary(card) {
+  const labels = {
+    bleedTarget: amount => `Bleed ${amount}: true HP damage at end of turn; ignores block; then -1.`,
+    burnTarget: amount => `Burn ${amount}: damages block first, strips Guarded, then HP; then -1.`,
+    poisonTarget: amount => `Poison ${amount}: ignores half block and halves healing; then -1.`,
+    doomTarget: amount => `Doom ${amount}: countdown; at 0, 10 true damage.`,
+    vulnerableTarget: amount => `Vulnerable ${amount}: next incoming hit +50% damage.`,
+    staggerTarget: amount => `Staggered ${amount}: next incoming hit deals double damage.`,
+    guardTarget: amount => `Guarded ${amount}: next incoming hit -2 damage.`,
+    guardSelf: amount => `Guarded ${amount}: next incoming hit -2 damage.`,
+    snareTarget: amount => `Snared ${amount}: next outgoing hit -5 damage and retarget/evade restricted.`,
+    shockTarget: amount => `Shock ${amount}: disrupts next card/intent.`,
+    blindTarget: amount => `Blind ${amount}: next attack -3 damage / glancing blow.`,
+    markTarget: amount => `Marked ${amount}: combo and targeting setup.`,
+    exposeTarget: amount => `Exposed ${amount}: opens weak-point access.`,
+    preparedSelf: amount => `Prepared ${amount}: improves next card.`,
+    salvageSelf: amount => `Salvage ${amount}: adds post-combat reward value.`,
+    testBonus: amount => `Test Bonus ${amount}: improves relevant tests.`,
+    consequenceReduction: amount => `Consequence Reduction ${amount}: softens failed risks/events.`,
+    healAfterCombat: amount => `Heal after combat: restores ${amount} HP after combat and persists.`,
+    partyHealAfterCombat: amount => `Heal after combat: party restores ${amount} HP after combat and persists.`
+  };
+  const parts = (card?.effects || []).flatMap(effect => {
+    const amount = effect.amount || effect.value || 1;
+    return labels[effect.type] ? [labels[effect.type](amount)] : [];
+  });
+  return parts.join(' ');
 }
 
 export function getCardPreview({

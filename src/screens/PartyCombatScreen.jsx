@@ -13,6 +13,10 @@ import {
   usePartySurvivalAction
 } from '../game/partyCombatLogic.js';
 import {
+  getPostCombatSalvageRewards,
+  resolveAfterCombatHealing
+} from '../game/combatLogic.js';
+import {
   formatEffectForDisplay,
   formatHistoryDetail,
   formatValueForDisplay
@@ -154,7 +158,10 @@ export default function PartyCombatScreen({
   };
 
   const finish = () => {
-    const survivors = combat.members.map(member => ({
+    const healedMembers = combat.members.map(member =>
+      resolveAfterCombatHealing(member, combat.status === 'won' ? 'victory' : 'combat')
+    );
+    const survivors = healedMembers.map(member => ({
       ...partyBonuses.find(bonus => bonus.survivor.id === member.survivor.id)?.survivor,
       hp: member.survivor.hp,
       survival: member.survivor.survival,
@@ -178,11 +185,18 @@ export default function PartyCombatScreen({
         dealtFinalBlow: Boolean(member.dealtFinalBlowThisHunt)
       }
     }));
+    const salvageRewards = healedMembers.map(getPostCombatSalvageRewards);
     if (combat.status === 'won') onVictory({
       survivors,
       monster: combat.monster,
       brokenWeakPoints,
-      wounds: combat.members.flatMap(member => member.woundHistory || [])
+      wounds: healedMembers.flatMap(member => member.woundHistory || []),
+      salvageTokens: salvageRewards.reduce((total, reward) => total + reward.salvageTokens, 0),
+      salvageResources: salvageRewards.flatMap(reward => reward.resources),
+      afterCombatLog: [
+        ...healedMembers.flatMap(member => member.afterCombatLog || []),
+        ...salvageRewards.flatMap(reward => reward.log)
+      ]
     });
     else onDefeat({
       survivors,

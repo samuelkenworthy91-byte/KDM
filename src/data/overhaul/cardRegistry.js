@@ -5,22 +5,64 @@ function numericValue(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
-function addStatusEffects(effects, statusApplied) {
+export const canonicalStatusEffectTypes = {
+  bleed: 'bleedTarget',
+  burn: 'burnTarget',
+  poison: 'poisonTarget',
+  doom: 'doomTarget',
+  vulnerable: 'vulnerableTarget',
+  stagger: 'staggerTarget',
+  staggered: 'staggerTarget',
+  guard: 'guardTarget',
+  guarded: 'guardTarget',
+  mark: 'markTarget',
+  marked: 'markTarget',
+  expose: 'exposeTarget',
+  exposed: 'exposeTarget',
+  snare: 'snareTarget',
+  snared: 'snareTarget',
+  shock: 'shockTarget',
+  blind: 'blindTarget',
+  dodge: 'guardSelf',
+  prepared: 'preparedSelf',
+  salvage: 'salvageSelf',
+  testbonus: 'testBonus',
+  consequence: 'consequenceReduction',
+  consequencereduction: 'consequenceReduction'
+};
+
+export function getCanonicalStatusEffectType(status) {
+  const key = String(status || '').toLowerCase().replace(/[^a-z]/g, '');
+  return canonicalStatusEffectTypes[key] || null;
+}
+
+function targetAwareStatusType(status, cardType) {
+  const key = String(status || '').toLowerCase().replace(/[^a-z]/g, '');
+  if (key === 'dodge') return 'guardSelf';
+  if (['guard', 'guarded'].includes(key) && cardType !== 'attack') return 'guardSelf';
+  return getCanonicalStatusEffectType(status);
+}
+
+function addStatusEffects(effects, statusApplied, cardType) {
   if (!statusApplied) return;
   if (typeof statusApplied === 'object') {
     Object.entries(statusApplied).forEach(([status, amount]) => {
+      const type = targetAwareStatusType(status, cardType);
+      if (!type) return;
       effects.push({
-        type: `${status.toLowerCase()}Monster`,
+        type,
         amount: numericValue(amount) || 1
       });
     });
     return;
   }
   if (typeof statusApplied === 'string') {
-    const match = statusApplied.match(/([A-Za-z]+)\s*(\d+)?/);
-    if (match) {
+    const matches = statusApplied.matchAll(/([A-Za-z]+(?:\s+[A-Za-z]+)?)\s*(\d+)?/g);
+    for (const match of matches) {
+      const type = targetAwareStatusType(match[1], cardType);
+      if (!type) continue;
       effects.push({
-        type: `${match[1].toLowerCase()}Monster`,
+        type,
         amount: numericValue(match[2]) || 1
       });
     }
@@ -57,13 +99,13 @@ export const overhaulCards = cardDataRaw.reduce((acc, card) => {
       amount: numericValue(card.breakDamage)
     });
   }
-  addStatusEffects(effects, card.statusApplied);
+  addStatusEffects(effects, card.statusApplied, card.type);
   if (card.testBonus) effects.push({ type: 'testBonus', amount: numericValue(card.testBonus) });
   if (card.consequenceReduction) {
     effects.push({ type: 'consequenceReduction', amount: numericValue(card.consequenceReduction) });
   }
-  if (card.salvage) effects.push({ type: 'salvage', value: card.salvage });
-  if (card.prepared) effects.push({ type: 'prepared', value: card.prepared });
+  if (card.salvage) effects.push({ type: 'salvageSelf', amount: numericValue(card.salvage) || 1 });
+  if (card.prepared) effects.push({ type: 'preparedSelf', amount: numericValue(card.prepared) || 1 });
   if (card.panicGain) effects.push({ type: 'addPanic', amount: numericValue(card.panicGain) || 1 });
   
   acc[card.cardId] = {

@@ -1,5 +1,6 @@
 import {
   applyMonsterIntent,
+  applyEndTurnStatuses,
   createCombatState,
   getCounterWeakPointPreview,
   getMonsterIntentForResolution,
@@ -107,6 +108,19 @@ function applyPendingEffects(state, targetIndex) {
       member = { ...member, intentHintLevel: Math.max(member.intentHintLevel || 0, effect.value) };
     } else if (effect.effectType === 'healAfterCombat') {
       member = { ...member, afterCombatHealing: (member.afterCombatHealing || 0) + effect.value };
+    } else if (effect.effectType === 'heal') {
+      const survivor = member.survivor;
+      if (survivor.hp > 0) {
+        const raw = Math.max(0, effect.value || 0);
+        const amount = survivor.poison > 0 ? Math.floor(raw / 2) : raw;
+        member = {
+          ...member,
+          survivor: {
+            ...survivor,
+            hp: Math.min(survivor.maxHp, survivor.hp + amount)
+          }
+        };
+      }
     } else if (effect.effectType === 'injuryProtection') {
       member = { ...member, injuryProtection: (member.injuryProtection || 0) + effect.value };
     }
@@ -675,13 +689,19 @@ export function endPartyTurn(state) {
     state.members[state.activePartyIndex].attacksPlayedThisTurn === 0 ? 1 : 0;
   const attackPanic = quietMadness &&
     state.members[state.activePartyIndex].attacksPlayedThisTurn >= 3 ? [cards.panic] : [];
+  const turnLog = [];
+  const tickedSurvivor = applyEndTurnStatuses(
+    state.members[state.activePartyIndex].survivor,
+    state.members[state.activePartyIndex].survivor.name,
+    turnLog
+  );
   const currentMember = {
     ...state.members[state.activePartyIndex],
     survivor: {
-      ...state.members[state.activePartyIndex].survivor,
+      ...tickedSurvivor,
       survival: Math.min(
-        state.members[state.activePartyIndex].survivor.maxSurvival,
-        state.members[state.activePartyIndex].survivor.survival + noAttackSurvival
+        tickedSurvivor.maxSurvival,
+        tickedSurvivor.survival + noAttackSurvival
       )
     },
     discardPile: [
@@ -707,11 +727,18 @@ export function endPartyTurn(state) {
       activePartyIndex: nextIndex,
       activeCombatant: members[nextIndex].survivor.id,
       combatTurnOrder: buildTurnOrder(members),
+      combatLog: [...(state.combatLog || []), ...turnLog],
       selectedCombatTarget: state.selectedCombatTarget
     };
   }
 
-  return resolveMonsterTurn({ ...state, members, activeCombatant: 'monster', activePartyIndex: -1 });
+  return resolveMonsterTurn({
+    ...state,
+    members,
+    combatLog: [...(state.combatLog || []), ...turnLog],
+    activeCombatant: 'monster',
+    activePartyIndex: -1
+  });
 }
 
 export function validateTargetingBar(state = null, {

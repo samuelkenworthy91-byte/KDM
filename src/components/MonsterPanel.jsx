@@ -5,6 +5,21 @@ import {
   getTargetingTell
 } from '../game/monsterTargeting.js';
 
+const statusText = {
+  bleed: value => `Bleed ${value}: true HP damage at end of turn; ignores block; then -1.`,
+  burn: value => `Burn ${value}: damages block first, strips Guarded, then HP; then -1.`,
+  poison: value => `Poison ${value}: ignores half block and halves healing; then -1.`,
+  doom: value => `Doom ${value}: countdown; at 0, 10 true damage.`,
+  vulnerable: value => `Vulnerable ${value}: next incoming hit +50% damage.`,
+  staggered: value => `Staggered ${value}: next incoming hit deals double damage.`,
+  guarded: value => `Guarded ${value}: next incoming hit -2 damage.`,
+  snared: value => `Snared ${value}: next outgoing hit -5 damage and retarget/evade restricted.`,
+  shock: value => `Shock ${value}: disrupts next card/intent.`,
+  blind: value => `Blind ${value}: next attack -3 damage / glancing blow.`,
+  marked: () => 'Marked: combo and targeting setup.',
+  exposed: value => `Exposed ${value}: one closed weak point can be targeted as open.`
+};
+
 function clearerTell(intent) {
   const tags = intent?.tags || [];
   if (tags.some(tag => ['attack', 'heavy', 'precision', 'ambush', 'charge'].includes(tag))) {
@@ -35,12 +50,18 @@ export default function MonsterPanel({
       {monster.level && <p>Quarry Level: {monster.level}</p>}
       {monster.tier && <p>Monster Tier: {monster.tier.charAt(0).toUpperCase() + monster.tier.slice(1)}</p>}
       <div className="status-effects">
-        {monster.bleed > 0 && <span className="status-tag bleed" title="Bleed: Deals damage at the start of its intent phase.">Bleed {monster.bleed}</span>}
-        {monster.poison > 0 && <span className="status-tag poison" title="Poison: Deals damage over time.">Poison {monster.poison}</span>}
-        {monster.vulnerable > 0 && <span className="status-tag vulnerable" title="Vulnerable: Takes 50% more damage.">Vulnerable {monster.vulnerable}</span>}
-        {monster.staggered > 0 && <span className="status-tag staggered" title="Staggered: Deals 2 less damage.">Staggered {monster.staggered}</span>}
-        {monster.guarded > 0 && <span className="status-tag guarded" title="Guarded: Next 2 damage taken is reduced by 2.">Guarded {monster.guarded}</span>}
-        {monster.marked && <span className="status-tag marked" title="Marked: Certain attacks deal extra damage.">Marked</span>}
+        {monster.bleed > 0 && <span className="status-tag bleed" title={statusText.bleed(monster.bleed)}>Bleed {monster.bleed}</span>}
+        {monster.burn > 0 && <span className="status-tag burn" title={statusText.burn(monster.burn)}>Burn {monster.burn}</span>}
+        {monster.poison > 0 && <span className="status-tag poison" title={statusText.poison(monster.poison)}>Poison {monster.poison}</span>}
+        {monster.doom > 0 && <span className="status-tag doom" title={statusText.doom(monster.doom)}>Doom {monster.doom}</span>}
+        {monster.vulnerable > 0 && <span className="status-tag vulnerable" title={statusText.vulnerable(monster.vulnerable)}>Vulnerable {monster.vulnerable}</span>}
+        {monster.staggered > 0 && <span className="status-tag staggered" title={statusText.staggered(monster.staggered)}>Staggered {monster.staggered}</span>}
+        {monster.guarded > 0 && <span className="status-tag guarded" title={statusText.guarded(monster.guarded)}>Guarded {monster.guarded}</span>}
+        {monster.snared > 0 && <span className="status-tag snared" title={statusText.snared(monster.snared)}>Snared {monster.snared}</span>}
+        {monster.shock > 0 && <span className="status-tag shock" title={statusText.shock(monster.shock)}>Shock {monster.shock}</span>}
+        {monster.blind > 0 && <span className="status-tag blind" title={statusText.blind(monster.blind)}>Blind {monster.blind}</span>}
+        {monster.marked && <span className="status-tag marked" title={statusText.marked()}>Marked {Number.isFinite(Number(monster.marked)) ? monster.marked : ''}</span>}
+        {monster.exposed > 0 && <span className="status-tag exposed" title={statusText.exposed(monster.exposed)}>Exposed {monster.exposed}</span>}
       </div>
       {monster.passiveTell && (
         <p className="monster-passive">

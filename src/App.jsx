@@ -1115,6 +1115,9 @@ export default function App() {
       }
       setRunParty(living);
       setRunSurvivor(living[0]);
+      if (combatResult.salvageResources?.length) {
+        setRunResources(items => [...items, ...combatResult.salvageResources]);
+      }
       const isBoss = currentNode?.type === 'boss';
       setBossGenericRewards(isBoss ? rollTierGenericBossRewards(selectedQuarry, selectedLevel) : []);
       setPendingCombatVictory({
@@ -1151,6 +1154,9 @@ export default function App() {
       recordConditionGain('scars', scarId);
     }
     setRunSurvivor(survivorAfterCombat);
+    if (combatResult?.salvageResources?.length) {
+      setRunResources(items => [...items, ...combatResult.salvageResources]);
+    }
     const genericRewards = isBoss
       ? rollTierGenericBossRewards(selectedQuarry, selectedLevel)
       : [];

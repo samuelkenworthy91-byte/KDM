@@ -2,7 +2,14 @@ import React, { useState } from 'react';
 import Card from '../components/Card.jsx';
 import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorPanel from '../components/SurvivorPanel.jsx';
-import { createCombatState, endTurn, playCard, useSurvivalAction } from '../game/combatLogic.js';
+import {
+  createCombatState,
+  endTurn,
+  getPostCombatSalvageRewards,
+  playCard,
+  resolveAfterCombatHealing,
+  useSurvivalAction
+} from '../game/combatLogic.js';
 import { formatHistoryDetail, formatValueForDisplay } from '../utils/formatters.js';
 import { getCardPreview } from '../utils/cardPreview.js';
 
@@ -60,7 +67,22 @@ export default function CombatScreen({
           <button
             type="button"
             onClick={combat.status === 'won'
-              ? () => onVictory({ survivor: combat.survivor })
+              ? () => {
+                const healed = resolveAfterCombatHealing({
+                  survivor: combat.survivor,
+                  afterCombatHealing: combat.afterCombatHealing
+                }, 'victory');
+                const salvage = getPostCombatSalvageRewards(combat);
+                onVictory({
+                  survivor: healed.survivor,
+                  salvageTokens: salvage.salvageTokens,
+                  salvageResources: salvage.resources,
+                  afterCombatLog: [
+                    ...(healed.afterCombatLog || []),
+                    ...salvage.log
+                  ]
+                });
+              }
               : handleDefeat}
           >
             {combat.status === 'won' ? victoryButtonText : defeatButtonText}
