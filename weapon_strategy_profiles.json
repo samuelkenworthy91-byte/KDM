@@ -1,0 +1,72 @@
+{
+  "blockToDamage": {
+    "name": "Block-to-Damage Engine",
+    "summary": "Build Block/Guarded, then turn prevention into Counter damage or bash payoffs.",
+    "rampResource": "Block / Guarded",
+    "payoffPattern": "Counter cards, shield-wall cards and guard-to-damage attacks.",
+    "deckAdvice": "Pair with Blue affinity and armour that starts combat with Block."
+  },
+  "panicRamp": {
+    "name": "Panic Furnace",
+    "summary": "Accept or generate Panic, then turn instability into bigger attacks.",
+    "rampResource": "Panic",
+    "payoffPattern": "Strange attacks, scythes and cards that gain power from Panic or clearing Panic.",
+    "deckAdvice": "Pair with controlled Panic clearing so the deck does not collapse before the payoff."
+  },
+  "bleedStatus": {
+    "name": "Status Stack",
+    "summary": "Stack Bleed, Poison, Burn, Shock or Snared until the quarry buckles under pressure.",
+    "rampResource": "Status tokens",
+    "payoffPattern": "Repeat hits, low-cost attacks and status riders.",
+    "deckAdvice": "Pair with Red affinity and draw/filtering to keep pressure constant."
+  },
+  "weakPointBreaker": {
+    "name": "Weak-Point Breaker",
+    "summary": "Open, mark and break weak points for burst damage and reward/control triggers.",
+    "rampResource": "Marked / Exposed / break damage",
+    "payoffPattern": "Break-damage attacks and weak-point payoff cards.",
+    "deckAdvice": "Pair with Purple reward pieces or ranged setup cards."
+  },
+  "comboTempo": {
+    "name": "Combo Tempo",
+    "summary": "Chain low-cost attacks, follow-ups and first-card bonuses into smooth damage turns.",
+    "rampResource": "Cards played this turn / cheap attacks",
+    "payoffPattern": "Follow-up riders, extra draw, cost reduction and repeated attack bonuses.",
+    "deckAdvice": "Pair with draw/filtering so chain pieces appear together."
+  },
+  "heavyBreaker": {
+    "name": "Heavy Breaker",
+    "summary": "Build slowly into huge single hits, guard breaks and expensive attacks.",
+    "rampResource": "Energy / setup / exposed target",
+    "payoffPattern": "High base damage, break damage and guard stripping.",
+    "deckAdvice": "Pair with Green or Blue support to survive the setup turn."
+  },
+  "rangedControl": {
+    "name": "Ranged Control",
+    "summary": "Mark, pin or soften the quarry from a distance before committing.",
+    "rampResource": "Marked / positioning / pinning",
+    "payoffPattern": "Ranged attacks that ignore guard, break weak points or improve follow-up hits.",
+    "deckAdvice": "Pair with mobility and weak-point reward gear."
+  },
+  "resourceHarvest": {
+    "name": "Resource Hunter",
+    "summary": "Turn tests, broken weak points and retreats into more resources.",
+    "rampResource": "Harvest tests / weak-point breaks",
+    "payoffPattern": "Extra resources, preserved resources, salvage and improved hunt rewards.",
+    "deckAdvice": "Pair with Purple affinity for reward spikes after a successful hunt."
+  },
+  "partySupport": {
+    "name": "Party Support Weapon",
+    "summary": "Use weapon actions to protect or set up allies rather than only dealing damage.",
+    "rampResource": "Prepared / ally Block / party positioning",
+    "payoffPattern": "Ally buffs, block grants, panic clear and shared payoffs.",
+    "deckAdvice": "Pair with Green affinity and other support gear."
+  },
+  "woundRisk": {
+    "name": "Wound-Risk Berserker",
+    "summary": "Grow damage from wounds, low safety or self-inflicted risk.",
+    "rampResource": "Wounds / low HP / self-risk",
+    "payoffPattern": "Bonus damage when wounded, exposed or after paying risky costs.",
+    "deckAdvice": "Pair with healing or death prevention so ramp does not kill the survivor."
+  }
+}

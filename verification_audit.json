@@ -1,0 +1,79 @@
+{
+  "version": "v8-duplicate-weapon-names-and-card-copy-training",
+  "equipmentCount": 327,
+  "cardCount": 778,
+  "setCount": 18,
+  "slotCounts": {
+    "weapon": 109,
+    "utility": 84,
+    "jewelry": 27,
+    "armor": 89,
+    "setDefinition": 18
+  },
+  "bodySlotCounts": {
+    "waist": 15,
+    "head": 18,
+    "legs": 16,
+    "arms": 17,
+    "chest": 23
+  },
+  "weaponStrategyCounts": {
+    "bleedStatus": 11,
+    "rangedControl": 19,
+    "panicRamp": 14,
+    "heavyBreaker": 18,
+    "partySupport": 11,
+    "weakPointBreaker": 17,
+    "blockToDamage": 10,
+    "resourceHarvest": 2,
+    "comboTempo": 7
+  },
+  "armorMissingBodySlotCount": 0,
+  "armorMissingBodySlot": [],
+  "jewelrySlotMismatchCount": 0,
+  "jewelrySlotMismatch": [],
+  "missingSetPieceCount": 0,
+  "missingSetPieces": [],
+  "duplicateOrMissingSetBodySlotsCount": 0,
+  "duplicateOrMissingSetBodySlots": [],
+  "weaponWithoutStrategyCount": 0,
+  "weaponWithoutStrategy": [],
+  "removedUpperLimitCaps": 0,
+  "remainingUpperLimitCapHits": [],
+  "duplicateCardIds": [],
+  "duplicateCardNames": [],
+  "duplicateMechanicalSignatures": [],
+  "weaponLimitRule": {
+    "maxWeaponItems": 2,
+    "maxDistinctWeaponNames": 2,
+    "duplicateNamesAllowed": true,
+    "sameNamePairsAllowed": true,
+    "countsLoadoutCategory": "weapon",
+    "ruleText": "A survivor may equip at most 2 weapon items. Those weapons may have the same name (for example, two Katars) or two different names. The number of distinct equipped weapon names can never exceed 2."
+  },
+  "weaponItemCount": 109,
+  "duplicateWeaponNamesAllowed": true,
+  "maxWeaponItems": 2,
+  "maxDistinctWeaponNames": 2,
+  "cardCopyRule": {
+    "enabled": true,
+    "scope": "equipmentCard",
+    "baseCopiesFromOneItem": 1,
+    "maxCopiesFromOneItem": 3,
+    "maxExtraCopiesUnlockedFromOneItem": 2,
+    "trackingKey": "survivorId + gearInstanceId + cardId",
+    "ruleText": "Each equipped item instance contributes 1 copy of each of its cards by default. A survivor can train a specific card from that specific item instance to add extra copies, up to 3 total copies of that card from that one item.",
+    "duplicateItemRule": "Duplicate items are tracked separately by gearInstanceId. Two identical weapons can each train their own copies, but each item instance is still capped at 3 copies of a given card.",
+    "unequipRule": "Extra copies granted by an item are removed from the deck immediately when that item is unequipped, destroyed, or no longer valid.",
+    "progressionSuggestion": {
+      "copy2": "Unlock the second copy after 3 successful plays of that card while the item is equipped, then pay 1 matching resource or 1 generic resource.",
+      "copy3": "Unlock the third copy after 6 total successful plays of that card while the item is equipped, then pay 1 rare/matching quarry resource or 2 generic resources.",
+      "successfulPlayDefinition": "The card resolves at least one meaningful effect: damage, block, healing, draw/filtering, status application, survival gain, resource gain, or party support."
+    },
+    "implementationReminder": "Do not duplicate rows in the static card table for trained copies. Build the runtime deck by expanding cards according to each survivor's gearCardTraining state."
+  },
+  "copyEligibleCardCount": 756,
+  "dynamicBonusCardCopyLockedCount": 22,
+  "copyEligibleCardsMissingLimitCount": 0,
+  "copyEligibleCardsMissingLimit": []
+}

@@ -1,0 +1,28 @@
+{
+  "version": "v8-duplicate-weapon-names-and-card-copy-training",
+  "rule": {
+    "enabled": true,
+    "scope": "equipmentCard",
+    "baseCopiesFromOneItem": 1,
+    "maxCopiesFromOneItem": 3,
+    "maxExtraCopiesUnlockedFromOneItem": 2,
+    "trackingKey": "survivorId + gearInstanceId + cardId",
+    "ruleText": "Each equipped item instance contributes 1 copy of each of its cards by default. A survivor can train a specific card from that specific item instance to add extra copies, up to 3 total copies of that card from that one item.",
+    "duplicateItemRule": "Duplicate items are tracked separately by gearInstanceId. Two identical weapons can each train their own copies, but each item instance is still capped at 3 copies of a given card.",
+    "unequipRule": "Extra copies granted by an item are removed from the deck immediately when that item is unequipped, destroyed, or no longer valid.",
+    "progressionSuggestion": {
+      "copy2": "Unlock the second copy after 3 successful plays of that card while the item is equipped, then pay 1 matching resource or 1 generic resource.",
+      "copy3": "Unlock the third copy after 6 total successful plays of that card while the item is equipped, then pay 1 rare/matching quarry resource or 2 generic resources.",
+      "successfulPlayDefinition": "The card resolves at least one meaningful effect: damage, block, healing, draw/filtering, status application, survival gain, resource gain, or party support."
+    },
+    "implementationReminder": "Do not duplicate rows in the static card table for trained copies. Build the runtime deck by expanding cards according to each survivor's gearCardTraining state."
+  },
+  "eligibleCardCount": 756,
+  "dynamicBonusCardCopyLockedCount": 22,
+  "implementationNotes": [
+    "Track training by survivorId + gearInstanceId + cardId, never just cardId.",
+    "Duplicate same-name weapons are legal but are separate item instances for card copy progression.",
+    "The static card database remains unique; runtime deck construction expands trained copies.",
+    "If an item is unequipped, all extra trained copies from that item leave the deck until it is re-equipped."
+  ]
+}

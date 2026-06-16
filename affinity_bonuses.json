@@ -1,0 +1,62 @@
+[
+  {
+    "affinityId": "blue",
+    "affinityName": "Blue",
+    "theme": "Block and protection",
+    "minorThreshold": 2,
+    "minorBonus": "Start each combat with +2 Block.",
+    "majorThreshold": 4,
+    "majorBonus": "The first Block or Counter card you play each combat gains +3 Block.",
+    "hugeThreshold": 5,
+    "hugeBonus": "Gain the Blue affinity ability card while the threshold is maintained.",
+    "specialAbilityCardId": "blueBastionStance",
+    "specialAbilityCardName": "Blue Affinity — Bastion Stance",
+    "specialAbilityCardEffect": "Cost 1. Gain 8 Block. Until your next turn, the first time damage is prevented by Block, deal 2 counter damage.",
+    "implementationRule": "Count equipped items with colorAffinity === \"blue\". Apply 2/4 passives at combat start. Add/remove the special card dynamically while count >= 5."
+  },
+  {
+    "affinityId": "red",
+    "affinityName": "Red",
+    "theme": "Damage and aggression",
+    "minorThreshold": 2,
+    "minorBonus": "The first Attack card you play each combat deals +1 damage.",
+    "majorThreshold": 4,
+    "majorBonus": "Once per combat, when you deal break damage, add +2 break damage.",
+    "hugeThreshold": 5,
+    "hugeBonus": "Gain the Red affinity ability card while the threshold is maintained.",
+    "specialAbilityCardId": "redButchersTempo",
+    "specialAbilityCardName": "Red Affinity — Butcher's Tempo",
+    "specialAbilityCardEffect": "Cost 1. Deal 5 damage and apply Bleed 2. If the target has Block, remove 3 Block first.",
+    "implementationRule": "Count equipped items with colorAffinity === \"red\". Apply 2/4 combat modifiers. Add/remove the special card dynamically while count >= 5."
+  },
+  {
+    "affinityId": "green",
+    "affinityName": "Green",
+    "theme": "Survival and healing",
+    "minorThreshold": 2,
+    "minorBonus": "Start each hunt with +1 Survival.",
+    "majorThreshold": 4,
+    "majorBonus": "After each combat, heal the equipped survivor for 2 HP.",
+    "hugeThreshold": 5,
+    "hugeBonus": "Gain the Green affinity ability card while the threshold is maintained.",
+    "specialAbilityCardId": "greenMendersOath",
+    "specialAbilityCardName": "Green Affinity — Mender's Oath",
+    "specialAbilityCardEffect": "Cost 1. At the end of combat, heal an ally for 5 HP. If no ally is wounded, gain 2 Survival instead.",
+    "implementationRule": "Count equipped items with colorAffinity === \"green\". Apply hunt-start and post-combat passives. Add/remove the special card dynamically while count >= 5."
+  },
+  {
+    "affinityId": "purple",
+    "affinityName": "Purple",
+    "theme": "Resources and rewards",
+    "minorThreshold": 2,
+    "minorBonus": "At the end of a successful hunt/run, gain +1 standard monster resource.",
+    "majorThreshold": 4,
+    "majorBonus": "At the end of a successful hunt/run, gain +1 additional resource from the defeated quarry reward pool.",
+    "hugeThreshold": 5,
+    "hugeBonus": "Gain the Purple affinity ability card while the threshold is maintained.",
+    "specialAbilityCardId": "purpleScavengersClaim",
+    "specialAbilityCardName": "Purple Affinity — Scavenger's Claim",
+    "specialAbilityCardEffect": "Cost 0. Exhaust. The next time any survivor breaks a weak point this combat, add +1 standard monster resource to the hunt rewards.",
+    "implementationRule": "Count equipped items with colorAffinity === \"purple\". Apply reward passives only after a successful combat/hunt. Add/remove the special card dynamically while count >= 5."
+  }
+]

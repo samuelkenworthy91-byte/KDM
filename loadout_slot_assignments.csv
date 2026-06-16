@@ -1,0 +1,328 @@
+equipmentName,itemType,oldSlot,loadoutCategory,loadoutSlot,bodySlot,jewelrySlot,weaponLimitSlot,maxPerSlot,equippable,setMembership,slotAuditStatus,rule,duplicateWeaponNamesAllowed,maxDistinctWeaponNames,maxWeaponItems
+Acid Tooth Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Acid Tusk Dirk,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Almanac,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Amber Bow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Amber Cello (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Amber Cello (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Amber Twin Knives,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Amber Edge,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Amber Poleaxe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Antelope Visage,charm,head,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Arc Bow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Armor Spikes,body,body,armor,armor:waist,waist,,,1,True,Godling Stormhide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Bandages,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Beacon Guard,offhand,offhand,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Beast Knuckle,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Beetugle (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Beetugle (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Bird Bread,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Dusk Hunter Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Black Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Blast Guard,offhand,offhand,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Blast Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Blood Bag,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Blood Crown,head,head,armor,armor:head,head,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Blood Paint,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Blood Sheath,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Bloom Sphere,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Blue Charm,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Blue Power Core,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Blue Ring,charm,arms,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Bone Axe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Bone Axe (Broken),weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Bone Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Bone Blade (Broken),weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Bone Club,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Bone Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Bone Darts,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Bone Darts (Broken),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Bone Earrings,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Bone Pickaxe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Bone Sickle,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Boss Mehndi,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Brain Mint,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Bug Trap,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Calcified Bone Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Calcified Digging Claw,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Calcified Gramber Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Calcified Greaves,legs,legs,armor,armor:legs,legs,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Calcified Juggernaut Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Calcified Shoulder Pads,body,body,armor,armor:arms,arms,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Calcified Zanbato,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Cat Eye Circlet,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Fang Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Catgut Bow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Century Greaves,legs,legs,armor,armor:legs,legs,,,1,True,Rolling Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Century Shoulder Pads,body,body,armor,armor:arms,arms,,,1,True,Rolling Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Chentu,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Claw Head Arrow,weapon,head,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Cloth Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Cloth Bracers,arms,arms,armor,armor:arms,arms,,,1,True,Cloth Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Cloth Galoshes,body,legs,armor,armor:legs,legs,,,1,True,Cloth Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Cloth Leggings,legs,waist,armor,armor:waist,waist,,,1,True,Vagabond Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Cloth Pants,legs,waist,armor,armor:waist,waist,,,1,True,Cloth Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Cloth Robes,body,body,armor,armor:chest,chest,,,1,True,Cloth Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Cloth Turban,head,head,armor,armor:head,head,,,1,True,Cloth Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Counterweighted Axe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Crest Crown,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Crimson Rose,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Cycloid Scale Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Cycloid Scale Hood,body,head,armor,armor:head,head,,,1,True,Cycloid Scale Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Cycloid Scale Jacket,body,body,armor,armor:chest,chest,,,1,True,Cycloid Scale Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Cycloid Scale Shoes,body,legs,armor,armor:legs,legs,,,1,True,Cycloid Scale Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Cycloid Scale Skirt,legs,waist,armor,armor:waist,waist,,,1,True,Cycloid Scale Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Cycloid Scale Sleeves,arms,arms,armor,armor:arms,arms,,,1,True,Cycloid Scale Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Chitin Crusader Errant Badge,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Dark Water Vial,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Daydream Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Death Visage,charm,head,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Death's Wail (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Death's Wail (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Dense Bone Arrows,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Denticle Axe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Digging Claw,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Ember Drake Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Ember Drake Belt,legs,waist,armor,armor:waist,waist,,,1,True,Ember Drake Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Ember Drake Bite Bolt,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Ember Drake Treads,legs,legs,armor,armor:legs,legs,,,1,True,Ember Drake Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Ember Drake Chakram,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Ember Drake Gloves,arms,arms,armor,armor:arms,arms,,,1,True,Ember Drake Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Ember Drake Mantle,body,body,armor,armor:chest,chest,,,1,True,Ember Drake Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Ember Drake Slayer,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Ember Drake Slayer (Broken),weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Ember Drake Skull Crown,head,head,armor,armor:head,head,,,1,True,Ember Drake Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Dried Acanthus,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Elder Earrings,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Elder Fang Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Eventide (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Eventide (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Fanged Dusters,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Feather Mantle,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Feather Guard,offhand,offhand,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Fecal Salve,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Fetosaurus,body,body,armor,armor:chest,chest,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Finger of God,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+First Aid Kit,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Frenzy Drink,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Fur Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Fur Kilt,body,waist,armor,armor:waist,waist,,,1,True,Fur Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Fur Leg Warmers,legs,legs,armor,armor:legs,legs,,,1,True,Fur Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Fur Mantle,body,body,armor,armor:chest,chest,,,1,True,Fur Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Fur Websilk Cuffs,body,arms,armor,armor:arms,arms,,,1,True,Fur Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Gaxe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Gloom Bracelets,tool,arms,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Gloom Cream,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Gloom Drum (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Gloom Drum (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Gloom Hammer,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Gloom Katana,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Gloom Mehndi,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Gloom Sheath,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Gloom-Coated Arrow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Glute (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Glute (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+God Visage,charm,head,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Godling Stormhide Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Godling Stormhide Treads,legs,legs,armor,armor:legs,legs,,,1,True,Godling Stormhide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Godling Stormhide Visage,charm,head,armor,armor:head,head,,,1,True,Godling Stormhide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Godling Stormhide Sleeves,arms,arms,armor,armor:arms,arms,,,1,True,Godling Stormhide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Godling Stormhide Suit,body,body,armor,armor:chest,chest,,,1,True,Godling Stormhide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Gorn,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Gramber Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Greater Gaxe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Green Treads,legs,legs,armor,armor:legs,legs,,,1,True,Green Knight Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Green Charm,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Green Faulds,body,waist,armor,armor:waist,waist,,,1,True,Green Knight Armour; Rolling Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Green Gloves,arms,arms,armor,armor:arms,arms,,,1,True,Green Knight Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Green Crown,head,head,armor,armor:head,head,,,1,True,Green Knight Armour; Rolling Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Green Knight Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Green Plate,body,body,armor,armor:chest,chest,,,1,True,Green Knight Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Green Ring,charm,arms,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Griswaldo,body,body,armor,armor:chest,chest,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Hard Breastplate,body,body,armor,armor:chest,chest,,,1,True,Vagabond Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Hardened Scrap Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Heavy Skull Crown,head,head,armor,armor:head,head,,,1,True,Fur Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Hollow Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Hollow Blade (Broken),weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Hollowpoint Arrow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Hooded Scrap Katar,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Hooked Claw Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Hours Ring,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Hunter Whip,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Ignis Fatuus,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Ink Bagpipes (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Ink Bagpipes (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Ink Blood Bow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Ink Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Jack O' Lantern,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Juggernaut Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+King Spear,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Knuckle Guard,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Lance of Longinus,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Lantern Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Lantern Cuirass,body,body,armor,armor:chest,chest,,,1,True,Lantern Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Lantern Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Lantern Gloves,arms,arms,armor,armor:arms,arms,,,1,True,Lantern Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Lantern Glaive,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Lantern Gong (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Lantern Gong (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Lantern Greaves,legs,legs,armor,armor:legs,legs,,,1,True,Lantern Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Lantern Crown,head,head,armor,armor:head,head,,,1,True,Lantern Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Lantern Mail,body,waist,armor,armor:waist,waist,,,1,True,Lantern Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Lantern Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Hide Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Hide Treads,legs,legs,armor,armor:legs,legs,,,1,True,Hide Armour; Vagabond Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Hide Bracers,arms,arms,armor,armor:arms,arms,,,1,True,Hide Armour; Vagabond Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Hide Cuirass,body,body,armor,armor:chest,chest,,,1,True,Hide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Hide Visage,charm,head,armor,armor:head,head,,,1,True,Hide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Hide Skirt,legs,waist,armor,armor:waist,waist,,,1,True,Hide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Hunter Beast Katar,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Hunter Headdress,head,head,armor,armor:head,head,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Hunter Skin Cloak,body,body,armor,armor:chest,chest,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Hunter Slayer Cape,weapon,head,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Hunter's Roar (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Hunter's Roar (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Lucky Charm,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Man Visage,charm,head,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Metronome,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Monster Grease,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Monster Tooth Necklace,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Musk Bomb,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Nightmare Quiver,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Nuclear Flute (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Nuclear Flute (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Nuclear Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Nuclear Scythe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Oxidized Beacon Guard,offhand,offhand,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Oxidized Beast Katar,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Oxidized Lantern Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Oxidized Lantern Glaive,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Oxidized Lantern Crown,head,head,armor,armor:head,head,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Oxidized Lantern Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Oxidized Ring Whip,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Penumbra Bow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Perfect Slayer,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Phase Axe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Ash Phoenix Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Ash Phoenix Armor Set (Variant),set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Ash Phoenix Faulds,body,waist,armor,armor:waist,waist,,,1,True,Ash Phoenix Armour; Ash Phoenix Armour Variant,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Ash Phoenix Gauntlet,arms,arms,armor,armor:arms,arms,,,1,True,Ash Phoenix Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Ash Phoenix Gloves,arms,arms,armor,armor:arms,arms,,,1,True,Ash Phoenix Armour Variant,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Ash Phoenix Greaves,legs,legs,armor,armor:legs,legs,,,1,True,Ash Phoenix Armour; Ash Phoenix Armour Variant,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Ash Phoenix Crown,head,head,armor,armor:head,head,,,1,True,Ash Phoenix Armour; Ash Phoenix Armour Variant,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Ash Phoenix Visage,charm,head,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Ash Phoenix Plackart,body,body,armor,armor:chest,chest,,,1,True,Ash Phoenix Armour; Ash Phoenix Armour Variant,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Pulse Lantern,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Quiver & Noon String,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Rainbow Katana,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Rainbow Katana (Broken),weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Rainbow Wing Belt,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Raptor-Worm Collar,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Stitched Hide Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Stitched Hide Treads,legs,legs,armor,armor:legs,legs,,,1,True,Stitched Hide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Stitched Hide Drum,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Stitched Hide Gloves,arms,arms,armor,armor:arms,arms,,,1,True,Stitched Hide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Stitched Hide Headband,head,head,armor,armor:head,head,,,1,True,Stitched Hide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Stitched Hide Pants,legs,waist,armor,armor:waist,waist,,,1,True,Stitched Hide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Stitched Hide Vest,body,body,armor,armor:chest,chest,,,1,True,Stitched Hide Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Stitched Hide Whip,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Red Charm,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Red Power Core,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Red Ring,charm,arms,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Regeneration Suit,body,body,armor,armor:chest,chest,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Rib Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Ring Whip,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Riot Mace,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Rolling Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Bloom Knight Badge,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Round Hide Guard,offhand,offhand,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Rubber Bone Harness,body,body,armor,armor:chest,chest,,,1,True,Rolling Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Sanguine Cello,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Sanguine Épee,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Satchel,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Scarab Circlet,charm,charm,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Scavenger Kit,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Scoopy Club,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Scrap Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Scrap Horn (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Scrap Horn (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Scrap Guard,offhand,offhand,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Scrap Blade,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Wailing Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Wailing Bracers,arms,arms,armor,armor:arms,arms,,,1,True,Wailing Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Wailing Coat,body,body,armor,armor:chest,chest,,,1,True,Wailing Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Wailing Horns,tool,head,armor,armor:head,head,,,1,True,Wailing Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Wailing Leg Warmers,legs,legs,armor,armor:legs,legs,,,1,True,Wailing Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Wailing Skirt,legs,waist,armor,armor:waist,waist,,,1,True,Wailing Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Scymitaxe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Seasoned Monster Meat,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Shadow Fur Treads,legs,legs,armor,armor:legs,legs,,,1,True,Dusk Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Shadow Fur Coat,body,body,armor,armor:chest,chest,,,1,True,Dusk Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Shadow Fur Gloves,arms,arms,armor,armor:arms,arms,,,1,True,Dusk Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Shadow Fur Crown,head,head,armor,armor:head,head,,,1,True,Dusk Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Shadow Fur Kilt,body,waist,armor,armor:waist,waist,,,1,True,Dusk Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Shadow Saliva Shawl,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Shaxe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Shielded Quiver,offhand,offhand,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Websilk Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Websilk Body Suit,body,body,armor,armor:chest,chest,,,1,True,Websilk Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Websilk Bomb,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Websilk Treads,legs,legs,armor,armor:legs,legs,,,1,True,Websilk Armour; Websilken Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Websilk Robes,body,body,armor,armor:chest,chest,,,1,True,Websilken Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Websilk Sash,body,waist,armor,armor:waist,waist,,,1,True,Websilk Armour; Websilken Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Websilk Turban,head,head,armor,armor:head,head,,,1,True,Websilk Armour; Websilken Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Websilk Whip,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Websilk Wraps,body,arms,armor,armor:arms,arms,,,1,True,Websilk Armour; Websilken Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Websilken Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Silver Harp,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Skleaver,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Skull Crown,head,head,armor,armor:head,head,,,1,True,Vagabond Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Skullcap Hammer,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Sky Harpoon,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Slender Ovule,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Sonic Tomahawk,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Soothing Whip,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Spear of Fear,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Spectral Hunter Cloak,body,body,armor,armor:chest,chest,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Speed Powder,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Spider Visage,charm,head,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Stone Noses,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Noon Lure & Hook,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Noonshark Arrows,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Noonshark Bow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Noonspot Dart,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Noonspot Lantern,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Survivor's Lantern,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Switch Poleaxe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Blade & Guard,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Tabard,body,body,armor,armor:chest,chest,,,1,True,,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Talon Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Beetle Bomb,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+The Three,tool,arms,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Thorn,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Throwing Knife,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Trom Bone (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Trom Bone (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Vagabond Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Vespertine Arrow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Vespertine Bow,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Vespertine Cello,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Vespertine Foil,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Web Eye Wreath,charm,head,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Whisker Harp,tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Whistling Mace,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Pale Hunter Armor Set,set,set,setDefinition,setDefinition,,,,0,False,,PASS: utility/virtual slot assigned,Set definition only; this row is not directly equipped.,,,
+Pale Hunter Treads,legs,legs,armor,armor:legs,legs,,,1,True,Pale Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the legs slot.,,,
+Pale Hunter Coat,body,body,armor,armor:chest,chest,,,1,True,Pale Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the chest slot.,,,
+Pale Hunter Gloves,arms,arms,armor,armor:arms,arms,,,1,True,Pale Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the arms slot.,,,
+Pale Hunter Crown,head,head,armor,armor:head,head,,,1,True,Pale Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the head slot.,,,
+Pale Hunter Visage,charm,head,jewelry,jewelry,,yes,,1,True,,PASS: jewellery slot assigned,Only one jewellery item may be equipped.,,,
+Pale Hunter Skirt,legs,waist,armor,armor:waist,waist,,,1,True,Pale Hunter Armour,PASS: armour body slot assigned,Only one armour item may be equipped in the waist slot.,,,
+Winding Horn (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Winding Horn (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Winged Harp (Hunt Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Winged Harp (Showdown Phase),tool,tool,utility,utility,,,,,True,,PASS: utility/virtual slot assigned,"Utility gear fills remaining equipment capacity after weapon, armour and jewellery limits.",,,
+Xmaxe,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Zanbato,weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
+Zanbato (Broken),weapon,weapon,weapon,weapon,,,yes,2,True,,PASS: weapon may duplicate same name; distinct weapon names capped at 2.,Max 2 weapon items total. Duplicate weapon names are allowed; distinct weapon names are capped at 2.,TRUE,2,2
