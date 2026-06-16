@@ -731,7 +731,12 @@ export default function App() {
   const handleDelete = slotId => {
     if (!window.confirm(`Delete Save Slot ${slotId}? This cannot be undone.`)) return;
     deleteSettlement(slotId);
-    if (slotId === activeSlot) setSettlement(null);
+    if (Number(slotId) === Number(activeSlot)) {
+      setSettlement(null);
+      applyRuntime(createEmptyRuntime('title'));
+      setActiveSlotState(getActiveSlot());
+    }
+    setCreateSlot(null);
     setSlotVersion(version => version + 1);
     setScreen('title');
   };

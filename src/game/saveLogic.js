@@ -689,6 +689,9 @@ export function deleteSettlement(slotId) {
   }
 
   localStorage.removeItem(getSaveSlotKey(slotId));
+  if (Number(slotId) === 1) {
+    localStorage.removeItem(LEGACY_SAVE_KEY);
+  }
   if (getActiveSlot() === Number(slotId)) {
     localStorage.removeItem(ACTIVE_SLOT_KEY);
   }

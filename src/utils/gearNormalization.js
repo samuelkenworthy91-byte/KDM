@@ -38,6 +38,7 @@ const CREATURE_SOURCES = [
 ];
 
 const SPECIAL_UNLOCK_METHODS = new Set(['promoOrEvent', 'rareHarvestOrEvent']);
+const PHASE_SUFFIX_PATTERN = /\s*(?:\((?:hunt phase|showdown phase)\)|(?:hunt phase|showdown phase))\s*$/i;
 
 function slugify(value) {
   return String(value || '')
@@ -66,17 +67,55 @@ export function cleanGearDisplayName(name) {
     .replace(/^\s*(?:import(?:ed)?|source|user|username|owner|author)\s*[:|/\\-]\s*/i, '')
     .replace(/^\s*@[\w.-]+\s*[:|/\\-]\s*/i, '')
     .replace(/^\s*[\w.-]+@[\w.-]+\s*[:|/\\-]\s*/i, '')
+    .replace(PHASE_SUFFIX_PATTERN, '')
     .trim();
 
   return cleaned || 'Legacy gear';
 }
 
+function mergePhaseVariants(existing = {}, incoming = {}) {
+  const merged = { ...existing };
+  ['hunt', 'showdown'].forEach(phase => {
+    const cards = [
+      ...(merged[phase]?.cards || merged[phase]?.cardPackage || []),
+      ...(incoming[phase]?.cards || incoming[phase]?.cardPackage || [])
+    ];
+    if (cards.length) {
+      const uniqueCards = [...new Set(cards)];
+      merged[phase] = {
+        ...(merged[phase] || {}),
+        ...(incoming[phase] || {}),
+        cards: uniqueCards,
+        cardPackage: uniqueCards
+      };
+    }
+  });
+  return merged;
+}
+
+function mergeGearMetadata(existing, incoming) {
+  existing.cardPackage = [...new Set([
+    ...(existing.cardPackage || []),
+    ...(incoming.cardPackage || [])
+  ])];
+  existing.keywords = [...new Set([
+    ...(existing.keywords || []),
+    ...(incoming.keywords || [])
+  ])];
+  existing.phaseVariants = mergePhaseVariants(existing.phaseVariants, incoming.phaseVariants);
+  existing.name = cleanGearDisplayName(getGearDisplayName(existing));
+  existing.displayName = existing.name;
+  existing.phase = null;
+}
+
 function getGearIdentityKeys(item) {
   const id = item?.id || item?.gearId || item?.cardId || item?.ourGameId;
   const nameSlug = slugify(getGearDisplayName(item));
+  const baseNameSlug = slugify(cleanGearDisplayName(getGearDisplayName(item)));
   return [
     id ? `id:${slugify(id)}` : null,
-    nameSlug ? `name:${nameSlug}` : null
+    nameSlug ? `name:${nameSlug}` : null,
+    baseNameSlug ? `phase-base:${baseNameSlug}` : null
   ].filter(Boolean);
 }
 
@@ -135,6 +174,7 @@ export function dedupeGearList(items = [], { includeHidden = false } = {}) {
         .find(index => index !== undefined);
 
       if (existingIndex !== undefined) {
+        mergeGearMetadata(deduped[existingIndex], item);
         keys.forEach(key => keyOwners.set(key, existingIndex));
         return;
       }
@@ -142,6 +182,8 @@ export function dedupeGearList(items = [], { includeHidden = false } = {}) {
       const index = deduped.length;
       deduped.push({
         ...item,
+        name: cleanGearDisplayName(getGearDisplayName(item)),
+        displayName: cleanGearDisplayName(getGearDisplayName(item)),
         stableId: getGearStableId(item)
       });
       keys.forEach(key => keyOwners.set(key, index));

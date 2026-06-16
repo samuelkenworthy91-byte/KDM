@@ -101,6 +101,43 @@ test('Armoury grouping contains v8 gear and not old handcrafted recipes', () => 
   });
 });
 
+test('normal Armoury recipe names do not expose phase suffixes', () => {
+  const grouped = groupGearByArmouryTab(
+    equipmentList.filter(item => item.currentSource === 'v8GearRegistry'),
+    {
+      builtInnovations: ['lionTrophyHall'],
+      discoveredQuarries: []
+    }
+  );
+  const recipes = Object.values(grouped).flatMap(sourceGroups => Object.values(sourceGroups).flat());
+
+  recipes.forEach(item => {
+    assert.doesNotMatch(item.name, /\(?hunt phase\)?|\(?showdown phase\)?/i);
+  });
+});
+
+test('Lion Trophy Hall phase gear appears once with grouped phase cards', () => {
+  const grouped = groupGearByArmouryTab(
+    equipmentList.filter(item => item.currentSource === 'v8GearRegistry'),
+    {
+      builtInnovations: ['lionTrophyHall'],
+      discoveredQuarries: []
+    }
+  );
+  const lionGroup = grouped['Lion Trophy Hall'] || grouped.Catarium || {};
+  const lionRecipes = Object.values(lionGroup).flat();
+  const names = lionRecipes.map(item => item.name);
+  const duplicateNames = names.filter((name, index) => names.indexOf(name) !== index);
+
+  assert.deepEqual(duplicateNames, []);
+  ['Amber Cello', 'Beetugle'].forEach(name => {
+    const matches = lionRecipes.filter(item => item.name === name);
+    assert.equal(matches.length, 1);
+    assert.ok(matches[0].phaseVariants?.hunt?.cards?.length > 0);
+    assert.ok(matches[0].phaseVariants?.showdown?.cards?.length > 0);
+  });
+});
+
 test('unknown old save gear becomes a generic uncrafteable placeholder', () => {
   const placeholder = getEquipment('oldSaveItemId');
   assert.equal(placeholder.name, 'Unknown Legacy Item');

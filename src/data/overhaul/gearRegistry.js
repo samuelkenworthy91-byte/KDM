@@ -30,7 +30,7 @@ const locationMapping = {
   '': 'lanternHearth'
 };
 
-const phasePattern = /\s*\((hunt phase|showdown phase)\)\s*$/i;
+const phasePattern = /\s*(?:\((hunt phase|showdown phase)\)|(hunt phase|showdown phase))\s*$/i;
 
 function slugify(value) {
   return String(value || '')
@@ -127,7 +127,8 @@ function cleanPhaseName(name) {
 function phaseForName(name) {
   const match = String(name || '').match(phasePattern);
   if (!match) return null;
-  return match[1].toLowerCase().startsWith('hunt') ? 'hunt' : 'showdown';
+  const phase = match[1] || match[2];
+  return phase.toLowerCase().startsWith('hunt') ? 'hunt' : 'showdown';
 }
 
 const deckCardsByEquipmentName = deckCardsRaw.reduce((acc, card) => {
