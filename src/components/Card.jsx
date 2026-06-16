@@ -41,6 +41,12 @@ export default function Card({ card, disabled, onPlay, preview }) {
           {formatValueForDisplay(preview.harvestWarning)}
         </small>
       )}
+      {preview?.harvestPreview && (
+        <small className="card-preview-detail">
+          Break {preview.harvestPreview.breakDamage}/{preview.harvestPreview.breakValue}; overkill {preview.harvestPreview.overkill}.{' '}
+          {formatValueForDisplay(preview.harvestPreview.expectedQualityHint)}
+        </small>
+      )}
       <p>{formatValueForDisplay(card.description)}</p>
       {preview?.modifierBreakdown?.length > 0 && (
         <small className="card-breakdown-hint">Hover for modifier breakdown</small>

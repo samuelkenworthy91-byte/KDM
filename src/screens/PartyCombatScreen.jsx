@@ -91,6 +91,7 @@ export default function PartyCombatScreen({
         monsterDamage: selectedCardPreview.monsterHpDamage,
         breakDamage: selectedCardPreview.weakPointBreakDamage,
         weaponMatch: selectedCardPreview.weaponMatch || 'Neutral',
+        harvestPreview: selectedCardPreview.harvestPreview,
         tellState: selectedCardPreview.tellState === 'unknown'
           ? getPartyWeakPointPreview(combat, selectedWeakPointId)?.tellState || 'neutral'
           : selectedCardPreview.tellState,
@@ -284,6 +285,13 @@ export default function PartyCombatScreen({
                 ? 'Suppressed by opening/card'
                 : selectedWeakPoint?.riskLabel
             } ({riskText(selectedWeakPoint)}). {harvestPreview(selectedWeakPoint)}
+            {selectedPreview.harvestPreview && (
+              <>
+                {' '}Break {selectedPreview.harvestPreview.breakDamage}/{selectedPreview.harvestPreview.breakValue};
+                overkill {selectedPreview.harvestPreview.overkill}.{' '}
+                {selectedPreview.harvestPreview.labels.join(' ')}
+              </>
+            )}
             {' '}{baneRevealsWeakPoints ? counterIntentText(selectedWeakPoint) : ''}
           </p>
         )}

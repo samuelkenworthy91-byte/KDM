@@ -34,7 +34,6 @@ import {
 } from './data/innovationCards.js';
 import {
   calculateAvailableQuarryTiers,
-  getCreatureSpecificLootChoices,
   getDiscoveryChoices,
   getHighestDefeatedQuarryLevel,
   hasDefeatedQuarryLevel,
@@ -55,6 +54,7 @@ import {
 import { genericResourceIds, resources as resourceData } from './data/resources.js';
 import { getQuarryDiscoveryEvent } from './data/quarryDiscoveryEvents.js';
 import { createMonsterWeakPoints, getBrokenWeakPointRewards } from './data/weakPoints.js';
+import { buildHarvestRewardOffers } from './game/harvestRewardLogic.js';
 import { treatWound } from './data/woundTables.js';
 import {
   addResources,
@@ -1128,11 +1128,16 @@ export default function App() {
         harvestResults,
         wounds: combatResult.wounds || []
       });
-      setLootChoices(getCreatureSpecificLootChoices(
-        selectedQuarry,
-        selectedLevel,
-        harvestResults
-      ));
+      setLootChoices(buildHarvestRewardOffers({
+        quarryId: selectedQuarry,
+        quarryLevel: selectedLevel,
+        brokenWeakPoints,
+        harvestResults,
+        combatWounds: combatResult.wounds || [],
+        party: living,
+        runModifiers,
+        offerSeed: `${currentHuntId || Date.now()}:${currentNode?.id || 'combat'}:${selectedQuarry}:${selectedLevel}`
+      }));
       setScreen('lootReward');
       return;
     }
@@ -1166,9 +1171,13 @@ export default function App() {
       isBoss,
       survivor: survivorAfterCombat
     });
-    setLootChoices(
-      getCreatureSpecificLootChoices(selectedQuarry, selectedLevel)
-    );
+    setLootChoices(buildHarvestRewardOffers({
+      quarryId: selectedQuarry,
+      quarryLevel: selectedLevel,
+      party: [survivorAfterCombat],
+      runModifiers,
+      offerSeed: `${currentHuntId || Date.now()}:${currentNode?.id || 'combat'}:${selectedQuarry}:${selectedLevel}`
+    }));
     setScreen('lootReward');
   };
 

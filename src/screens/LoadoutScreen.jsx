@@ -17,10 +17,12 @@ import {
 } from '../game/legacyContent.js';
 import { formatValueForDisplay } from '../utils/formatters.js';
 import { getSurvivorDisplayName } from '../game/survivorIdentity.js';
+import { getHarvestBenefitLabels } from '../game/harvestRewardLogic.js';
 
 function GearCards({ gear }) {
   const item = getEquipment(gear.equipmentId);
   const knownItem = equipment[gear.equipmentId];
+  const gearBenefits = getHarvestBenefitLabels(item);
   return (
     <article className="item-card">
       <h4>{item.name}</h4>
@@ -35,13 +37,20 @@ function GearCards({ gear }) {
       <p>{formatValueForDisplay(item?.passiveText)}</p>
       {item?.affectsOtherSurvivors && <p className="effect-text">Affects other survivors.</p>}
       {item?.deckIdentity && <p className="effect-text">Deck identity: {item.deckIdentity}</p>}
+      {gearBenefits.map(label => <p className="effect-text" key={label}>{label}</p>)}
       <ul>
-        {(item?.cardPackage || []).map(cardId => (
-          <li key={cardId}>
-            <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
-            {getLegacyDescription(cards, cardId)}
-          </li>
-        ))}
+        {(item?.cardPackage || []).map(cardId => {
+          const cardBenefits = getHarvestBenefitLabels(cards[cardId]);
+          return (
+            <li key={cardId}>
+              <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
+              {getLegacyDescription(cards, cardId)}
+              {cardBenefits.length > 0 && (
+                <small> {cardBenefits.join(' ')}</small>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </article>
   );
@@ -139,6 +148,7 @@ export default function LoadoutScreen({
         {armory.map(gear => {
           const selected = selectedInstanceIds.includes(gear.instanceId);
           const item = getEquipment(gear.equipmentId);
+          const gearBenefits = getHarvestBenefitLabels(item);
           return (
             <article className={`item-card ${selected ? 'built' : ''}`} key={gear.instanceId}>
               <h4>{item.name}</h4>
@@ -160,13 +170,20 @@ export default function LoadoutScreen({
                   This gear adds a {item.deckIdentity} package.
                 </p>
               )}
+              {gearBenefits.map(label => <p className="effect-text" key={label}>{label}</p>)}
               <ul>
-                {(item.cardPackage || []).map(cardId => (
-                  <li key={cardId}>
-                    <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
-                    {getLegacyDescription(cards, cardId)}
-                  </li>
-                ))}
+                {(item.cardPackage || []).map(cardId => {
+                  const cardBenefits = getHarvestBenefitLabels(cards[cardId]);
+                  return (
+                    <li key={cardId}>
+                      <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
+                      {getLegacyDescription(cards, cardId)}
+                      {cardBenefits.length > 0 && (
+                        <small> {cardBenefits.join(' ')}</small>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
               <button
                 type="button"
@@ -189,12 +206,18 @@ export default function LoadoutScreen({
             <div key={gear.instanceId}>
               <strong>{item.name} adds:</strong>
               <ul>
-                {(item?.cardPackage || []).map((cardId, cardIndex) => (
-                  <li key={`${cardId}-${cardIndex}`}>
-                    <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
-                    {getLegacyDescription(cards, cardId)}
-                  </li>
-                ))}
+                {(item?.cardPackage || []).map((cardId, cardIndex) => {
+                  const cardBenefits = getHarvestBenefitLabels(cards[cardId]);
+                  return (
+                    <li key={`${cardId}-${cardIndex}`}>
+                      <strong>{getLegacyDisplayName(cards, cardId, 'card')}</strong>:{' '}
+                      {getLegacyDescription(cards, cardId)}
+                      {cardBenefits.length > 0 && (
+                        <small> {cardBenefits.join(' ')}</small>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           );

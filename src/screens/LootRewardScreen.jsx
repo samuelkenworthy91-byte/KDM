@@ -5,6 +5,29 @@ import {
   formatHistoryDetail,
   formatValueForDisplay
 } from '../utils/formatters.js';
+import { getResourceRarityLabel, getResourceRarityTier } from '../game/resourceRarityLogic.js';
+
+function normalizeOffer(choice, index) {
+  if (typeof choice === 'string') {
+    const resource = resources[choice];
+    return {
+      id: `${choice}-${index}`,
+      resourceId: choice,
+      quantity: 1,
+      rarityTier: getResourceRarityTier(resource),
+      source: resource?.creatureId ? 'quarryPool' : 'generic',
+      quality: 'messy',
+      reason: resource?.creatureId ? 'Quarry pool.' : 'Generic fallback.',
+      legacy: true
+    };
+  }
+  return {
+    id: `${choice.resourceId}-${index}-${choice.source || 'offer'}-${choice.reason || ''}`,
+    quantity: 1,
+    rarityTier: getResourceRarityTier(choice.resourceId),
+    ...choice
+  };
+}
 
 export default function LootRewardScreen({
   quarryName,
@@ -18,15 +41,25 @@ export default function LootRewardScreen({
 }) {
   const chooseCount = level;
   const [selected, setSelected] = useState([]);
-  const toggleChoice = resourceId => {
-    setSelected(current => current.includes(resourceId)
-      ? current.filter(id => id !== resourceId)
-      : current.length < chooseCount ? [...current, resourceId] : current);
+  const offers = choices.map(normalizeOffer);
+  const toggleChoice = offerId => {
+    setSelected(current => current.includes(offerId)
+      ? current.filter(id => id !== offerId)
+      : current.length < chooseCount ? [...current, offerId] : current);
   };
-  const rarityLabel = resource => {
-    if (resource?.type === 'level3Rare') return 'Level 3 Rare';
-    if (resource?.type === 'rare' || resource?.type === 'strange') return 'Rare';
-    return resource?.type === 'creature' ? 'Common' : 'Uncommon';
+  const selectedResources = () => selected.flatMap(offerId => {
+    const offer = offers.find(item => item.id === offerId);
+    return offer ? Array.from({ length: offer.quantity || 1 }, () => offer.resourceId) : [];
+  });
+  const sourceLabel = source => {
+    const labels = {
+      generic: 'Generic fallback',
+      fallback: 'Weak-point fallback',
+      quarryPool: 'Quarry pool',
+      weakPoint: 'Weak point',
+      rareWeakPoint: 'Rare weak point'
+    };
+    return labels[source] || 'Unknown / Legacy';
   };
   return (
     <section className="loot-reward-screen">
@@ -66,23 +99,25 @@ export default function LootRewardScreen({
       )}
       <p>Choose {chooseCount} monster {chooseCount === 1 ? 'part' : 'parts'}.</p>
       <div className="loot-choice-grid">
-        {choices.map((resourceId, index) => {
-          const resource = resources[resourceId];
+        {offers.map(offer => {
+          const resource = resources[offer.resourceId];
           return (
             <button
               type="button"
-              key={`${resourceId}-${index}`}
-              className={selected.includes(resourceId) ? 'selected' : ''}
-              onClick={() => toggleChoice(resourceId)}
+              key={offer.id}
+              className={selected.includes(offer.id) ? 'selected' : ''}
+              onClick={() => toggleChoice(offer.id)}
             >
-              <strong>{resource?.name || resourceId}</strong>
-              <span>{rarityLabel(resource)}</span>
+              <strong>{resource?.name || 'Unknown / Legacy'}{offer.quantity > 1 ? ` x${offer.quantity}` : ''}</strong>
+              <span>{getResourceRarityLabel(resource || offer.resourceId)}</span>
+              <span>{sourceLabel(offer.source)} - {formatValueForDisplay(offer.quality || 'messy')}</span>
+              <span>{formatHistoryDetail(offer.reason || 'No harvest reason recorded.')}</span>
               <span>{formatValueForDisplay(resource?.description)}</span>
             </button>
           );
         })}
       </div>
-      <button type="button" disabled={selected.length !== chooseCount} onClick={() => onChoose(selected)}>
+      <button type="button" disabled={selected.length !== chooseCount} onClick={() => onChoose(selectedResources())}>
         Take Selected Parts ({selected.length}/{chooseCount})
       </button>
     </section>

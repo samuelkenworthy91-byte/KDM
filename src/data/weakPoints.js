@@ -364,6 +364,55 @@ export function getWeaponSuitability(weakPoint, weaponType, cardTags = []) {
   };
 }
 
+export function getWeakPointHarvestPreview({
+  weakPoint,
+  breakDamage = 0,
+  weaponType,
+  cardTags = []
+}) {
+  if (!weakPoint) return null;
+  const breakValue = weakPoint.breakValue || 0;
+  const remaining = Math.max(0, breakValue - breakDamage);
+  const overkill = Math.max(0, breakDamage - breakValue);
+  const overkillRatio = breakValue ? overkill / breakValue : 0;
+  const suitability = getWeaponSuitability(weakPoint, weaponType, cardTags);
+  const labels = [];
+
+  if (breakDamage >= breakValue && overkillRatio <= 0.1) {
+    labels.push('Perfect range: likely clean break.');
+  } else if (breakDamage >= breakValue && overkillRatio <= 0.25) {
+    labels.push('Safe break: should break without much damage.');
+  }
+  if (
+    breakDamage >= breakValue &&
+    overkillRatio >= 0.3 &&
+    (weakPoint.harvestProfile?.fragile || weakPoint.harvestProfile?.overkillSensitive)
+  ) {
+    labels.push('Overkill warning: may mutilate delicate parts and reduce rare/specific loot.');
+  }
+  if (suitability.label === 'Poor') labels.push('Poor tool: this weapon type may damage the part.');
+  if (suitability.label === 'Good') labels.push('Preferred tool: this weapon type improves clean harvest odds.');
+  if (weakPoint.harvestProfile?.fragile || weakPoint.harvestProfile?.overkillSensitive) {
+    labels.push('Harvest risk: fragile / overkill sensitive.');
+  } else {
+    labels.push('Harvest risk: safe.');
+  }
+
+  return {
+    breakValue,
+    breakDamage,
+    remaining,
+    overkill,
+    weaponMatch: suitability.label,
+    labels,
+    expectedQualityHint: labels.find(label => label.startsWith('Perfect range'))
+      ? 'Clean harvest likely.'
+      : labels.find(label => label.startsWith('Overkill warning'))
+        ? 'Mutilation may push harvest toward ruined.'
+        : 'Messy harvest possible.'
+  };
+}
+
 function worsenQuality(quality) {
   return HARVEST_QUALITIES[Math.min(HARVEST_QUALITIES.length - 1, HARVEST_QUALITIES.indexOf(quality) + 1)];
 }

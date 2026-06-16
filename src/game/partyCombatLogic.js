@@ -12,6 +12,7 @@ import { drawCards } from './deckLogic.js';
 import { treatWound } from '../data/woundTables.js';
 import {
   getTellBreakModifier,
+  getWeakPointHarvestPreview,
   getWeakPointTellState,
   getWeaponSuitability
 } from '../data/weakPoints.js';
@@ -574,7 +575,16 @@ export function getPartyWeakPointPreview(state, weakPointId) {
       (1 + suitability.modifier) * getTellBreakModifier(tellState)
     ) + suitability.flatBonus),
     tellState,
-    riskSuppressed: ['open', 'exposed'].includes(tellState) || cardTags.includes('safeWeakPoint')
+    riskSuppressed: ['open', 'exposed'].includes(tellState) || cardTags.includes('safeWeakPoint'),
+    harvestPreview: getWeakPointHarvestPreview({
+      weakPoint,
+      breakDamage: Math.max(0, Math.round(
+        baseDamage * weakPoint.breakDamageMultiplier *
+        (1 + suitability.modifier) * getTellBreakModifier(tellState)
+      ) + suitability.flatBonus),
+      weaponType: card.weaponType,
+      cardTags
+    })
   };
 }
 

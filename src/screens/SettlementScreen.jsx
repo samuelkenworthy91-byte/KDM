@@ -83,6 +83,7 @@ import {
   getSurvivorGenerationText
 } from '../game/survivorIdentity.js';
 import { canSpendMemories, getMemoryBalance } from '../game/memoryEconomy.js';
+import { getHarvestBenefitLabels } from '../game/harvestRewardLogic.js';
 
 const baseTabs = ['overview', 'survivors', 'armory', 'innovations', 'population', 'graveyard', 'quarries'];
 
@@ -146,7 +147,13 @@ function GearCardList({ recipe }) {
             <p className="muted-text"><strong>Hunt cards:</strong></p>
             <ul>{variants.hunt.cards.map(cardId => {
               const line = cardLine(cardId);
-              return <li key={cardId}><strong>{line.name}</strong> - {line.text}</li>;
+              const benefits = getHarvestBenefitLabels(cards[cardId]);
+              return (
+                <li key={cardId}>
+                  <strong>{line.name}</strong> - {line.text}
+                  {benefits.length > 0 && <small> {benefits.join(' ')}</small>}
+                </li>
+              );
             })}</ul>
           </>
         )}
@@ -155,7 +162,13 @@ function GearCardList({ recipe }) {
             <p className="muted-text"><strong>Showdown cards:</strong></p>
             <ul>{variants.showdown.cards.map(cardId => {
               const line = cardLine(cardId);
-              return <li key={cardId}><strong>{line.name}</strong> - {line.text}</li>;
+              const benefits = getHarvestBenefitLabels(cards[cardId]);
+              return (
+                <li key={cardId}>
+                  <strong>{line.name}</strong> - {line.text}
+                  {benefits.length > 0 && <small> {benefits.join(' ')}</small>}
+                </li>
+              );
             })}</ul>
           </>
         )}
@@ -169,7 +182,13 @@ function GearCardList({ recipe }) {
       <ul>
         {recipe.cardPackage.map(cardId => {
           const line = cardLine(cardId);
-          return <li key={cardId}><strong>{line.name}</strong> - {line.text}</li>;
+          const benefits = getHarvestBenefitLabels(cards[cardId]);
+          return (
+            <li key={cardId}>
+              <strong>{line.name}</strong> - {line.text}
+              {benefits.length > 0 && <small> {benefits.join(' ')}</small>}
+            </li>
+          );
         })}
       </ul>
     </>

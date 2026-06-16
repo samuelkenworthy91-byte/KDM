@@ -1,8 +1,10 @@
 import { playCard } from '../game/combatLogic.js';
 import {
+  getWeakPointHarvestPreview,
   getWeakPointTellState,
   getWeaponSuitability
 } from '../data/weakPoints.js';
+import { getHarvestBenefitLabels } from '../game/harvestRewardLogic.js';
 
 const EMPTY_PREVIEW = {
   baseDamage: 0,
@@ -261,7 +263,23 @@ export function getCardPreview({
       preview.harvestWarning = afterPoint.harvestProfile?.fragile
         ? 'Fragile: excess break damage may reduce harvest quality.'
         : '';
+      preview.harvestPreview = getWeakPointHarvestPreview({
+        weakPoint: beforePoint,
+        breakDamage: weakPointBreakDamage,
+        weaponType,
+        cardTags
+      });
+      if (preview.harvestPreview) {
+        preview.modifierBreakdown.push(
+          `Break value: ${preview.harvestPreview.breakValue}`,
+          `Incoming break: ${preview.harvestPreview.breakDamage}`,
+          `Overkill: ${preview.harvestPreview.overkill}`,
+          ...preview.harvestPreview.labels
+        );
+      }
     }
+    const harvestBenefits = getHarvestBenefitLabels(card);
+    if (harvestBenefits.length) preview.modifierBreakdown.push(...harvestBenefits);
     preview.effectSummary = summaryFor(preview, card, selectedWeakPoint);
     return preview;
   } catch (error) {
