@@ -1,4 +1,4 @@
-import cardDataRaw from '../../../.agents/gear-card-overhaul/all_deck_cards.json' with { type: 'json' };
+import cardDataRaw from '../../../all_deck_cards.json' with { type: 'json' };
 
 export const overhaulCards = cardDataRaw.reduce((acc, card) => {
   const effects = [];
@@ -25,22 +25,32 @@ export const overhaulCards = cardDataRaw.reduce((acc, card) => {
     });
   }
   if (card.breakDamage) {
-    // We'll add a new effect type or handle it in damage
     effects.push({
       type: 'breakBonus',
       amount: parseInt(card.breakDamage) || 0
     });
   }
-  // statusApplied is handled separately in playCard now, but we could add it here too
+  if (card.statusApplied && typeof card.statusApplied === 'object') {
+    Object.entries(card.statusApplied).forEach(([status, amount]) => {
+      effects.push({
+        type: `${status.toLowerCase()}Monster`,
+        amount: parseInt(amount) || 1
+      });
+    });
+  }
   
   acc[card.cardId] = {
     ...card,
     id: card.cardId,
     name: card.cardName,
-    cost: card.energyCost,
-    description: card.cardText,
+    cost: card.energyCost ?? card.cost ?? 0,
+    description: card.cardText || card.fullEffect || card.shortEffect,
     type: card.type,
     tags: card.tags,
+    sourceType: 'gear',
+    sourceGearName: card.equipmentName || card.sourceEquipmentName,
+    cardCopyEligible: card.cardCopyEligible !== false,
+    maxCopiesFromOneItem: Number(card.maxCopiesFromOneItem || 3),
     effects,
     exhaust: card.exhaust,
     implemented: true

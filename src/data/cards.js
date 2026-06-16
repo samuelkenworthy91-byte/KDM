@@ -148,7 +148,7 @@ export const cards = {
   )
 };
 
-Object.assign(cards, gearCards, monsterRewardCards, fightingArtCards);
+Object.assign(cards, monsterRewardCards, fightingArtCards);
 
 Object.keys(cards).forEach(cardId => {
   const current = cards[cardId];

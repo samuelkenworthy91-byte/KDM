@@ -153,7 +153,8 @@ export function dedupeGearList(items = [], { includeHidden = false } = {}) {
 }
 
 export function normaliseCraftingLocation(item = {}) {
-  const rawLocation = item.ourCraftingLocation ||
+  const rawLocation = item.craftingLocationName ||
+    item.ourCraftingLocation ||
     item.kdmSettlementLocationOrSource ||
     item.ourSettlementSource ||
     item.location ||
@@ -239,18 +240,11 @@ export function getGearUnlockState(item, settlement = {}) {
 export function groupGearByArmouryTab(
   items = [],
   settlementState = null,
-  { includeLocked = true, includeHidden = false } = {}
+  { includeLocked = true } = {}
 ) {
   const groups = {};
 
-  dedupeGearList(items, { includeHidden }).forEach(item => {
-    if ((item.deprecated || item.hiddenFromCrafting) && includeHidden) {
-      const location = 'Legacy / Hidden Review';
-      if (!groups[location]) groups[location] = {};
-      if (!groups[location].General) groups[location].General = [];
-      groups[location].General.push(item);
-      return;
-    }
+  dedupeGearList(items).forEach(item => {
     if (
       settlementState &&
       !includeLocked &&

@@ -7,7 +7,6 @@ import {
   normalizeChildTraitId
 } from '../data/childTraits.js';
 import {
-  equipmentCatalogList,
   equipmentList,
   getEquipment
 } from '../data/equipment.js';
@@ -116,6 +115,64 @@ function CostList({ cost, stash }) {
         );
       })}
     </div>
+  );
+}
+
+function getCleanGearSummary(recipe) {
+  if (recipe.weaponType) {
+    return `${recipe.weaponType} gear for ${recipe.keywords?.slice(0, 3).join(', ') || 'combat'} play.`;
+  }
+  if (recipe.bodySlot) return `${recipe.bodySlot} armour for defensive loadouts.`;
+  return `${recipe.slot || recipe.itemType || 'Gear'} for survivor loadouts.`;
+}
+
+function cardLine(cardId) {
+  const card = cards[cardId];
+  if (!card) return { name: cardId, text: 'Unknown / legacy card.' };
+  return {
+    name: card.name || cardId,
+    text: card.shortEffect || card.description || ''
+  };
+}
+
+function GearCardList({ recipe }) {
+  const variants = recipe.phaseVariants || {};
+  const hasPhaseCards = variants.hunt?.cards?.length || variants.showdown?.cards?.length;
+  if (hasPhaseCards) {
+    return (
+      <>
+        {variants.hunt?.cards?.length > 0 && (
+          <>
+            <p className="muted-text"><strong>Hunt cards:</strong></p>
+            <ul>{variants.hunt.cards.map(cardId => {
+              const line = cardLine(cardId);
+              return <li key={cardId}><strong>{line.name}</strong> - {line.text}</li>;
+            })}</ul>
+          </>
+        )}
+        {variants.showdown?.cards?.length > 0 && (
+          <>
+            <p className="muted-text"><strong>Showdown cards:</strong></p>
+            <ul>{variants.showdown.cards.map(cardId => {
+              const line = cardLine(cardId);
+              return <li key={cardId}><strong>{line.name}</strong> - {line.text}</li>;
+            })}</ul>
+          </>
+        )}
+      </>
+    );
+  }
+  if (!recipe.cardPackage?.length) return null;
+  return (
+    <>
+      <p className="muted-text"><strong>Cards:</strong></p>
+      <ul>
+        {recipe.cardPackage.map(cardId => {
+          const line = cardLine(cardId);
+          return <li key={cardId}><strong>{line.name}</strong> - {line.text}</li>;
+        })}
+      </ul>
+    </>
   );
 }
 
@@ -248,7 +305,13 @@ function SurvivorCard({
     return (item?.cardPackage || []).map(cardId => ({
       cardId,
       source: `Gear: ${item.name}`,
-      eligible: false
+      copies: Math.min(3, Math.max(1, Number(
+        survivor.gearCardTraining?.[`${survivor.id}:${gear.instanceId}:${cardId}`] ??
+        survivor.gearCardTraining?.[`${gear.instanceId}:${cardId}`] ??
+        survivor.gearCardTraining?.[gear.instanceId]?.[cardId] ??
+        1
+      ) || 1)),
+      gearInstanceId: gear.instanceId
     }));
   });
   const activeProficiencyType = survivor.activeProficiencyType || 'fistAndTooth';
@@ -546,6 +609,16 @@ function SurvivorCard({
         <p><strong>Bound gear:</strong> {survivor.boundGear?.length
           ? survivor.boundGear.map(gear => getEquipment(gear.equipmentId).name).join(', ')
           : 'None'}</p>
+        {!!gearEntries.length && (
+          <details>
+            <summary>Equipped Gear Cards</summary>
+            {gearEntries.map(entry => (
+              <p className="muted-text" key={`${entry.gearInstanceId}-${entry.cardId}`}>
+                <strong>{cards[entry.cardId]?.name || entry.cardId}</strong> x{entry.copies} | {entry.source}
+              </p>
+            ))}
+          </details>
+        )}
         {[...(survivor.injuries || []), ...(survivor.scars || []), ...(survivor.disorders || [])].map(id => {
           const condition = injuries[id] || scars[id] || disorders[id];
           if (!condition) return null;
@@ -689,7 +762,6 @@ export default function SettlementScreen({
 }) {
   const [tab, setTab] = useState('overview');
   const [showLockedGear, setShowLockedGear] = useState(false);
-  const [showLegacyGear, setShowLegacyGear] = useState(false);
   const [activeArmouryTab, setActiveArmouryTab] = useState('Stored Gear');
   const [survivorName, setSurvivorName] = useState('');
   const [survivorGender, setSurvivorGender] = useState('other');
@@ -739,11 +811,10 @@ export default function SettlementScreen({
     drawableInnovationIds.length > 0;
   const nextTimelineMilestone = getNextTimelineMilestone(settlement.lanternYear);
   const armouryData = useMemo(() => {
-    return groupGearByArmouryTab(showLegacyGear ? equipmentCatalogList : equipmentList, settlement, {
-      includeLocked: showLockedGear,
-      includeHidden: showLegacyGear
+    return groupGearByArmouryTab(equipmentList, settlement, {
+      includeLocked: showLockedGear
     });
-  }, [settlement, showLockedGear, showLegacyGear]);
+  }, [settlement, showLockedGear]);
 
   const recipeTabs = useMemo(() => Object.keys(armouryData).sort((a, b) => {
     const priority = ['Starting / Basic', 'Lantern Hoard', 'Bone Smith', 'Organ Grinder', 'Skinnery'];
@@ -1511,16 +1582,6 @@ export default function SettlementScreen({
                 />
                 Show locked gear
               </label>
-              {import.meta.env.DEV && (
-                <label className="toggle-label">
-                  <input
-                    type="checkbox"
-                    checked={showLegacyGear}
-                    onChange={e => setShowLegacyGear(e.target.checked)}
-                  />
-                  Show legacy / hidden review
-                </label>
-              )}
             </div>
           </div>
 
@@ -1597,33 +1658,24 @@ export default function SettlementScreen({
                         <article className={`item-card ${isLocked ? 'locked' : ''}`} key={recipe.stableId || recipe.id}>
                           <p className="eyebrow">{recipe.slot}</p>
                           <h4>{getGearDisplayName(recipe)}</h4>
-                          {(recipe.deprecated || recipe.hiddenFromCrafting) && (
-                            <p className="locked-badge">Legacy / hidden. Review only; cannot be crafted.</p>
-                          )}
                           {isLocked && <p className="locked-badge">Locked: {unlockState.reason}</p>}
                           <p>
-                            <strong>Type:</strong> {recipe.weaponType || 'Non-weapon'} |{' '}
-                            <strong>Hands:</strong> {recipe.hands || 0} | <strong>Speed:</strong> {recipe.speedStyle || 'standard'}
+                            <strong>Category:</strong> {recipe.itemType || recipe.slot || 'gear'} |{' '}
+                            <strong>Slot:</strong> {recipe.loadoutSlot || recipe.slot || 'gear'}
+                            {recipe.weaponType ? <> | <strong>Weapon:</strong> {recipe.weaponType}</> : null}
+                            {recipe.hands ? <> | <strong>Hands:</strong> {recipe.hands}</> : null}
+                            {recipe.bodySlot ? <> | <strong>Body:</strong> {recipe.bodySlot}</> : null}
                           </p>
+                          <p>
+                            <strong>Rarity:</strong> {recipe.rarity || 'standard'} |{' '}
+                            <strong>Tier:</strong> {recipe.tier || 'standard'}
+                            {recipe.colorAffinityName ? <> | <strong>Affinity:</strong> {recipe.colorAffinityName}</> : null}
+                          </p>
+                          <p><strong>Building:</strong> {recipe.craftingLocationName || recipe.location || activeArmouryTab}</p>
+                          <p><strong>Source:</strong> {recipe.quarryName || recipe.source || 'Settlement'}</p>
                           <p><strong>Keywords:</strong> {recipe.keywords?.join(', ') || 'Survival'}</p>
-                          <p>{formatValueForDisplay(recipe.description || recipe.passiveText)}</p>
-                          <p className="effect-text">{formatModifierEffect(recipe.passiveText)}</p>
-                          {recipe.deckIdentity && (
-                            <p className="effect-text">Deck identity: {recipe.deckIdentity}</p>
-                          )}
-                          {recipe.cardPackage?.length > 0 && (
-                            <>
-                              <p className="muted-text"><strong>Adds:</strong></p>
-                              <ul>
-                                {recipe.cardPackage.map((cardId, index) => (
-                                  <li key={`${cardId}-${index}`}>
-                                    <strong>{cards[cardId]?.name || cardId}</strong>:{' '}
-                                    {formatValueForDisplay(cards[cardId]?.description)}
-                                  </li>
-                                ))}
-                              </ul>
-                            </>
-                          )}
+                          <p>{getCleanGearSummary(recipe)}</p>
+                          <GearCardList recipe={recipe} />
                           <CostList cost={recipe.cost} stash={settlement.stash} />
                           {!isLocked && !recipe.deprecated && !recipe.hiddenFromCrafting && (
                             <button

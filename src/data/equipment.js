@@ -5,7 +5,7 @@ import {
   getGearMetadata,
   weaponStyleDefinitions
 } from './gearMetadata.js';
-import { gearById } from './overhaul/gearRegistry.js';
+import { gearRegistry } from './overhaul/gearRegistry.js';
 import {
   cleanGearDisplayName,
   dedupeGearList
@@ -51,13 +51,11 @@ function recipe(id, name, buildingId, cost, description, cardPackage, passiveTex
 }
 
 const legacyEquipment = Object.fromEntries(
-  Object.entries(gearById).map(([legacyId, item]) => [
-    legacyId,
+  gearRegistry.map(item => [
+    item.id,
     {
       ...item,
       name: cleanGearDisplayName(item.name),
-      deprecated: true,
-      hiddenFromCrafting: true,
       legacySource: 'importedGearRegistry'
     }
   ])
@@ -237,12 +235,26 @@ monsterRecipeRows.forEach(row => {
   equipment[row[0]].affectsOtherSurvivors = true;
 });
 
+const currentGearIds = new Set(gearRegistry.map(item => item.id));
+Object.values(equipment).forEach(item => {
+  if (currentGearIds.has(item.id)) {
+    item.deprecated = false;
+    item.hiddenFromCrafting = false;
+    item.legacySource = null;
+    item.currentSource = 'v8GearRegistry';
+    return;
+  }
+  item.deprecated = true;
+  item.hiddenFromCrafting = true;
+  item.legacySource = item.legacySource || 'handcraftedCompatibilityRecipe';
+});
+
 Object.values(equipment).forEach(item => {
   item.name = cleanGearDisplayName(item.name);
   const metadata = getGearMetadata(item);
-  item.weaponType = metadata.weaponType;
-  item.slot = metadata.slot;
-  item.hands = metadata.hands;
+  item.weaponType = item.weaponType || metadata.weaponType;
+  item.slot = item.slot || metadata.slot;
+  item.hands = Number(item.hands ?? metadata.hands ?? 0) || 0;
   item.speedStyle = metadata.speedStyle;
   item.styleTags = metadata.styleTags;
   item.keywords = [...new Set([

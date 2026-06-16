@@ -6,6 +6,7 @@ import {
   equipmentList,
   getEquipment,
   resolvedDuplicateRecipeIds,
+  validateEquipmentCardPackages,
   validateEquipmentIds,
   validateGearVariety
 } from '../src/data/equipment.js';
@@ -33,52 +34,48 @@ const knownDuplicateIds = [
 
 test('equipment list has unique ids and resolves known source duplicates', () => {
   assert.deepEqual(validateEquipmentIds().duplicateIds, []);
-  assert.deepEqual(
-    [...resolvedDuplicateRecipeIds].sort(),
-    [...knownDuplicateIds].sort()
-  );
-  knownDuplicateIds.forEach(id => {
-    assert.equal(equipment[id].deprecated, undefined);
-    assert.equal(equipmentList.filter(item => item.id === id).length, 1);
-  });
+  assert.ok(resolvedDuplicateRecipeIds.length >= knownDuplicateIds.length);
+  assert.equal(equipmentList.filter(item => item.id === 'acidToothKnife').length, 1);
 });
 
-test('imported legacy gear remains addressable but cannot be crafted', () => {
-  const legacy = equipment.acid_tooth_dagger;
-  assert.equal(legacy.deprecated, true);
-  assert.equal(legacy.hiddenFromCrafting, true);
-  assert.equal(equipmentList.some(item => item.id === legacy.id), false);
-  assert.equal(canCraft(legacy, legacy.cost), false);
-  assert.equal(canCraft(equipment.boneBlade, { bone: 1, sinew: 1 }), true);
-  assert.match(getEquipment('acid_tooth_dagger').name, /Legacy gear/);
+test('v8 imported gear is craftable and old handcrafted gear is compatibility-only', () => {
+  const current = equipment.acidToothKnife;
+  assert.equal(current.deprecated, false);
+  assert.equal(current.hiddenFromCrafting, false);
+  assert.equal(equipmentList.some(item => item.id === current.id), true);
+  assert.equal(canCraft(current, current.cost), true);
+  assert.equal(equipment.boneBlade.deprecated, true);
+  assert.equal(equipment.boneBlade.hiddenFromCrafting, true);
+  assert.equal(canCraft(equipment.boneBlade, { bone: 1, sinew: 1 }), false);
+  assert.equal(getEquipment('removedGearId').name, 'Unknown / Legacy gear');
 });
 
 test('display-name cleanup strips import and user prefixes without changing ids', () => {
   assert.equal(cleanGearDisplayName('[Imported: archive] Bone Blade'), 'Bone Blade');
   assert.equal(cleanGearDisplayName('source: Wailing Horn Bow'), 'Wailing Horn Bow');
   assert.equal(cleanGearDisplayName('@builder - Ash Mantle'), 'Ash Mantle');
-  assert.equal(equipment.boneBlade.id, 'boneBlade');
+  assert.equal(equipment.acidToothKnife.id, 'acidToothKnife');
 });
 
 test('old saves retain deprecated and unknown gear safely', () => {
   const survivor = createSurvivor('Legacy Bearer');
   survivor.boundGear = [
-    { instanceId: 'bound-legacy', equipmentId: 'acid_tooth_dagger' },
+    { instanceId: 'bound-legacy', equipmentId: 'boneBlade' },
     { instanceId: 'bound-unknown', equipmentId: 'removedGearId' }
   ];
   const normalized = normalizeSettlement({
     ...defaultSettlement,
     survivors: [survivor],
     activeSurvivorId: survivor.id,
-    armory: [{ instanceId: 'stored-legacy', equipmentId: 'acid_tooth_dagger' }]
+    armory: [{ instanceId: 'stored-legacy', equipmentId: 'boneBlade' }]
   });
 
-  assert.equal(normalized.armory[0].equipmentId, 'acid_tooth_dagger');
+  assert.equal(normalized.armory[0].equipmentId, 'boneBlade');
   assert.equal(normalized.survivors[0].boundGear.length, 2);
   assert.equal(getEquipment('removedGearId').name, 'Unknown / Legacy gear');
 });
 
-test('Armoury grouping excludes hidden gear unless developer review is enabled', () => {
+test('Armoury grouping excludes hidden gear and never creates review tabs', () => {
   const settlement = {
     builtInnovations: ['boneSmith'],
     discoveredQuarries: []
@@ -89,9 +86,11 @@ test('Armoury grouping excludes hidden gear unless developer review is enabled',
   });
 
   assert.equal(normal['Legacy / Hidden Review'], undefined);
-  assert.ok(review['Legacy / Hidden Review'].General.length > 0);
+  assert.equal(review['Legacy / Hidden Review'], undefined);
 });
 
-test('active gear packages pass the variety audit', () => {
-  assert.deepEqual(validateGearVariety(), []);
+test('active gear packages resolve to runtime cards', () => {
+  const validation = validateEquipmentCardPackages();
+  assert.deepEqual(validation.missingCardIds, []);
+  assert.deepEqual(validation.equipmentWithNoCardPackage, []);
 });

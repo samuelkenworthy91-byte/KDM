@@ -129,6 +129,7 @@ export function createSurvivor(name = 'Nameless Survivor', gender = 'other', opt
     recentRewardOfferIds: [],
     permanentNegativeCards: [],
     forgottenCardIds: [],
+    gearCardTraining: {},
     injuries: [],
     scars: [],
     disorders: [],
@@ -315,6 +316,9 @@ export function normalizeSettlement(data = {}) {
         recentRewardOfferIds: Array.isArray(survivor.recentRewardOfferIds)
           ? survivor.recentRewardOfferIds.filter(id => typeof id === 'string').slice(-15)
           : [],
+        gearCardTraining: survivor.gearCardTraining && typeof survivor.gearCardTraining === 'object'
+          ? survivor.gearCardTraining
+          : {},
         maxSurvival: Math.max(1, Number(survivor.maxSurvival) || 3),
         survival: Math.min(
           Math.max(0, Number(survivor.survival) || 0),

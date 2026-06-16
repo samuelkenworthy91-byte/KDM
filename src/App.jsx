@@ -784,9 +784,9 @@ export default function App() {
       return;
     }
     const partyDecks = huntParty.map(survivor => {
-      const equippedGear = (survivor.boundGear || []).map(gear => equipment[gear.equipmentId]).filter(Boolean);
+      const equippedGear = (survivor.boundGear || []).filter(gear => equipment[gear.equipmentId]);
       const deck = buildRunDeck({ survivor, equippedGear });
-      if (equippedGear.some(item => item.id === 'predatorMask') && !(survivor.scars || []).length) {
+      if (equippedGear.some(item => item.equipmentId === 'predatorMask') && !(survivor.scars || []).length) {
         deck.push(...getCardsFromIds(['panic'], 'Predator Mask'));
       }
       if (survivor.disorders?.includes('nightTerrors')) {
@@ -794,7 +794,7 @@ export default function App() {
       }
       return deck;
     });
-    const equippedGear = (activeSurvivor.boundGear || []).map(gear => equipment[gear.equipmentId]).filter(Boolean);
+    const equippedGear = (activeSurvivor.boundGear || []).filter(gear => equipment[gear.equipmentId]);
     const huntSurvivor = huntParty[0];
     const nextRunDeck = partyDecks[0];
 
@@ -859,7 +859,7 @@ export default function App() {
     setRunResources(startingResources);
     setRunSurvivor(huntSurvivor);
     setRunParty(huntParty);
-    setRunEquippedGear(equippedGear.map(item => item.id));
+    setRunEquippedGear(equippedGear.map(item => item.equipmentId));
     setRunDeck(nextRunDeck);
     setPartyCombatBonuses(huntParty.map((survivor, index) => ({
       survivor,
@@ -930,7 +930,7 @@ export default function App() {
     const nodeSurvivor = livingParty[completedCount % Math.max(1, livingParty.length)];
     if (nodeSurvivor && !['fight', 'elite', 'boss'].includes(node.type)) {
       setRunSurvivor(nodeSurvivor);
-      const equipped = (nodeSurvivor.boundGear || []).map(gear => equipment[gear.equipmentId]).filter(Boolean);
+      const equipped = (nodeSurvivor.boundGear || []).filter(gear => equipment[gear.equipmentId]);
       setRunDeck(buildRunDeck({ survivor: nodeSurvivor, equippedGear: equipped }));
     }
 
@@ -2111,10 +2111,9 @@ export default function App() {
     });
     if (nemesisPreparation && preparedSurvivor) {
       const equipped = preparedSurvivor.boundGear
-        .map(gear => equipment[gear.equipmentId])
-        .filter(Boolean);
+        .filter(gear => equipment[gear.equipmentId]);
       setRunSurvivor(preparedSurvivor);
-      setRunEquippedGear(equipped.map(item => item.id));
+      setRunEquippedGear(equipped.map(item => item.equipmentId));
       setRunDeck(buildRunDeck({ survivor: preparedSurvivor, equippedGear: equipped }));
       setCombatBonus({
         ...getLoadoutBonus(settlement, null, nemesisPreparation.nemesisId),
@@ -2295,8 +2294,7 @@ export default function App() {
     const nextActive = result.runSurvivor || runSurvivor;
     const nextPartyBonuses = nextParty.map(survivor => {
       const equippedGear = (survivor.boundGear || [])
-        .map(gear => equipment[gear.equipmentId])
-        .filter(Boolean);
+        .filter(gear => equipment[gear.equipmentId]);
       const existing = partyCombatBonuses.find(member => member?.survivor?.id === survivor.id);
       return {
         ...existing,
@@ -2313,8 +2311,7 @@ export default function App() {
     setPartyCombatBonuses(nextPartyBonuses);
     if (nextActive) {
       const equippedGear = (nextActive.boundGear || [])
-        .map(gear => equipment[gear.equipmentId])
-        .filter(Boolean);
+        .filter(gear => equipment[gear.equipmentId]);
       setRunDeck(buildRunDeck({ survivor: nextActive, equippedGear }));
     }
     completeCurrentNode();

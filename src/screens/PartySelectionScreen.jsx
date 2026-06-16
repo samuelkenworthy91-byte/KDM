@@ -27,7 +27,7 @@ export default function PartySelectionScreen({
       <div className="quarry-list">
         {living.map(survivor => {
           const selected = selectedIds.includes(survivor.id);
-          const gear = (survivor.boundGear || []).map(item => equipment[item.equipmentId]).filter(Boolean);
+          const gear = (survivor.boundGear || []).filter(item => equipment[item.equipmentId]);
           const baneId = getSurvivorMonsterBaneId(survivor);
           const deckSize = buildRunDeck({ survivor, equippedGear: gear }).length;
           const unavailable = (survivor.unavailableHunts || 0) > 0;

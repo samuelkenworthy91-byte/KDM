@@ -44,13 +44,41 @@ export function getCardsFromIds(cardIds = [], source, sourceType) {
 
 export function getEquipmentCardIds(equippedGear = []) {
   return equippedGear.flatMap(itemOrId => {
-    const item = typeof itemOrId === 'string'
-      ? equipment[itemOrId]
-      : itemOrId?.equipmentId
-        ? equipment[itemOrId.equipmentId]
-        : itemOrId;
+    const item = resolveEquippedGear(itemOrId)?.item;
     return item?.cardPackage || [];
   });
+}
+
+function resolveEquippedGear(itemOrId) {
+  if (typeof itemOrId === 'string') {
+    const item = equipment[itemOrId];
+    return item ? { item, gearInstanceId: itemOrId, equipmentId: itemOrId } : null;
+  }
+  if (itemOrId?.equipmentId) {
+    const item = equipment[itemOrId.equipmentId];
+    return item ? {
+      item,
+      gearInstanceId: itemOrId.instanceId || itemOrId.equipmentId,
+      equipmentId: itemOrId.equipmentId
+    } : null;
+  }
+  if (itemOrId?.id) {
+    return {
+      item: itemOrId,
+      gearInstanceId: itemOrId.instanceId || itemOrId.id,
+      equipmentId: itemOrId.id
+    };
+  }
+  return null;
+}
+
+function getTrainedCopyCount(survivor, gearInstanceId, cardId) {
+  const training = survivor?.gearCardTraining || {};
+  const fullKey = `${survivor?.id || 'survivor'}:${gearInstanceId}:${cardId}`;
+  const shortKey = `${gearInstanceId}:${cardId}`;
+  const raw = training[fullKey] ?? training[shortKey] ?? training?.[gearInstanceId]?.[cardId];
+  const value = typeof raw === 'object' ? raw.copies ?? raw.copyCount : raw;
+  return Math.min(3, Math.max(1, Number(value) || 1));
 }
 
 export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] }) {
@@ -65,19 +93,42 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
   const activeProficiencyType = survivor?.activeProficiencyType || 'fistAndTooth';
 
   equippedGear.forEach(itemOrId => {
-    const item = typeof itemOrId === 'string'
-      ? equipment[itemOrId]
-      : itemOrId?.equipmentId
-        ? equipment[itemOrId.equipmentId]
-        : itemOrId;
+    const resolved = resolveEquippedGear(itemOrId);
+    const item = resolved?.item;
     if (item) {
-      deck.push(...getCardsFromIds(item.cardPackage, item.name, 'gear').map(card => ({
+      const cardIds = (item.cardPackage || []).flatMap(cardId => {
+        const card = cards[cardId];
+        const copies = card?.cardCopyEligible === false
+          ? 1
+          : getTrainedCopyCount(survivor, resolved.gearInstanceId, cardId);
+        return Array.from({ length: copies }, () => cardId);
+      });
+      deck.push(...getCardsFromIds(cardIds, item.name, 'gear').map(card => ({
         ...card,
         weaponType: item.weaponType || null,
+        gearInstanceId: resolved.gearInstanceId,
+        sourceGearId: resolved.equipmentId,
+        colorAffinity: item.colorAffinity || card.colorAffinity || '',
+        colorAffinityName: item.colorAffinityName || card.colorAffinityName || '',
         keywords: [...new Set([...(card.keywords || []), ...(item.keywords || [])])]
       })));
     }
   });
+
+  const affinityCounts = equippedGear.reduce((counts, itemOrId) => {
+    const item = resolveEquippedGear(itemOrId)?.item;
+    if (item?.colorAffinity) {
+      counts[item.colorAffinity] = (counts[item.colorAffinity] || 0) + 1;
+    }
+    return counts;
+  }, {});
+  Object.values(cards)
+    .filter(card => card.grantedByAffinity && card.affinityThresholdRequired)
+    .forEach(card => {
+      if ((affinityCounts[card.grantedByAffinity] || 0) >= Number(card.affinityThresholdRequired)) {
+        deck.push(...getCardsFromIds([card.id], `${card.colorAffinityName || card.grantedByAffinity} affinity`, 'affinity'));
+      }
+    });
 
   const activeDeck = deck.filter(card =>
     !['proficiency', 'weaponMastery'].includes(card.sourceType) ||

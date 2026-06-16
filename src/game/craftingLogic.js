@@ -26,7 +26,7 @@ export function formatCostWithMissing(cost = {}, stash = {}) {
       owned,
       required,
       missing,
-      text: `${resources[resourceId]?.name || resourceId}: ${owned} / ${required}${missing ? ` (Missing ${missing})` : ''}`
+      text: `${resources[resourceId]?.name || resourceId} x${required}${missing ? ` (missing ${missing})` : ''}`
     };
   });
 }
