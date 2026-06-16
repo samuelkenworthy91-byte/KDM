@@ -608,7 +608,7 @@ export function playCard(cardIndex, state) {
   };
 
   const parseAndApplyStatus = (statusStr, targetType) => {
-    if (!statusStr) return;
+    if (typeof statusStr !== 'string') return;
     const lower = statusStr.toLowerCase();
     const isMonster = targetType === 'monster';
     const target = isMonster ? monster : survivor;
@@ -656,8 +656,8 @@ export function playCard(cardIndex, state) {
     }
   };
 
-  if (card.statusApplied) {
-    parseAndApplyStatus(card.statusApplied, 'monster'); // Cards usually apply to monster
+  if (typeof card.statusApplied === 'string' && !card.effects?.length) {
+    parseAndApplyStatus(card.statusApplied, 'monster'); // Legacy support for string statuses
   }
 
   const drawAmount = amount => {
