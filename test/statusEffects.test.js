@@ -6,6 +6,7 @@ import {
   applyEndTurnStatuses,
   applyMonsterIntent,
   createCombatState,
+  endTurn,
   getPostCombatSalvageRewards,
   playCard,
   resolveAfterCombatHealing
@@ -136,6 +137,147 @@ test('Guarded reduces incoming hit by 2', () => {
   });
   assert.equal(result.survivor.hp, 17);
   assert.equal(result.survivor.guarded, 0);
+});
+
+test('aura card activates an active aura', () => {
+  const card = {
+    id: 'warBeat',
+    name: 'War Beat',
+    cost: 0,
+    type: 'skill',
+    effects: [{ type: 'aura', auraType: 'globalDamageBonus', amount: 2, duration: 'combat' }]
+  };
+  const result = playCard(0, stateWithCard(card));
+
+  assert.equal(result.activeAuras.length, 1);
+  assert.equal(result.activeAuras[0].type, 'globalDamageBonus');
+  assert.equal(result.activeAuras[0].amount, 2);
+});
+
+test('global damage aura applies to attacks', () => {
+  const attack = { id: 'hit', name: 'Hit', cost: 0, type: 'attack', effects: [{ type: 'damage', amount: 4 }] };
+  const result = playCard(0, stateWithCard(attack, {
+    state: {
+      activeAuras: [{
+        id: 'aura-1',
+        sourceCardId: 'warBeat',
+        sourceCardName: 'War Beat',
+        type: 'globalDamageBonus',
+        amount: 2,
+        duration: 'combat'
+      }]
+    }
+  }));
+
+  assert.equal(result.monster.hp, 24);
+});
+
+test('global block-card aura applies to block cards', () => {
+  const block = { id: 'guard', name: 'Guard', cost: 0, type: 'skill', effects: [{ type: 'block', amount: 3 }] };
+  const result = playCard(0, stateWithCard(block, {
+    state: {
+      activeAuras: [{
+        id: 'aura-1',
+        sourceCardId: 'shieldHymn',
+        sourceCardName: 'Shield Hymn',
+        type: 'globalBlockCardBonus',
+        amount: 2,
+        duration: 'combat'
+      }]
+    }
+  }));
+
+  assert.equal(result.survivor.block, 5);
+});
+
+test('next survivor damage aura applies only once', () => {
+  const attack = { id: 'hit', name: 'Hit', cost: 0, type: 'attack', effects: [{ type: 'damage', amount: 4 }] };
+  const first = playCard(0, stateWithCard(attack, {
+    state: {
+      activeAuras: [{
+        id: 'aura-1',
+        sourceCardId: 'warBeat',
+        sourceCardName: 'War Beat',
+        type: 'nextSurvivorDamageBonus',
+        amount: 3,
+        duration: 'nextUse',
+        remainingUses: 1
+      }]
+    }
+  }));
+  const second = playCard(0, {
+    ...first,
+    hand: [attack],
+    survivor: { ...first.survivor, energy: 3 }
+  });
+
+  assert.equal(first.monster.hp, 23);
+  assert.equal(first.activeAuras.some(aura => aura.type === 'nextSurvivorDamageBonus'), false);
+  assert.equal(second.monster.hp, 19);
+});
+
+test('DoT multiplier applies only while aura is active', () => {
+  const base = createCombatState(monster(), { runDeck: [] });
+  const withAura = endTurn({
+    ...base,
+    survivor: { ...base.survivor, bleed: 2 },
+    activeAuras: [{
+      id: 'aura-1',
+      sourceCardId: 'grindingRhythm',
+      sourceCardName: 'Grinding Rhythm',
+      type: 'dotDamageMultiplier',
+      amount: 2,
+      duration: 'combat'
+    }]
+  });
+  const withoutAura = endTurn({
+    ...base,
+    survivor: { ...base.survivor, bleed: 2 },
+    activeAuras: []
+  });
+
+  assert.equal(withAura.survivor.hp, base.survivor.hp - 4);
+  assert.equal(withoutAura.survivor.hp, base.survivor.hp - 2);
+});
+
+test('block persistence aura expires after monster turn', () => {
+  const base = createCombatState(monster(), { runDeck: [] });
+  const result = endTurn({
+    ...base,
+    survivor: { ...base.survivor, block: 5 },
+    activeAuras: [{
+      id: 'aura-1',
+      sourceCardId: 'lockedGuard',
+      sourceCardName: 'Locked Guard',
+      type: 'blockPersistsUntilRoundEnd',
+      amount: 1,
+      duration: 'nextMonsterTurn',
+      remainingRounds: 1
+    }]
+  });
+
+  assert.equal(result.survivor.block, 5);
+  assert.equal(result.activeAuras.some(aura => aura.type === 'blockPersistsUntilRoundEnd'), false);
+});
+
+test('party after-combat heal aura stores modest healing', () => {
+  const card = {
+    id: 'triageCircle',
+    name: 'Triage Circle',
+    cost: 0,
+    type: 'skill',
+    effects: [{ type: 'aura', auraType: 'partyAfterCombatHeal', amount: 1, duration: 'combat' }]
+  };
+  const played = playCard(0, stateWithCard(card, {
+    survivor: { hp: 8, maxHp: 10 }
+  }));
+  const healed = resolveAfterCombatHealing({
+    survivor: played.survivor,
+    afterCombatHealing: played.afterCombatHealing
+  }, 'victory');
+
+  assert.equal(played.afterCombatHealing, 1);
+  assert.equal(healed.survivor.hp, 9);
 });
 
 test('Bleed ignores block and can kill', () => {

@@ -15,4 +15,4 @@ top.forEach((group, index) => {
   });
 });
 
-console.log('\nIntentionally allowed groups: broad imported block-only armour templates remain allowed for now.');
+console.log('\nIntentionally allowed groups: small starter/basic duplicates and explicitly documented placeholders only.');

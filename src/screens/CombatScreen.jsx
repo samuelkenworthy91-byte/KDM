@@ -6,6 +6,7 @@ import {
   createCombatState,
   endTurn,
   getPostCombatSalvageRewards,
+  formatAuraForDisplay,
   playCard,
   resolveAfterCombatHealing,
   useSurvivalAction
@@ -29,6 +30,7 @@ export default function CombatScreen({
   }));
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
+  const activeAuras = combat.activeAuras || [];
 
   const handlePlayCard = cardIndex => {
     setCombat(current => playCard(cardIndex, current));
@@ -103,6 +105,16 @@ export default function CombatScreen({
         <div className="run-bonus-note" role="status">
           Survivor conditions are active in this combat.
         </div>
+      )}
+      {activeAuras.length > 0 && (
+        <section className="run-bonus-note" aria-label="Active auras">
+          {activeAuras.map(aura => (
+            <div key={aura.id}>
+              <strong>{aura.type?.startsWith('nextSurvivor') ? 'Queued Aura' : 'Active Aura'}:</strong>{' '}
+              {formatAuraForDisplay(aura)}
+            </div>
+          ))}
+        </section>
       )}
 
       <section className="survival-command-bar">

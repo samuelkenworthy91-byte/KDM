@@ -69,6 +69,28 @@ function addStatusEffects(effects, statusApplied, cardType) {
   }
 }
 
+function addAuraEffects(effects, card) {
+  const auras = [
+    ...(Array.isArray(card.auras) ? card.auras : []),
+    ...(card.aura ? [card.aura] : [])
+  ].filter(Boolean);
+  auras.forEach(aura => {
+    if (typeof aura === 'string') {
+      effects.push({ type: 'aura', auraType: aura, amount: 1, duration: 'combat' });
+      return;
+    }
+    if (typeof aura !== 'object') return;
+    effects.push({
+      type: 'aura',
+      auraType: aura.type || aura.auraType,
+      amount: numericValue(aura.amount) || 1,
+      duration: aura.duration || 'combat',
+      remainingUses: aura.remainingUses,
+      rounds: aura.rounds
+    });
+  });
+}
+
 export const overhaulCards = cardDataRaw.reduce((acc, card) => {
   const effects = [];
   if (card.damage) {
@@ -107,6 +129,7 @@ export const overhaulCards = cardDataRaw.reduce((acc, card) => {
   if (card.salvage) effects.push({ type: 'salvageSelf', amount: numericValue(card.salvage) || 1 });
   if (card.prepared) effects.push({ type: 'preparedSelf', amount: numericValue(card.prepared) || 1 });
   if (card.panicGain) effects.push({ type: 'addPanic', amount: numericValue(card.panicGain) || 1 });
+  if (card.panicClear) effects.push({ type: 'removePanicAny', amount: numericValue(card.panicClear) || 1 });
   if (card.heal) effects.push({ type: 'healSelf', amount: numericValue(card.heal) || 1 });
   if (card.healIfWounded) {
     effects.push({ type: 'healIfWounded', amount: numericValue(card.healIfWounded) || 1 });
@@ -123,6 +146,31 @@ export const overhaulCards = cardDataRaw.reduce((acc, card) => {
   if (card.targetAvoidance) {
     effects.push({ type: 'targetAvoidance', amount: numericValue(card.targetAvoidance) || 1 });
   }
+  if (card.partyBlock) {
+    effects.push({
+      type: 'partyEffect',
+      target: 'nextPartyMember',
+      effectType: 'block',
+      value: numericValue(card.partyBlock) || 1
+    });
+  }
+  if (card.partyDraw) {
+    effects.push({
+      type: 'partyEffect',
+      target: 'nextPartyMember',
+      effectType: 'draw',
+      value: numericValue(card.partyDraw) || 1
+    });
+  }
+  if (card.partyReveal) {
+    effects.push({
+      type: 'partyEffect',
+      target: 'nextPartyMember',
+      effectType: 'reveal',
+      value: numericValue(card.partyReveal) || 1
+    });
+  }
+  addAuraEffects(effects, card);
   
   acc[card.cardId] = {
     ...card,
@@ -143,12 +191,18 @@ export const overhaulCards = cardDataRaw.reduce((acc, card) => {
     salvage: card.salvage,
     prepared: card.prepared,
     panicGain: card.panicGain,
+    panicClear: card.panicClear,
     heal: card.heal,
     healIfWounded: card.healIfWounded,
     healAfterCombat: card.healAfterCombat,
     partyHealAfterCombat: card.partyHealAfterCombat,
     reduceBleedSelf: card.reduceBleedSelf,
     targetAvoidance: card.targetAvoidance,
+    partyBlock: card.partyBlock,
+    partyDraw: card.partyDraw,
+    partyReveal: card.partyReveal,
+    aura: card.aura,
+    auras: card.auras,
     effects,
     exhaust: card.exhaust,
     implemented: true

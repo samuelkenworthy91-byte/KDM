@@ -1,7 +1,9 @@
 import {
+  activeAuraAmount,
   applyMonsterIntent,
   applyEndTurnStatuses,
   createCombatState,
+  tickAuraDurations,
   getCounterWeakPointPreview,
   getMonsterIntentForResolution,
   playCard,
@@ -272,6 +274,7 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
   let members = [...state.members];
   const intentMonster = monster;
   let resolvedMonster = monster;
+  let activeAuras = [...(state.activeAuras || [])];
   const resolutionLog = [];
   resolutionIds.forEach((targetId, resolutionIndex) => {
     const targetIndex = members.findIndex(member => member.survivor.id === targetId);
@@ -281,8 +284,10 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
       monster: intentMonster,
       intentIndex: state.intentIndex,
       resolvedIntent: selectedIntent,
+      activeAuras,
       status: 'playing'
     });
+    activeAuras = targetResult.activeAuras || activeAuras;
     if (resolutionIndex === 0) resolvedMonster = targetResult.monster;
     if (!targetIds.includes(targetId)) return;
     let resolvedTarget = targetResult;
@@ -312,6 +317,7 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
       lastTargetId: null,
       lastTargetIds: [],
       lastTargetRule: null,
+      activeAuras,
       combatLog: [...(state.combatLog || []), targetingLog, ...resolutionLog]
     };
   }
@@ -334,6 +340,7 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
     lastTargetIds: [],
     lastTargetRule: null,
     combatLog: [...(state.combatLog || []), targetingLog, ...resolutionLog],
+    activeAuras,
     round: state.round + 1,
     selectedCombatTarget: state.selectedCombatTarget?.type === 'weakPoint' &&
       monster.weakPoints?.some(point =>
@@ -371,6 +378,7 @@ export function createPartyCombatState(monster, partyBonuses, pendingPartyEffect
     intentIndex: 0,
     round: 0,
     pendingPartyEffects,
+    activeAuras: [],
     status: firstIndex >= 0 ? 'playing' : 'lost',
     lastTargetId: null,
     selectedCombatTarget: { type: 'monster', id: monster.id || 'monster' },
@@ -407,7 +415,8 @@ export function playPartyCard(cardIndex, state) {
     monster: state.monster,
     intentIndex: state.intentIndex,
     selectedWeakPointId,
-    hasMonsterBane: partyHasMonsterBane
+    hasMonsterBane: partyHasMonsterBane,
+    activeAuras: state.activeAuras || []
   });
   const emitted = active.emittedPartyEffects || [];
   const cleanedActive = {
@@ -450,6 +459,7 @@ export function playPartyCard(cardIndex, state) {
     monster: active.monster,
     combatTurnOrder: buildTurnOrder(members),
     pendingPartyEffects: [...(state.pendingPartyEffects || []), ...emitted],
+    activeAuras: active.activeAuras || state.activeAuras || [],
     lastAttackerId: playedCard?.type === 'attack'
       ? active.survivor.id
       : state.lastAttackerId,
@@ -704,7 +714,8 @@ export function endPartyTurn(state) {
   const tickedSurvivor = applyEndTurnStatuses(
     state.members[state.activePartyIndex].survivor,
     state.members[state.activePartyIndex].survivor.name,
-    turnLog
+    turnLog,
+    { dotDamageMultiplier: activeAuraAmount(state.activeAuras || [], 'dotDamageMultiplier') }
   );
   const currentMember = {
     ...state.members[state.activePartyIndex],
@@ -746,6 +757,7 @@ export function endPartyTurn(state) {
   return resolveMonsterTurn({
     ...state,
     members,
+    activeAuras: tickAuraDurations(state.activeAuras || [], 'round'),
     combatLog: [...(state.combatLog || []), ...turnLog],
     activeCombatant: 'monster',
     activePartyIndex: -1

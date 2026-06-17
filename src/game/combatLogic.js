@@ -107,6 +107,99 @@ function applyHealingToSurvivor(survivor, amount, { revive = false } = {}) {
   };
 }
 
+const auraDescriptions = {
+  globalDamageBonus: aura => `all survivors deal +${aura.amount} damage`,
+  globalBlockCardBonus: aura => `all Block cards gain +${aura.amount} block`,
+  blockPersistsUntilRoundEnd: () => 'block does not decay',
+  dotDamageMultiplier: aura => `Bleed, Burn and Poison damage x${aura.amount}`,
+  nextSurvivorDamageBonus: aura => `next survivor gains +${aura.amount} damage on their next attack`,
+  nextSurvivorBlockBonus: aura => `next survivor gains +${aura.amount} block on their next Block card`,
+  nextSurvivorTargetAvoidance: aura => `next survivor gains Target Avoidance ${aura.amount}`,
+  partyAfterCombatHeal: aura => `wounded survivors heal ${aura.amount} HP after combat`,
+  bleedReductionAura: aura => `incoming Bleed is reduced by ${aura.amount}`
+};
+
+const auraDurationLabels = {
+  combat: 'until end of combat',
+  endOfCombat: 'until end of combat',
+  round: 'until end of round',
+  endOfRound: 'until end of round',
+  nextMonsterTurn: 'until the end of the next monster turn',
+  nextUse: 'until used'
+};
+
+function normalizeAuraDuration(duration) {
+  if (duration === 'endOfCombat') return 'combat';
+  if (duration === 'endOfRound') return 'round';
+  return duration || 'combat';
+}
+
+function auraIsQueued(aura) {
+  return [
+    'nextSurvivorDamageBonus',
+    'nextSurvivorBlockBonus',
+    'nextSurvivorTargetAvoidance'
+  ].includes(aura.type);
+}
+
+export function activeAuraAmount(auras = [], type) {
+  return auras
+    .filter(aura => aura.type === type)
+    .reduce((total, aura) => total + (Number(aura.amount) || 0), 0);
+}
+
+function consumeFirstAura(auras = [], type) {
+  let consumed = false;
+  const next = [];
+  let amount = 0;
+  auras.forEach(aura => {
+    if (!consumed && aura.type === type && (aura.remainingUses ?? 1) > 0) {
+      consumed = true;
+      amount = Number(aura.amount) || 0;
+      const remainingUses = (aura.remainingUses ?? 1) - 1;
+      if (remainingUses > 0) next.push({ ...aura, remainingUses });
+      return;
+    }
+    next.push(aura);
+  });
+  return { auras: next, amount };
+}
+
+export function tickAuraDurations(auras = [], duration) {
+  return auras.flatMap(aura => {
+    if (aura.duration !== duration) return [aura];
+    const remainingRounds = (aura.remainingRounds ?? 1) - 1;
+    return remainingRounds > 0 ? [{ ...aura, remainingRounds }] : [];
+  });
+}
+
+function createAuraFromEffect(effect, card, survivor, sourceEquipment = {}) {
+  const type = effect.auraType || effect.typeName;
+  if (!type) return null;
+  const duration = normalizeAuraDuration(effect.duration);
+  return {
+    id: `${card.id || card.cardId}-${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    sourceCardId: card.id || card.cardId,
+    sourceCardName: card.name || card.cardName,
+    sourceEquipmentId: sourceEquipment.id || card.sourceGearId || card.sourceEquipmentId || null,
+    sourceEquipmentName: card.sourceGearName || card.sourceEquipmentName || sourceEquipment.name || null,
+    ownerSurvivorId: survivor.id || survivor.survivorId || survivor.name || null,
+    type,
+    amount: Number(effect.amount) || 1,
+    duration,
+    remainingUses: effect.remainingUses ?? (auraIsQueued({ type }) ? 1 : undefined),
+    remainingRounds: ['round', 'nextMonsterTurn'].includes(duration) ? (effect.rounds || 1) : undefined
+  };
+}
+
+export function formatAuraForDisplay(aura) {
+  if (!aura) return '';
+  const label = auraDescriptions[aura.type]?.(aura) || aura.type;
+  const duration = auraDurationLabels[aura.duration] || aura.duration || 'until used';
+  const source = aura.sourceCardName || aura.sourceEquipmentName || 'Aura';
+  return `${source} - ${label} ${duration}.`;
+}
+
 function applyStatusToCombatant(combatant, type, amount, options = {}) {
   const value = Math.max(1, Number(amount) || 1);
   switch (type) {
@@ -139,16 +232,17 @@ function applyStatusToCombatant(combatant, type, amount, options = {}) {
   }
 }
 
-export function applyEndTurnStatuses(combatant, label, logEntries = []) {
+export function applyEndTurnStatuses(combatant, label, logEntries = [], options = {}) {
   let next = { ...combatant };
+  const dotMultiplier = Math.max(1, Number(options.dotDamageMultiplier) || 1);
   if (next.bleed > 0) {
-    const damage = next.bleed;
+    const damage = next.bleed * dotMultiplier;
     next = applyDirectDamage(next, damage);
     next.bleed = reduceStatus(next.bleed);
     logEntries.push(`${label} takes ${damage} true damage from Bleed.`);
   }
   if (next.burn > 0) {
-    const damage = next.burn;
+    const damage = next.burn * dotMultiplier;
     const guardedBefore = next.guarded || 0;
     const absorbed = Math.min(next.block || 0, damage);
     const remaining = damage - absorbed;
@@ -162,7 +256,7 @@ export function applyEndTurnStatuses(combatant, label, logEntries = []) {
     logEntries.push(`${label} takes ${damage} Burn damage; protection burns away.`);
   }
   if (next.poison > 0) {
-    const damage = next.poison;
+    const damage = next.poison * dotMultiplier;
     const effectiveBlock = Math.max(0, (next.block || 0) - Math.floor((next.block || 0) / 2));
     const absorbed = Math.min(effectiveBlock, damage);
     const remaining = damage - absorbed;
@@ -407,6 +501,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     consequenceReduction: 0,
     salvageTokens: 0,
     afterCombatHealing: 0,
+    activeAuras: [],
     // Delayed effects
     pendingEnergy: 0,
     pendingDraw: 0
@@ -449,7 +544,13 @@ export function playCard(cardIndex, state) {
   let emittedPartyEffects = [...(state.emittedPartyEffects || [])];
   let salvageTokens = state.salvageTokens || 0;
   let afterCombatHealing = state.afterCombatHealing || 0;
+  let activeAuras = [...(state.activeAuras || [])];
   const isAttack = card.type === 'attack';
+  const targetAvoidanceAura = consumeFirstAura(activeAuras, 'nextSurvivorTargetAvoidance');
+  activeAuras = targetAvoidanceAura.auras;
+  if (targetAvoidanceAura.amount) {
+    survivor = applyStatusToCombatant(survivor, 'targetAvoidance', targetAvoidanceAura.amount);
+  }
   const preparedConsumed = survivor.prepared > 0 ? 1 : 0;
   if (preparedConsumed) survivor.prepared = reduceStatus(survivor.prepared);
   let preparedDamageBonus = isAttack ? preparedConsumed : 0;
@@ -726,10 +827,14 @@ export function playCard(cardIndex, state) {
       : 0;
     const snaredPenalty = isAttack && survivor.snared > 0 ? 5 : 0;
     const blindPenalty = isAttack && survivor.blind > 0 ? 3 : 0;
+    const nextDamageAura = isAttack ? consumeFirstAura(activeAuras, 'nextSurvivorDamageBonus') : { auras: activeAuras, amount: 0 };
+    activeAuras = nextDamageAura.auras;
     const amount = Math.max(0,
       conditionalDamage(effect) +
       preparedDamageBonus +
       (survivor.strength || 0) +
+      activeAuraAmount(activeAuras, 'globalDamageBonus') +
+      nextDamageAura.amount +
       (hasMonsterBane ? 1 : 0) +
       (state.fightingArts?.includes('clawStyle') ? 1 : 0) +
       (state.fightingArts?.includes('berserker') && survivor.block === 0 ? 1 : 0) +
@@ -924,11 +1029,13 @@ export function playCard(cardIndex, state) {
         monster = { ...monster, block: 0 };
         break;
       case 'block': {
+        const nextBlockAura = consumeFirstAura(activeAuras, 'nextSurvivorBlockBonus');
+        activeAuras = nextBlockAura.auras;
+        const auraBlockBonus = activeAuraAmount(activeAuras, 'globalBlockCardBonus') + nextBlockAura.amount;
         const penalty = (!state.firstBlockPlayed && firstBlockEffect &&
           state.injuries?.includes('crackedRibs') ? 1 : 0) +
           (!state.firstBlockPlayed && firstBlockEffect &&
           state.disorders?.includes('recklessJoy') ? 2 : 0);
-        survivor = { ...survivor, block: survivor.block + Math.max(0, effect.amount - penalty) };
         const intentTags = currentIntent?.tags || [];
         const tellBonus = intentTags.some(tag => ['multiHit', 'trample'].includes(tag))
           ? effect.bonusIfMultiHitTell || 0
@@ -938,18 +1045,21 @@ export function playCard(cardIndex, state) {
             .filter(passive => passive.type === 'firstBlockBonus')
             .reduce((total, passive) => total + (passive.value || 0), 0)
           : 0;
-        const gained = Math.max(0, effect.amount + artBlockBonus - penalty) +
+        const gained = Math.max(0, effect.amount + auraBlockBonus + artBlockBonus - penalty) +
           (!isAttack ? preparedConsumed : 0) +
           (state.hasMonsterBane ? effect.bonusIfMonsterBane || 0 : 0) +
           tellBonus;
-        survivor = { ...survivor, block: survivor.block - Math.max(0, effect.amount - penalty) + gained };
+        survivor = { ...survivor, block: survivor.block + gained };
         blockGainedThisTurn += gained;
         firstBlockEffect = false;
         break;
       }
       case 'conditionalBlock': {
+        const nextBlockAura = consumeFirstAura(activeAuras, 'nextSurvivorBlockBonus');
+        activeAuras = nextBlockAura.auras;
+        const auraBlockBonus = activeAuraAmount(activeAuras, 'globalBlockCardBonus') + nextBlockAura.amount;
         const isLowHp = survivor.hp < survivor.maxHp / 2;
-        const block = isLowHp ? effect.lowHpAmount : effect.amount;
+        const block = (isLowHp ? effect.lowHpAmount : effect.amount) + auraBlockBonus;
         const penalty = !state.firstBlockPlayed && firstBlockEffect &&
           state.injuries?.includes('crackedRibs') ? 1 : 0;
         survivor = { ...survivor, block: survivor.block + Math.max(0, block - penalty) };
@@ -1158,6 +1268,27 @@ export function playCard(cardIndex, state) {
           expiresAfterCombat: Boolean(effect.expiresAfterCombat)
         });
         break;
+      case 'aura': {
+        const aura = createAuraFromEffect(effect, card, survivor);
+        if (!aura) break;
+        activeAuras = [
+          ...activeAuras.filter(existing =>
+            !(existing.sourceCardId === aura.sourceCardId && existing.type === aura.type)
+          ),
+          aura
+        ];
+        if (aura.type === 'partyAfterCombatHeal') {
+          afterCombatHealing += aura.amount;
+          emittedPartyEffects.push({
+            target: 'all',
+            effectType: 'healAfterCombat',
+            value: aura.amount,
+            expiresAfterTurn: false,
+            expiresAfterCombat: true
+          });
+        }
+        break;
+      }
       case 'healAfterCombat':
         afterCombatHealing += statusAmount(effect);
         break;
@@ -1433,6 +1564,7 @@ export function playCard(cardIndex, state) {
     emittedPartyEffects,
     salvageTokens,
     afterCombatHealing,
+    activeAuras,
     firstAttackPlayed: state.firstAttackPlayed || card.type === 'attack',
     firstBlockPlayed: state.firstBlockPlayed ||
       card.effects.some(effect => ['block', 'conditionalBlock'].includes(effect.type)),
@@ -1801,7 +1933,10 @@ export function applyMonsterIntent(monster, state) {
   const hasMonsterBane = state.monsterBaneKnowledge?.[monster.quarryId] || 
                          state.fightingArts?.includes(`monsterBane_${monster.quarryId}`);
   
-  nextMonster = applyEndTurnStatuses(nextMonster, monster.name, state.combatLogEntries);
+  let activeAuras = [...(state.activeAuras || [])];
+  nextMonster = applyEndTurnStatuses(nextMonster, monster.name, state.combatLogEntries, {
+    dotDamageMultiplier: activeAuraAmount(activeAuras, 'dotDamageMultiplier')
+  });
 
   nextMonster.block = 0;
 
@@ -1904,7 +2039,8 @@ export function applyMonsterIntent(monster, state) {
       const reduction = brokenEffects
         .filter(partEffect => partEffect.type === 'reduceBleed')
         .reduce((total, partEffect) => total + (partEffect.amount || 0), 0);
-      survivor.bleed = (survivor.bleed || 0) + Math.max(0, effect.amount - reduction);
+      survivor.bleed = (survivor.bleed || 0) +
+        Math.max(0, effect.amount - reduction - activeAuraAmount(activeAuras, 'bleedReductionAura'));
     } else if (['burnTarget', 'poisonTarget', 'doomTarget', 'vulnerableTarget', 'staggerTarget', 'guardTarget', 'markTarget', 'exposeTarget', 'snareTarget', 'shockTarget', 'blindTarget'].includes(effect.type)) {
       if (shockStatusBlocked) {
         shockStatusBlocked = false;
@@ -1960,7 +2096,9 @@ export function applyMonsterIntent(monster, state) {
   if (shieldGuardSurvived) {
     survivor.survival = Math.min(survivor.maxSurvival, survivor.survival + 1);
   }
-  survivor.block = 0;
+  const blockPersists = activeAuras.some(aura => aura.type === 'blockPersistsUntilRoundEnd');
+  if (!blockPersists) survivor.block = 0;
+  activeAuras = tickAuraDurations(activeAuras, 'nextMonsterTurn');
   if (attackBonusConsumed) nextMonster.nextAttackBonus = 0;
   const monsterTurnCount = (state.monsterTurnCount || 0) + 1;
   (monster.passiveRules || []).forEach(rule => {
@@ -1993,6 +2131,7 @@ export function applyMonsterIntent(monster, state) {
       ? { ...state.weaponMasteryUsed, shield: true }
       : state.weaponMasteryUsed,
     nextMonsterDamageReduction: 0,
+    activeAuras,
     status: getCombatStatus(survivor, nextMonster)
   };
 }
@@ -2007,7 +2146,8 @@ export function endTurn(state) {
   survivorBeforeIntent = applyEndTurnStatuses(
     survivorBeforeIntent,
     survivorBeforeIntent.name || 'Survivor',
-    state.combatLogEntries
+    state.combatLogEntries,
+    { dotDamageMultiplier: activeAuraAmount(state.activeAuras || [], 'dotDamageMultiplier') }
   );
 
   // Apply delayed effects for next turn
@@ -2081,6 +2221,7 @@ export function endTurn(state) {
     intentHintLevel: 0,
     nextCounterBonus: 0,
     weaponTurnTriggers: {},
+    activeAuras: tickAuraDurations(afterIntent.activeAuras || [], 'round'),
     damageTakenLastTurn: afterIntent.damageTakenThisTurn || 0,
     damageTakenThisTurn: 0
   };

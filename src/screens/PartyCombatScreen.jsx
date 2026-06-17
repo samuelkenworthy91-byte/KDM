@@ -13,6 +13,7 @@ import {
   usePartySurvivalAction
 } from '../game/partyCombatLogic.js';
 import {
+  formatAuraForDisplay,
   getPostCombatSalvageRewards,
   resolveAfterCombatHealing
 } from '../game/combatLogic.js';
@@ -44,6 +45,7 @@ export default function PartyCombatScreen({
   const active = combat.members[combat.activePartyIndex] || combat.members[0];
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
+  const activeAuras = combat.activeAuras || [];
   const livingPartyHasMonsterBane = combat.members.some(member =>
     member.survivor.hp > 0 &&
     member.fightingArts?.includes(`monsterBane_${combat.monster.quarryId}`)
@@ -223,6 +225,16 @@ export default function PartyCombatScreen({
             : active?.survivor.name}
         </strong>
       </p>
+      {activeAuras.length > 0 && (
+        <section className="run-bonus-note" aria-label="Active auras">
+          {activeAuras.map(aura => (
+            <div key={aura.id}>
+              <strong>{aura.type?.startsWith('nextSurvivor') ? 'Queued Aura' : 'Active Aura'}:</strong>{' '}
+              {formatAuraForDisplay(aura)}
+            </div>
+          ))}
+        </section>
+      )}
       <div className="combatants">
         <div>
           {combat.members.map(member => (
