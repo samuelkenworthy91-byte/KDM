@@ -107,6 +107,22 @@ export const overhaulCards = cardDataRaw.reduce((acc, card) => {
   if (card.salvage) effects.push({ type: 'salvageSelf', amount: numericValue(card.salvage) || 1 });
   if (card.prepared) effects.push({ type: 'preparedSelf', amount: numericValue(card.prepared) || 1 });
   if (card.panicGain) effects.push({ type: 'addPanic', amount: numericValue(card.panicGain) || 1 });
+  if (card.heal) effects.push({ type: 'healSelf', amount: numericValue(card.heal) || 1 });
+  if (card.healIfWounded) {
+    effects.push({ type: 'healIfWounded', amount: numericValue(card.healIfWounded) || 1 });
+  }
+  if (card.healAfterCombat) {
+    effects.push({ type: 'healAfterCombat', amount: numericValue(card.healAfterCombat) || 1 });
+  }
+  if (card.partyHealAfterCombat) {
+    effects.push({ type: 'partyHealAfterCombat', amount: numericValue(card.partyHealAfterCombat) || 1 });
+  }
+  if (card.reduceBleedSelf) {
+    effects.push({ type: 'reduceBleedSelf', amount: numericValue(card.reduceBleedSelf) || 1 });
+  }
+  if (card.targetAvoidance) {
+    effects.push({ type: 'targetAvoidance', amount: numericValue(card.targetAvoidance) || 1 });
+  }
   
   acc[card.cardId] = {
     ...card,
@@ -127,6 +143,12 @@ export const overhaulCards = cardDataRaw.reduce((acc, card) => {
     salvage: card.salvage,
     prepared: card.prepared,
     panicGain: card.panicGain,
+    heal: card.heal,
+    healIfWounded: card.healIfWounded,
+    healAfterCombat: card.healAfterCombat,
+    partyHealAfterCombat: card.partyHealAfterCombat,
+    reduceBleedSelf: card.reduceBleedSelf,
+    targetAvoidance: card.targetAvoidance,
     effects,
     exhaust: card.exhaust,
     implemented: true

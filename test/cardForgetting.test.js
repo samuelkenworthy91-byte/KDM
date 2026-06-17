@@ -8,6 +8,7 @@ import {
   hasEarlyForgettingAccess
 } from '../src/game/cardForgetting.js';
 import { buildRunDeck } from '../src/game/deckLogic.js';
+import { equipment } from '../src/data/equipment.js';
 
 function settlement(overrides = {}) {
   return {
@@ -54,7 +55,7 @@ test('legacy Rite of Forgetting remains an equivalent unlock', () => {
   assert.equal(hasEarlyForgettingAccess(current), true);
 });
 
-test('Monster Bane, permanent, and gear cards explain why they cannot be forgotten', () => {
+test('Monster Bane and permanent cards explain why they cannot be forgotten', () => {
   const current = settlement();
   const currentSurvivor = survivor();
   const monsterBane = getCardForgetEligibility({
@@ -69,16 +70,31 @@ test('Monster Bane, permanent, and gear cards explain why they cannot be forgott
     cardId: 'waitForTheShoulder',
     card: cards.waitForTheShoulder
   });
-  const gearCard = getCardForgetEligibility({
-    settlement: current,
-    survivor: currentSurvivor,
-    cardId: 'testGearCard',
-    card: { id: 'testGearCard', sourceType: 'gear', sourceGearId: 'testGear' }
-  });
 
   assert.equal(monsterBane.reason, 'Locked: Monster Bane');
   assert.equal(permanent.reason, 'Permanent card');
-  assert.equal(gearCard.reason, 'Gear card: unequip item to remove');
+});
+
+test('gear cards are eligible for forgetting but Panic remains locked', () => {
+  const current = settlement();
+  const currentSurvivor = survivor();
+  const gearCard = getCardForgetEligibility({
+    settlement: current,
+    survivor: currentSurvivor,
+    cardId: 'amberBowTechnique',
+    card: { ...cards.amberBowTechnique, sourceType: 'gear', sourceGearId: 'amberBow' },
+    gearGranted: true
+  });
+  const panic = getCardForgetEligibility({
+    settlement: current,
+    survivor: currentSurvivor,
+    cardId: 'panic',
+    card: cards.panic
+  });
+
+  assert.equal(gearCard.eligible, true);
+  assert.equal(panic.eligible, false);
+  assert.equal(panic.reason, 'Permanent burden: use Quiet Night or Taboo');
 });
 
 test('forgotten cards persist on the survivor and leave the run deck', () => {
@@ -96,6 +112,71 @@ test('forgotten cards persist on the survivor and leave the run deck', () => {
   assert.equal(nextSurvivor.lastForgetLanternYear, 2);
   assert.equal(nextSurvivor.forgottenCardsLog[0].method, 'Guided Reflection');
   assert.equal(deck.some(card => card.id === 'foundingStone'), false);
+});
+
+test('forgotten gear card is excluded without unequipping item or removing sibling cards', () => {
+  const currentSurvivor = survivor({
+    forgottenCardIds: ['amberBowTechnique'],
+    gearCardTraining: {
+      'survivor-1:amber-1:amberBowTechnique': 3
+    }
+  });
+  const equippedGear = [{ equipmentId: 'amberBow', instanceId: 'amber-1' }];
+  const deck = buildRunDeck({ survivor: currentSurvivor, equippedGear });
+
+  assert.ok(equipment.amberBow.cardPackage.includes('amberBowTechnique'));
+  assert.equal(deck.some(card => card.id === 'amberBowTechnique'), false);
+  assert.equal(deck.some(card => card.id === 'amberBowOpeningStrike'), true);
+  assert.equal(deck.some(card => card.id === 'amberBowPayoff'), true);
+});
+
+test('forgotten gear card survives re-equipping and does not affect another survivor', () => {
+  const equippedGear = [{ equipmentId: 'amberBow', instanceId: 'amber-1' }];
+  const forgettingSurvivor = survivor({ forgottenCardIds: ['amberBowTechnique'] });
+  const otherSurvivor = survivor({ id: 'survivor-2', name: 'Nia' });
+
+  assert.equal(
+    buildRunDeck({ survivor: forgettingSurvivor, equippedGear })
+      .some(card => card.id === 'amberBowTechnique'),
+    false
+  );
+  assert.equal(
+    buildRunDeck({ survivor: otherSurvivor, equippedGear })
+      .some(card => card.id === 'amberBowTechnique'),
+    true
+  );
+});
+
+test('affinity cards obey forgetting while temporary cards ignore it', () => {
+  const affinityCard = Object.values(cards).find(card =>
+    card.grantedByAffinity && card.affinityThresholdRequired
+  );
+  if (!affinityCard) return;
+  const gear = Object.values(equipment)
+    .filter(item => item.colorAffinity === affinityCard.grantedByAffinity)
+    .slice(0, Number(affinityCard.affinityThresholdRequired))
+    .map(item => ({ equipmentId: item.id, instanceId: `${item.id}-1` }));
+  if (gear.length < Number(affinityCard.affinityThresholdRequired)) return;
+
+  const currentSurvivor = survivor({ forgottenCardIds: [affinityCard.id, 'deepBreath'] });
+  const deck = buildRunDeck({
+    survivor: currentSurvivor,
+    equippedGear: gear,
+    temporaryCards: ['deepBreath']
+  });
+
+  assert.equal(deck.some(card => card.id === affinityCard.id), false);
+  assert.equal(deck.some(card => card.id === 'deepBreath'), true);
+});
+
+test('old saves with forgotten Panic still keep permanent Panic burden', () => {
+  const currentSurvivor = survivor({
+    forgottenCardIds: ['panic'],
+    permanentNegativeCards: ['panic']
+  });
+  const deck = buildRunDeck({ survivor: currentSurvivor });
+
+  assert.equal(deck.some(card => card.id === 'panic'), true);
 });
 
 test('missing access, memory, and yearly limits block removal safely', () => {

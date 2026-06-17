@@ -112,19 +112,26 @@ export function normalizeMonsterTargetRule(rule) {
   return 'randomLivingSurvivor';
 }
 
-function randomIndex(length, random) {
-  if (length <= 0) return -1;
-  const value = Number(random?.());
-  if (!Number.isFinite(value) || value < 0 || value >= 1) return -1;
-  return Math.floor(value * length);
-}
-
 export function selectRandomLivingSurvivor(party = [], combatState = {}, random = Math.random) {
   void combatState;
   const living = party.filter(isLivingPartyMember);
   if (!living.length) return null;
-  const index = randomIndex(living.length, random);
-  return survivorId(living[index >= 0 ? index : 0]);
+  const weights = living.map(member => {
+    const survivor = survivorFor(member);
+    const avoidance = Math.max(0, Number(survivor?.targetAvoidance) || 0);
+    return 1 / (1 + avoidance);
+  });
+  const totalWeight = weights.reduce((total, weight) => total + weight, 0);
+  const roll = Number(random?.());
+  if (!Number.isFinite(roll) || roll < 0 || roll >= 1 || totalWeight <= 0) {
+    return survivorId(living[0]);
+  }
+  let threshold = roll * totalWeight;
+  for (let index = 0; index < living.length; index += 1) {
+    threshold -= weights[index];
+    if (threshold <= 0) return survivorId(living[index]);
+  }
+  return survivorId(living[living.length - 1]);
 }
 
 function selectRandomLivingSurvivors(party, count, combatState, random) {

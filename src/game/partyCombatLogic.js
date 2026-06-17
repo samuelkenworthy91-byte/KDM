@@ -582,6 +582,7 @@ export function getPartyWeakPointPreview(state, weakPointId) {
         baseDamage * weakPoint.breakDamageMultiplier *
         (1 + suitability.modifier) * getTellBreakModifier(tellState)
       ) + suitability.flatBonus),
+      currentBreakDamage: weakPoint.currentBreakDamage || 0,
       weaponType: card.weaponType,
       cardTags
     })

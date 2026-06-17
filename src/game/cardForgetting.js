@@ -43,9 +43,6 @@ export function getCardForgetEligibility({
   if (survivor?.lastForgetLanternYear === settlement?.lanternYear) {
     return { eligible: false, reason: 'Already used this Lantern Year' };
   }
-  if (gearGranted || card.sourceType === 'gear' || card.sourceGearId) {
-    return { eligible: false, reason: 'Gear card: unequip item to remove' };
-  }
   if (isMonsterBane(cardId, card)) {
     return { eligible: false, reason: 'Locked: Monster Bane' };
   }
@@ -79,7 +76,17 @@ export function forgetSurvivorCard(survivor, cardId, method, lanternYear, card) 
     lastForgetLanternYear: lanternYear,
     forgottenCardsLog: [
       ...(survivor.forgottenCardsLog || []),
-      { cardId, cardName, lanternYear, method, wasStarterCard, wasNegative }
+      {
+        cardId,
+        cardName,
+        lanternYear,
+        method,
+        wasStarterCard,
+        wasNegative,
+        ...(card?.sourceGearName ? { sourceGearName: card.sourceGearName } : {}),
+        ...(card?.sourceGearId ? { sourceGearId: card.sourceGearId } : {}),
+        ...(card?.sourceType ? { sourceType: card.sourceType } : {})
+      }
     ]
   };
 }

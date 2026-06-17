@@ -14,6 +14,8 @@ import {
   getCanonicalStatusEffectType,
   overhaulCards
 } from '../src/data/overhaul/cardRegistry.js';
+import { cards } from '../src/data/cards.js';
+import { selectRandomLivingSurvivor } from '../src/game/monsterTargeting.js';
 
 function monster(effects = []) {
   return {
@@ -229,6 +231,8 @@ test('No implemented status silently does nothing', () => {
     'salvageSelf',
     'testBonus',
     'consequenceReduction',
+    'reduceBleedSelf',
+    'targetAvoidance',
     'healSelf',
     'healAfterCombat',
     'partyHealAfterCombat'
@@ -245,4 +249,55 @@ test('No implemented status silently does nothing', () => {
       `${type} has no parser or card coverage`
     );
   });
+});
+
+test('medical and scent effects resolve as real mechanics', () => {
+  const bandages = cards.bandagesResonance;
+  const fecalSalve = cards.fecalSalveResonance;
+  const bandageState = createCombatState(monster(), {
+    survivor: {
+      id: 'medic',
+      name: 'Medic',
+      hp: 5,
+      maxHp: 10,
+      block: 0,
+      bleed: 3,
+      energy: 3
+    },
+    runDeck: [bandages]
+  });
+  bandageState.survivor.bleed = 3;
+
+  const bleedingBandageResult = playCard(0, { ...bandageState, hand: [bandages] });
+
+  assert.equal(bleedingBandageResult.survivor.bleed, 2);
+  assert.equal(bleedingBandageResult.survivor.hp, 6);
+  assert.equal(bleedingBandageResult.afterCombatHealing, 1);
+
+  const salveState = createCombatState(monster(), {
+    survivor: {
+      id: 'salve',
+      name: 'Salve',
+      hp: 10,
+      maxHp: 10,
+      block: 0,
+      energy: 3
+    },
+    runDeck: [fecalSalve]
+  });
+  const salveResult = playCard(0, { ...salveState, hand: [fecalSalve] });
+
+  assert.equal(salveResult.survivor.targetAvoidance, 3);
+  assert.equal(salveResult.survivor.guarded, 1);
+  assert.equal(salveResult.discardPile.some(card => card.id === 'panic'), true);
+});
+
+test('target avoidance lowers random targeting weight without making survivor untargetable', () => {
+  const party = [
+    { survivor: { id: 'masked', hp: 10, isAlive: true, alive: true, targetAvoidance: 3 } },
+    { survivor: { id: 'plain', hp: 10, isAlive: true, alive: true } }
+  ];
+
+  assert.equal(selectRandomLivingSurvivor(party, {}, () => 0.19), 'masked');
+  assert.equal(selectRandomLivingSurvivor(party, {}, () => 0.21), 'plain');
 });

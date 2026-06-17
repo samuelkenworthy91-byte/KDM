@@ -367,24 +367,26 @@ export function getWeaponSuitability(weakPoint, weaponType, cardTags = []) {
 export function getWeakPointHarvestPreview({
   weakPoint,
   breakDamage = 0,
+  currentBreakDamage = 0,
   weaponType,
   cardTags = []
 }) {
   if (!weakPoint) return null;
   const breakValue = weakPoint.breakValue || 0;
-  const remaining = Math.max(0, breakValue - breakDamage);
-  const overkill = Math.max(0, breakDamage - breakValue);
+  const projectedBreakDamage = Math.max(0, currentBreakDamage + breakDamage);
+  const remaining = Math.max(0, breakValue - projectedBreakDamage);
+  const overkill = Math.max(0, projectedBreakDamage - breakValue);
   const overkillRatio = breakValue ? overkill / breakValue : 0;
   const suitability = getWeaponSuitability(weakPoint, weaponType, cardTags);
   const labels = [];
 
-  if (breakDamage >= breakValue && overkillRatio <= 0.1) {
+  if (projectedBreakDamage >= breakValue && overkillRatio <= 0.1) {
     labels.push('Perfect range: likely clean break.');
-  } else if (breakDamage >= breakValue && overkillRatio <= 0.25) {
+  } else if (projectedBreakDamage >= breakValue && overkillRatio <= 0.25) {
     labels.push('Safe break: should break without much damage.');
   }
   if (
-    breakDamage >= breakValue &&
+    projectedBreakDamage >= breakValue &&
     overkillRatio >= 0.3 &&
     (weakPoint.harvestProfile?.fragile || weakPoint.harvestProfile?.overkillSensitive)
   ) {
@@ -401,6 +403,8 @@ export function getWeakPointHarvestPreview({
   return {
     breakValue,
     breakDamage,
+    currentBreakDamage,
+    projectedBreakDamage,
     remaining,
     overkill,
     weaponMatch: suitability.label,

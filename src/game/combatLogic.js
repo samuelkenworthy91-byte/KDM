@@ -123,6 +123,7 @@ function applyStatusToCombatant(combatant, type, amount, options = {}) {
     case 'salvage':
     case 'testBonus':
     case 'consequenceReduction':
+    case 'targetAvoidance':
       return { ...combatant, [type]: (combatant[type] || 0) + value };
     case 'doom':
       return {
@@ -1013,6 +1014,12 @@ export function playCard(cardIndex, state) {
           survivor.block += effect.block;
           blockGainedThisTurn += effect.block;
         }
+        break;
+      case 'reduceBleedSelf':
+        survivor = { ...survivor, bleed: reduceStatus(survivor.bleed, statusAmount(effect)) };
+        break;
+      case 'targetAvoidance':
+        survivor = applyStatusToCombatant(survivor, 'targetAvoidance', statusAmount(effect));
         break;
       case 'loseHp':
         survivor = applyDamageToSurvivor({

@@ -1878,30 +1878,53 @@ export default function App() {
         ...(survivor.permanentNegativeCards || [])
       ];
       const addition = additions.find(item => getPersonalCardId(item) === cardId);
-      if (!starterCardIds.includes(cardId) && !addition) return current;
+      const gearSource = (survivor.boundGear || []).flatMap(gear => {
+        const item = equipment[gear.equipmentId];
+        return (item?.cardPackage || []).includes(cardId)
+          ? [{ gear, item }]
+          : [];
+      })[0];
+      if (!starterCardIds.includes(cardId) && !addition && !gearSource) return current;
       const card = cards[cardId];
+      const sourceCard = gearSource
+        ? {
+          ...card,
+          sourceType: 'gear',
+          sourceGearId: gearSource.item.id,
+          sourceGearName: gearSource.item.name
+        }
+        : card;
       const eligibility = getCardForgetEligibility({
         settlement: current,
         survivor,
         cardId,
-        card,
-        addition
+        card: sourceCard,
+        addition,
+        gearGranted: Boolean(gearSource)
       });
       if (!eligibility.eligible) return current;
 
       const method = current.builtMemoryInnovations.includes('riteOfForgetting')
         ? 'Rite of Forgetting'
         : 'Guided Reflection';
+      const cardName = card.name || cardId;
+      const gearPrefix = gearSource ? `${gearSource.item.name} — ` : '';
+      const cardShortName = gearSource && cardName.startsWith(gearPrefix)
+        ? cardName.slice(gearPrefix.length)
+        : cardName;
+      const forgetDescription = gearSource
+        ? `Forgot ${gearSource.item.name} — ${cardShortName} from ${gearSource.item.name}.`
+        : `${survivor.name} forgot ${card.name}.`;
       const spent = spendMemories(current, EARLY_FORGETTING_COST, {
         source: 'guided-reflection',
-        description: `${survivor.name} forgot ${card.name}.`,
+        description: forgetDescription,
         survivorIds: [survivorId]
       });
       if (!spent) return current;
       return {
         ...spent,
         survivors: spent.survivors.map(item => item.id === survivorId
-          ? forgetSurvivorCard(item, cardId, method, current.lanternYear, card)
+          ? forgetSurvivorCard(item, cardId, method, current.lanternYear, sourceCard)
           : item)
       };
     });

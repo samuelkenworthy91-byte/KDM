@@ -323,14 +323,16 @@ function SurvivorCard({
     const item = getEquipment(gear.equipmentId);
     return (item?.cardPackage || []).map(cardId => ({
       cardId,
-      source: `Gear: ${item.name}`,
+      source: `Gear card from ${item.name}`,
       copies: Math.min(3, Math.max(1, Number(
         survivor.gearCardTraining?.[`${survivor.id}:${gear.instanceId}:${cardId}`] ??
         survivor.gearCardTraining?.[`${gear.instanceId}:${cardId}`] ??
         survivor.gearCardTraining?.[gear.instanceId]?.[cardId] ??
         1
       ) || 1)),
-      gearInstanceId: gear.instanceId
+      gearInstanceId: gear.instanceId,
+      sourceGearId: item.id,
+      sourceGearName: item.name
     }));
   });
   const activeProficiencyType = survivor.activeProficiencyType || 'fistAndTooth';
@@ -456,8 +458,8 @@ function SurvivorCard({
         <div className="personal-card-list">
           <strong>Personal Cards</strong>
           <p className="muted-text">
-            Gear cards come from equipped gear. Remove the gear to remove these cards.
-            Removing bound gear destroys it.
+            Gear and item cards come from equipped gear. Guided Reflection can forget one
+            individual card without unequipping the item.
           </p>
           <p className="muted-text">
             Guided Reflection is available through the Lantern Hearth. Spend 1 Memory to forget
@@ -555,13 +557,45 @@ function SurvivorCard({
             );
           }) : <p className="muted-text">No future cards.</p>}
           <h4>Gear Cards</h4>
-          {gearEntries.length ? gearEntries.map((entry, index) => (
+          {gearEntries.length ? gearEntries.map((entry, index) => {
+            const gearCard = cards[entry.cardId];
+            const isForgotten = forgotten.has(entry.cardId);
+            const eligibility = getCardForgetEligibility({
+              settlement,
+              survivor,
+              cardId: entry.cardId,
+              card: {
+                ...gearCard,
+                sourceType: 'gear',
+                sourceGearId: entry.sourceGearId,
+                sourceGearName: entry.sourceGearName
+              },
+              gearGranted: true
+            });
+            return (
             <div className="personal-card-row" key={`${entry.source}-${entry.cardId}-${index}`}>
-              <DeckCardDetails cardId={entry.cardId} source={entry.source} />
-              <button type="button" disabled title="Gear card: unequip item to remove">Gear card</button>
-              <small>Gear card: unequip item to remove</small>
+              <DeckCardDetails
+                cardId={entry.cardId}
+                source={entry.source}
+                suffix={`${isForgotten ? ' - Forgotten' : ''}${
+                  entry.copies > 1 ? ` - ${entry.copies} trained copies` : ''
+                }`}
+              />
+              <button
+                type="button"
+                disabled={!eligibility.eligible}
+                title={eligibility.reason}
+                onClick={() => confirmForget(
+                  gearCard?.name || entry.cardId,
+                  () => onForgetCard(survivor.id, entry.cardId)
+                )}
+              >
+                Forget
+              </button>
+              {eligibility.reason && !eligibility.eligible && <small>{eligibility.reason}</small>}
             </div>
-          )) : <p className="muted-text">No bound gear cards.</p>}
+            );
+          }) : <p className="muted-text">No bound gear cards.</p>}
           <h4>Active Proficiency Cards</h4>
           {hasActiveMasteryCard ? (
             <div className="personal-card-row">
@@ -610,7 +644,10 @@ function SurvivorCard({
               <summary>Forgotten Card Log</summary>
               {survivor.forgottenCardsLog.map((entry, index) => (
                 <p key={`${entry.cardId}-${entry.lanternYear}-${index}`}>
-                  {entry.cardName} | Year {entry.lanternYear} | {entry.method}
+                  {entry.sourceGearName
+                    ? `Forgot ${entry.cardName} from ${entry.sourceGearName}`
+                    : entry.cardName}{' '}
+                  | Year {entry.lanternYear} | {entry.method}
                   {entry.wasStarterCard ? ' | Starter' : ''}
                   {entry.wasNegative ? ' | Negative' : ''}
                 </p>
@@ -886,24 +923,53 @@ export default function SettlementScreen({
   const settlementTabs = hasCentralActions
     ? [...baseTabs.slice(0, 2), 'actions', ...baseTabs.slice(2)]
     : baseTabs;
-  const forgettableActionCards = selectedActionSurvivor
-    ? [...new Set([
-      ...starterCardIds,
-      ...(selectedActionSurvivor.personalDeckAdditions || []).map(getPersonalCardId),
-      ...(selectedActionSurvivor.permanentNegativeCards || []).map(getPersonalCardId)
-    ].filter(Boolean))].filter(cardId =>
-      cardId !== 'panic' &&
-      getCardForgetEligibility({
-        settlement,
-        survivor: selectedActionSurvivor,
+  const selectedActionGearCardEntries = selectedActionSurvivor
+    ? (selectedActionSurvivor.boundGear || []).flatMap(gear => {
+      const item = getEquipment(gear.equipmentId);
+      return (item?.cardPackage || []).map(cardId => ({
         cardId,
-        card: cards[cardId],
+        sourceGearId: item.id,
+        sourceGearName: item.name
+      }));
+    })
+    : [];
+  const forgettableActionEntries = selectedActionSurvivor
+    ? [
+      ...[...new Set([
+        ...starterCardIds,
+        ...(selectedActionSurvivor.personalDeckAdditions || []).map(getPersonalCardId),
+        ...(selectedActionSurvivor.permanentNegativeCards || []).map(getPersonalCardId)
+      ].filter(Boolean))].map(cardId => ({
+        cardId,
         addition: (selectedActionSurvivor.personalDeckAdditions || []).find(addition =>
           getPersonalCardId(addition) === cardId
         )
+      })),
+      ...selectedActionGearCardEntries
+    ].filter((entry, index, entries) =>
+      entry.cardId !== 'panic' &&
+      entries.findIndex(candidate =>
+        candidate.cardId === entry.cardId &&
+        candidate.sourceGearId === entry.sourceGearId
+      ) === index &&
+      getCardForgetEligibility({
+        settlement,
+        survivor: selectedActionSurvivor,
+        cardId: entry.cardId,
+        card: {
+          ...cards[entry.cardId],
+          ...(entry.sourceGearId ? {
+            sourceType: 'gear',
+            sourceGearId: entry.sourceGearId,
+            sourceGearName: entry.sourceGearName
+          } : {})
+        },
+        addition: entry.addition,
+        gearGranted: Boolean(entry.sourceGearId)
       }).eligible
     )
     : [];
+  const forgettableActionCards = forgettableActionEntries.map(entry => entry.cardId);
   const selectedActionHasPanic = selectedActionSurvivor
     ? [
       ...(selectedActionSurvivor.personalDeckAdditions || []),
@@ -948,6 +1014,12 @@ export default function SettlementScreen({
     survivor.personalDeckAdditions.some(addition => {
       const cardId = getPersonalCardId(addition);
       return cardId && cardId !== 'panic' && !survivor.forgottenCardIds?.includes(cardId);
+    }) ||
+    (survivor.boundGear || []).some(gear => {
+      const item = getEquipment(gear.equipmentId);
+      return (item?.cardPackage || []).some(cardId =>
+        cardId !== 'panic' && !survivor.forgottenCardIds?.includes(cardId)
+      );
     })
   );
   const hasPanic = livingSurvivors.some(survivor =>
@@ -1423,9 +1495,9 @@ export default function SettlementScreen({
               {hasEarlyForgettingAccess(settlement) && (
                 <article className="item-card">
                   <h4>Rite of Forgetting / Guided Reflection</h4>
-                  <p>Spend 1 Memory to remove one eligible personal or basic card.</p>
+                  <p>Spend 1 Memory to remove one eligible card from this survivor.</p>
                   <p className="muted-text">
-                    Locked, unforgettable, gear, mastery, and Monster Bane cards cannot be removed.
+                    Panic, locked, unforgettable, mastery, and Monster Bane cards cannot be removed.
                   </p>
                   <label className="field-label">
                     Card to forget
@@ -1434,9 +1506,13 @@ export default function SettlementScreen({
                       onChange={event => setActionCardId(event.target.value)}
                     >
                       {!forgettableActionCards.length && <option value="">No eligible cards</option>}
-                      {forgettableActionCards.map(cardId => (
-                        <option key={cardId} value={cardId}>
-                          {cards[cardId]?.name || 'Unknown / Legacy'}
+                      {forgettableActionEntries.map(entry => (
+                        <option
+                          key={`${entry.sourceGearId || 'deck'}-${entry.cardId}`}
+                          value={entry.cardId}
+                        >
+                          {cards[entry.cardId]?.name || 'Unknown / Legacy'}
+                          {entry.sourceGearName ? ` from ${entry.sourceGearName}` : ''}
                         </option>
                       ))}
                     </select>

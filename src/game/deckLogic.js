@@ -84,22 +84,46 @@ function getTrainedCopyCount(survivor, gearInstanceId, cardId) {
   return Math.min(3, Math.max(1, Number(value) || 1));
 }
 
+function shouldExcludeForgotten(cardId, forgotten, { allowPanic = false } = {}) {
+  if (allowPanic && cardId === 'panic') return false;
+  return forgotten.has(cardId);
+}
+
+function filterForgottenAdditions(additions = [], forgotten, options = {}) {
+  return additions.filter(addition => {
+    const cardId = getPersonalCardId(addition);
+    return !shouldExcludeForgotten(cardId, forgotten, options);
+  });
+}
+
 export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] }) {
   const personalIds = survivor?.personalDeckAdditions || survivor?.deckAdditions || [];
   const negativeIds = survivor?.permanentNegativeCards || [];
   const forgotten = new Set(survivor?.forgottenCardIds || []);
   const deck = [
     ...getStarterDeck(),
-    ...getCardsFromIds(personalIds, survivor?.name ? `${survivor.name}'s progress` : 'Survivor progress', undefined, { warnOnMissing: false }),
-    ...getCardsFromIds(negativeIds, survivor?.name ? `${survivor.name}'s permanent burdens` : 'Permanent burdens', 'curse', { warnOnMissing: false })
-  ].filter(card => !forgotten.has(card.id));
+    ...getCardsFromIds(
+      filterForgottenAdditions(personalIds, forgotten),
+      survivor?.name ? `${survivor.name}'s progress` : 'Survivor progress',
+      undefined,
+      { warnOnMissing: false }
+    ),
+    ...getCardsFromIds(
+      filterForgottenAdditions(negativeIds, forgotten, { allowPanic: true }),
+      survivor?.name ? `${survivor.name}'s permanent burdens` : 'Permanent burdens',
+      'curse',
+      { warnOnMissing: false }
+    )
+  ].filter(card => !shouldExcludeForgotten(card.id, forgotten, { allowPanic: card.id === 'panic' }));
   const activeProficiencyType = survivor?.activeProficiencyType || 'fistAndTooth';
 
   equippedGear.forEach(itemOrId => {
     const resolved = resolveEquippedGear(itemOrId);
     const item = resolved?.item;
     if (item) {
-      const cardIds = (item.cardPackage || []).flatMap(cardId => {
+      const cardIds = (item.cardPackage || [])
+        .filter(cardId => !shouldExcludeForgotten(cardId, forgotten))
+        .flatMap(cardId => {
         const card = cards[cardId];
         if (!card) return [];
         const copies = card?.cardCopyEligible === false
@@ -129,7 +153,10 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
   Object.values(cards)
     .filter(card => card.grantedByAffinity && card.affinityThresholdRequired)
     .forEach(card => {
-      if ((affinityCounts[card.grantedByAffinity] || 0) >= Number(card.affinityThresholdRequired)) {
+      if (
+        !shouldExcludeForgotten(card.id, forgotten) &&
+        (affinityCounts[card.grantedByAffinity] || 0) >= Number(card.affinityThresholdRequired)
+      ) {
         deck.push(...getCardsFromIds([card.id], `${card.colorAffinityName || card.grantedByAffinity} affinity`, 'affinity'));
       }
     });

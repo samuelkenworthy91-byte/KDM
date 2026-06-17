@@ -92,10 +92,14 @@ export default function PartyCombatScreen({
         breakDamage: selectedCardPreview.weakPointBreakDamage,
         weaponMatch: selectedCardPreview.weaponMatch || 'Neutral',
         harvestPreview: selectedCardPreview.harvestPreview,
+        weakPointBreakdown: selectedCardPreview.weakPointBreakdown,
+        overkillBreakdown: selectedCardPreview.overkillBreakdown,
+        harvestBreakdown: selectedCardPreview.harvestBreakdown,
+        failedBreakBreakdown: selectedCardPreview.failedBreakBreakdown,
         tellState: selectedCardPreview.tellState === 'unknown'
           ? getPartyWeakPointPreview(combat, selectedWeakPointId)?.tellState || 'neutral'
           : selectedCardPreview.tellState,
-        riskSuppressed: selectedCardPreview.willBreakWeakPoint
+        riskSuppressed: selectedCardPreview.failedBreakRiskSuppressed
       }
     : null;
   const tellLabel = tellState => {
@@ -277,23 +281,54 @@ export default function PartyCombatScreen({
           ))}
         </div>
         {selectedPreview && (
-          <p className="run-bonus-note">
-            Preview using {selectedPreview.cardName}: about {selectedPreview.monsterDamage} monster damage,{' '}
-            {selectedPreview.breakDamage} break damage. Weapon Match: {selectedPreview.weaponMatch}.{' '}
-            {tellLabel(selectedPreview.tellState)}. Risk: {
-              selectedPreview.riskSuppressed
-                ? 'Suppressed by opening/card'
-                : selectedWeakPoint?.riskLabel
-            } ({riskText(selectedWeakPoint)}). {harvestPreview(selectedWeakPoint)}
-            {selectedPreview.harvestPreview && (
-              <>
-                {' '}Break {selectedPreview.harvestPreview.breakDamage}/{selectedPreview.harvestPreview.breakValue};
-                overkill {selectedPreview.harvestPreview.overkill}.{' '}
-                {selectedPreview.harvestPreview.labels.join(' ')}
-              </>
+          <div className="run-bonus-note">
+            <strong>Preview using {selectedPreview.cardName}</strong>
+            <div>
+              Damage: {selectedPreview.monsterDamage} monster HP,{' '}
+              {selectedCardPreview.blockDamage || 0} block,{' '}
+              {selectedCardPreview.finalDamage || selectedPreview.monsterDamage} total.
+            </div>
+            {selectedPreview.weakPointBreakdown && (
+              <div>
+                Weak Point: {selectedPreview.weakPointBreakdown.name}. Break:{' '}
+                {selectedPreview.weakPointBreakdown.current} / {selectedPreview.weakPointBreakdown.breakValue}
+                {' '}+ incoming {selectedPreview.weakPointBreakdown.incoming}
+                {' '}= {selectedPreview.weakPointBreakdown.projected}.{' '}
+                {selectedPreview.weakPointBreakdown.outcomeLabel}.
+              </div>
             )}
-            {' '}{baneRevealsWeakPoints ? counterIntentText(selectedWeakPoint) : ''}
-          </p>
+            {selectedPreview.overkillBreakdown && (
+              <div>
+                Overkill: {selectedPreview.overkillBreakdown.amount} -{' '}
+                {selectedPreview.overkillBreakdown.label}.
+              </div>
+            )}
+            {selectedPreview.harvestBreakdown && (
+              <div>
+                Harvest: {selectedPreview.harvestBreakdown.quality};{' '}
+                {selectedPreview.harvestBreakdown.family} family;{' '}
+                {selectedPreview.harvestBreakdown.weaponSuitability} weapon.
+                {selectedPreview.harvestBreakdown.warning
+                  ? ` ${selectedPreview.harvestBreakdown.warning}`
+                  : ' Low risk of ruined harvest.'}
+                {selectedPreview.harvestBreakdown.rarePartHint
+                  ? ` ${selectedPreview.harvestBreakdown.rarePartHint}.`
+                  : ''}
+              </div>
+            )}
+            {selectedPreview.failedBreakBreakdown && (
+              <div>
+                Failed-break consequence: {selectedPreview.failedBreakBreakdown.consequence}
+                {selectedPreview.failedBreakBreakdown.suppressed
+                  ? `, suppressed because ${selectedPreview.failedBreakBreakdown.suppressionReason}.`
+                  : '.'}
+              </div>
+            )}
+            <div>
+              Tell: {tellLabel(selectedPreview.tellState)}.{' '}
+              {baneRevealsWeakPoints ? counterIntentText(selectedWeakPoint) : harvestPreview(selectedWeakPoint)}
+            </div>
+          </div>
         )}
         {!selectedPreview && (
           <p className="run-bonus-note">

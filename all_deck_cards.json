@@ -64,10 +64,10 @@
     "rarity": "uncommon",
     "cardId": "acidToothKnifeTechnique",
     "cardName": "Acid Tooth Knife — Technique",
-    "cost": 2,
+    "cost": 1,
     "type": "skill",
-    "shortEffect": "Expose a fragile weak point; next knife attack gains +2 break damage. Also gain 3 block.",
-    "fullEffect": "Expose a fragile weak point; next knife attack gains +2 break damage. Gain 3 block. If you already played an attack this turn, add +1 damage or +1 block.",
+    "shortEffect": "Open a poisoned cut: apply Poison 1 and preserve fragile parts on low overkill.",
+    "fullEffect": "Open a poisoned cut: apply Poison 1 and gain +1 break damage. If this breaks a fragile weak point with overkill 0-1, improve harvest quality one step.",
     "tags": [
       "Quick",
       "Precise",
@@ -79,7 +79,6 @@
     "sourceOriginalName": "ACID TOOTH DAGGER",
     "equipmentIndex": 1,
     "mechanicalSignature": "a55d648a3096",
-    "block": 3,
     "opensWeakPoint": "True",
     "firstCounterFree": "False",
     "universalTargeting": true,
@@ -103,7 +102,16 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "breakDamage": 1,
+    "statusApplied": {
+      "Poison": 1
+    },
+    "mechanicFlags": [
+      "lowOverkillCleanHarvest"
+    ],
+    "itemFantasyPatch": "acid-tooth-poison-carving",
+    "cardText": "Open a poisoned cut: apply Poison 1 and gain +1 break damage. If this breaks a fragile weak point with overkill 0-1, improve harvest quality one step."
   },
   {
     "equipmentName": "Acid Tooth Knife",
@@ -411,10 +419,10 @@
     "rarity": "uncommon",
     "cardId": "amberBowTechnique",
     "cardName": "Amber Bow — Technique",
-    "cost": 1,
+    "cost": 0,
     "type": "skill",
-    "shortEffect": "Mark a wing, eye or distant weak point; ranged attacks ignore Guarded 1. Also gain 3 block.",
-    "fullEffect": "Mark a wing, eye or distant weak point; ranged attacks ignore Guarded 1. Gain 3 block. If you have Guarded, convert 1 Guarded into +2 damage.",
+    "shortEffect": "Mark a distant weak point. The next ranged hit is safer if overkill stays low.",
+    "fullEffect": "Mark the monster or selected weak point. Ranged attacks against that target gain +1 break damage. If overkill is 0-1, clean harvest is more likely.",
     "tags": [
       "Ranged",
       "Marking",
@@ -426,7 +434,6 @@
     "sourceOriginalName": "AMBER BOW",
     "equipmentIndex": 4,
     "mechanicalSignature": "79c518a74394",
-    "block": 3,
     "opensWeakPoint": "True",
     "firstCounterFree": "False",
     "universalTargeting": true,
@@ -450,7 +457,16 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "breakDamage": 1,
+    "statusApplied": {
+      "Marked": 1
+    },
+    "mechanicFlags": [
+      "lowOverkillCleanHarvest"
+    ],
+    "itemFantasyPatch": "amber-bow-precise-marking",
+    "cardText": "Mark the monster or selected weak point. Ranged attacks against that target gain +1 break damage. If overkill is 0-1, clean harvest is more likely."
   },
   {
     "equipmentName": "Amber Bow",
@@ -1486,8 +1502,8 @@
     "cardName": "Bandages — Resonance",
     "cost": 1,
     "type": "support",
-    "shortEffect": "Chosen ally gains 3 block and Prepared 2. No Panic if used before the monster acts.",
-    "fullEffect": "Chosen ally gains 3 block and Prepared 2. If the phase is wrong for this item, also gain Panic 1. If the quarry is below half HP, add +1 break damage.",
+    "shortEffect": "Bind wounds: reduce Bleed 1 and heal 1 if wounded. Gain 1 block.",
+    "fullEffect": "Bind wounds: reduce Bleed 1 and heal 1 HP if wounded. Gain 1 block. After combat, heal 1 if this survivor is still wounded.",
     "tags": [
       "WoundCare",
       "Support",
@@ -1498,8 +1514,7 @@
     "sourceOriginalName": "BANDAGES",
     "equipmentIndex": 13,
     "mechanicalSignature": "9a38f0bd8b90",
-    "block": 3,
-    "prepared": 2,
+    "block": 1,
     "panicGain": 0,
     "universalTargeting": true,
     "universalTargetingNote": "Effect resolves against the current combat target; it never requires fighting a specific quarry.",
@@ -1517,7 +1532,12 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "reduceBleedSelf": 1,
+    "healIfWounded": 1,
+    "healAfterCombat": 1,
+    "itemFantasyPatch": "bandages-wound-control",
+    "cardText": "Bind wounds: reduce Bleed 1 and heal 1 HP if wounded. Gain 1 block. After combat, heal 1 if this survivor is still wounded."
   },
   {
     "equipmentName": "Bandages",
@@ -1529,10 +1549,10 @@
     "rarity": "common",
     "cardId": "bandagesEcho",
     "cardName": "Bandages — Echo",
-    "cost": 1,
+    "cost": 0,
     "type": "reaction",
-    "shortEffect": "After an ally breaks a weak point, give the next ally Guarded 1 or clear Panic 2.",
-    "fullEffect": "After an ally breaks a weak point or survives a hunt event, choose: next ally gains Guarded 1, or clear Panic 2. If the quarry is below half HP, add +1 break damage.",
+    "shortEffect": "Reaction: staunch Bleed 2 or set up after-combat recovery.",
+    "fullEffect": "After an ally breaks a weak point or survives a hunt event, reduce your Bleed by 2. After combat, heal 1 HP if wounded.",
     "tags": [
       "WoundCare",
       "Support",
@@ -1543,8 +1563,6 @@
     "sourceOriginalName": "BANDAGES",
     "equipmentIndex": 13,
     "mechanicalSignature": "6573875340b4",
-    "partyBlock": 1,
-    "panicClear": 2,
     "universalTargeting": true,
     "universalTargetingNote": "Effect resolves against the current combat target; it never requires fighting a specific quarry.",
     "colorAffinity": "green",
@@ -1561,7 +1579,11 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "reduceBleedSelf": 2,
+    "healAfterCombat": 1,
+    "itemFantasyPatch": "bandages-wound-control",
+    "cardText": "After an ally breaks a weak point or survives a hunt event, reduce your Bleed by 2. After combat, heal 1 HP if wounded."
   },
   {
     "equipmentName": "Beacon Guard",
@@ -1575,8 +1597,8 @@
     "cardName": "Beacon Guard — Shield Wall",
     "cost": 1,
     "type": "skill",
-    "shortEffect": "Gain 5 block and give chosen ally Guarded 1. The first Counter from this equipment this battle costs 0.",
-    "fullEffect": "Gain 5 block and give chosen ally Guarded 1. Set firstCounterReady for this equipment if unused. Chosen ally gains Guarded 1 after this resolves.",
+    "shortEffect": "Raise the beacon shield: gain 5 block and reduce failed-break consequences by 1.",
+    "fullEffect": "Raise the beacon shield: gain 5 block. Until your next card, reduce the next failed-break or monster consequence by 1.",
     "tags": [
       "Defensive",
       "Counter",
@@ -1614,7 +1636,10 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "consequenceReduction": 1,
+    "itemFantasyPatch": "beacon-guard-protective-shield",
+    "cardText": "Raise the beacon shield: gain 5 block. Until your next card, reduce the next failed-break or monster consequence by 1."
   },
   {
     "equipmentName": "Beacon Guard",
@@ -3448,8 +3473,8 @@
     "cardName": "Bone Axe — Technique",
     "cost": 2,
     "type": "skill",
-    "shortEffect": "Commit to a heavy chop; +3 break damage but failed fragile harvests worsen by one step. Also gain 2 block. Gain Guarded 1 if first card this turn.",
-    "fullEffect": "Commit to a heavy chop; +3 break damage but failed fragile harvests worsen by one step. Gain 2 block. After use, Exhaust this equipment until the next monster turn. If this is your first card this turn, gain Guarded 1.",
+    "shortEffect": "Heavy chop: +4 break damage, apply Vulnerable 1, fragile harvest danger.",
+    "fullEffect": "Commit to a heavy chop: gain +4 break damage and apply Vulnerable 1. Excellent against body, bone, hide, or armour; fragile weak points suffer worse overkill risk.",
     "tags": [
       "Heavy",
       "Brutal",
@@ -3461,11 +3486,10 @@
     "sourceOriginalName": "BONE AXE",
     "equipmentIndex": 31,
     "mechanicalSignature": "d4a099eb00e4",
-    "block": 2,
     "opensWeakPoint": "True",
     "firstCounterFree": "False",
     "statusApplied": {
-      "Guarded": 1
+      "Vulnerable": 1
     },
     "duplicateCorrectionApplied": true,
     "universalTargeting": true,
@@ -3489,7 +3513,13 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "breakDamage": 4,
+    "mechanicFlags": [
+      "severeFragileOverkillRisk"
+    ],
+    "itemFantasyPatch": "bone-axe-heavy-breaker",
+    "cardText": "Commit to a heavy chop: gain +4 break damage and apply Vulnerable 1. Excellent against body, bone, hide, or armour; fragile weak points suffer worse overkill risk."
   },
   {
     "equipmentName": "Bone Axe",
@@ -3780,10 +3810,10 @@
     "rarity": "uncommon",
     "cardId": "boneClubTechnique",
     "cardName": "Bone Club — Technique",
-    "cost": 2,
+    "cost": 1,
     "type": "skill",
-    "shortEffect": "Rattle the quarry; apply Stagger 2 and gain Guarded 1. Also gain 3 block.",
-    "fullEffect": "Rattle the quarry; apply Stagger 2 and gain Guarded 1. Gain 3 block. If you play a third attack this round, gain Panic 1.",
+    "shortEffect": "Rattle the quarry: apply Staggered 1 and gain Guarded 1.",
+    "fullEffect": "Rattle the quarry with a brutal feint: apply Staggered 1 and gain Guarded 1. Better for body and bone weak points than fragile organs.",
     "tags": [
       "Heavy",
       "Counter",
@@ -3795,7 +3825,6 @@
     "sourceOriginalName": "BONE CLUB",
     "equipmentIndex": 35,
     "mechanicalSignature": "d6119fc1bd3d",
-    "block": 3,
     "opensWeakPoint": "True",
     "firstCounterFree": "True",
     "universalTargeting": true,
@@ -3819,7 +3848,16 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "statusApplied": {
+      "Staggered": 1,
+      "Guarded": 1
+    },
+    "mechanicFlags": [
+      "bodyBoneBreaker"
+    ],
+    "itemFantasyPatch": "bone-club-stagger",
+    "cardText": "Rattle the quarry with a brutal feint: apply Staggered 1 and gain Guarded 1. Better for body and bone weak points than fragile organs."
   },
   {
     "equipmentName": "Bone Club",
@@ -3945,10 +3983,10 @@
     "rarity": "uncommon",
     "cardId": "boneKnifeTechnique",
     "cardName": "Bone Knife — Technique",
-    "cost": 1,
+    "cost": 0,
     "type": "skill",
-    "shortEffect": "Expose a fragile weak point; next knife attack gains +2 break damage. Also gain 1 block.",
-    "fullEffect": "Expose a fragile weak point; next knife attack gains +2 break damage. Gain 1 block. If you deal no HP damage, gain +2 break damage.",
+    "shortEffect": "Crude close cut: apply Bleed 1 and gain +1 break damage; messy if overkill is high.",
+    "fullEffect": "Crude close cut: apply Bleed 1 and gain +1 break damage. Fragile harvests are safer at overkill 0, but high overkill risks a messy result.",
     "tags": [
       "Quick",
       "Precise",
@@ -3960,7 +3998,6 @@
     "sourceOriginalName": "BONE DAGGER",
     "equipmentIndex": 36,
     "mechanicalSignature": "cd855c553a12",
-    "block": 1,
     "opensWeakPoint": "True",
     "firstCounterFree": "False",
     "universalTargeting": true,
@@ -3984,7 +4021,16 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "breakDamage": 1,
+    "statusApplied": {
+      "Bleed": 1
+    },
+    "mechanicFlags": [
+      "overkillMessyRisk"
+    ],
+    "itemFantasyPatch": "bone-knife-crude-carving",
+    "cardText": "Crude close cut: apply Bleed 1 and gain +1 break damage. Fragile harvests are safer at overkill 0, but high overkill risks a messy result."
   },
   {
     "equipmentName": "Bone Knife",
@@ -11641,8 +11687,8 @@
     "cardName": "Fecal Salve — Resonance",
     "cost": 1,
     "type": "support",
-    "shortEffect": "Chosen ally gains 4 block and Prepared 1. Gain Panic 1. Gain Guarded 1 if first card this turn.",
-    "fullEffect": "Chosen ally gains 4 block and Prepared 1. If the phase is wrong for this item, also gain Panic 1. After use, Exhaust this equipment until the next monster turn. If this is your first card this turn, gain Guarded 1.",
+    "shortEffect": "Smear on filth: gain target avoidance 3 and Guarded 1. Gain Panic 1.",
+    "fullEffect": "Smear on filth: gain Target Avoidance 3, making random monster targeting less likely to choose you. Gain Guarded 1 and Panic 1.",
     "tags": [
       "WoundCare",
       "Support",
@@ -11653,8 +11699,6 @@
     "sourceOriginalName": "FECAL SALVE",
     "equipmentIndex": 102,
     "mechanicalSignature": "e217051a16e7",
-    "block": 4,
-    "prepared": 1,
     "panicGain": 1,
     "statusApplied": {
       "Guarded": 1
@@ -11676,7 +11720,10 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "targetAvoidance": 3,
+    "itemFantasyPatch": "fecal-salve-scent-masking",
+    "cardText": "Smear on filth: gain Target Avoidance 3, making random monster targeting less likely to choose you. Gain Guarded 1 and Panic 1."
   },
   {
     "equipmentName": "Fecal Salve",
@@ -11688,10 +11735,10 @@
     "rarity": "common",
     "cardId": "fecalSalveEcho",
     "cardName": "Fecal Salve — Echo",
-    "cost": 1,
+    "cost": 0,
     "type": "reaction",
-    "shortEffect": "After an ally breaks a weak point, give the next ally Guarded 1 or clear Panic 1. Gain Guarded 1 if first card this turn.",
-    "fullEffect": "After an ally breaks a weak point or survives a hunt event, choose: next ally gains Guarded 1, or clear Panic 1. After use, Exhaust this equipment until the next monster turn. If this is your first card this turn, gain Guarded 1.",
+    "shortEffect": "Reaction: refresh the stink; gain target avoidance 2. Gain Panic 1.",
+    "fullEffect": "After an ally breaks a weak point or survives a hunt event, refresh the stink: gain Target Avoidance 2. Gain Panic 1.",
     "tags": [
       "WoundCare",
       "Support",
@@ -11702,11 +11749,6 @@
     "sourceOriginalName": "FECAL SALVE",
     "equipmentIndex": 102,
     "mechanicalSignature": "c56d9509d641",
-    "partyBlock": 1,
-    "panicClear": 1,
-    "statusApplied": {
-      "Guarded": 1
-    },
     "duplicateCorrectionApplied": true,
     "universalTargeting": true,
     "universalTargetingNote": "Effect resolves against the current combat target; it never requires fighting a specific quarry.",
@@ -11724,7 +11766,11 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "targetAvoidance": 2,
+    "panicGain": 1,
+    "itemFantasyPatch": "fecal-salve-scent-masking",
+    "cardText": "After an ally breaks a weak point or survives a hunt event, refresh the stink: gain Target Avoidance 2. Gain Panic 1."
   },
   {
     "equipmentName": "Fetosaurus",
@@ -11927,8 +11973,8 @@
     "cardName": "First Aid Kit — Resonance",
     "cost": 1,
     "type": "support",
-    "shortEffect": "Chosen ally gains 4 block and Prepared 2. Gain Panic 1.",
-    "fullEffect": "Chosen ally gains 4 block and Prepared 2. If the phase is wrong for this item, also gain Panic 1. If played after blocking, your next Counter gains +2 damage.",
+    "shortEffect": "Treat an ally: heal 1, reduce Bleed 2, and gain 2 block. Gain Panic 1.",
+    "fullEffect": "Treat an ally with a proper kit: heal 1 HP, reduce Bleed by 2, and gain 2 block. The whole party heals 1 after combat. Gain Panic 1 if used under pressure.",
     "tags": [
       "WoundCare",
       "Support",
@@ -11939,8 +11985,7 @@
     "sourceOriginalName": "FIRST AID KIT",
     "equipmentIndex": 105,
     "mechanicalSignature": "7bc258303b8f",
-    "block": 4,
-    "prepared": 2,
+    "block": 2,
     "panicGain": 1,
     "universalTargeting": true,
     "universalTargetingNote": "Effect resolves against the current combat target; it never requires fighting a specific quarry.",
@@ -11958,7 +12003,12 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "heal": 1,
+    "reduceBleedSelf": 2,
+    "partyHealAfterCombat": 1,
+    "itemFantasyPatch": "first-aid-kit-medical-support",
+    "cardText": "Treat an ally with a proper kit: heal 1 HP, reduce Bleed by 2, and gain 2 block. The whole party heals 1 after combat. Gain Panic 1 if used under pressure."
   },
   {
     "equipmentName": "First Aid Kit",
@@ -11972,8 +12022,8 @@
     "cardName": "First Aid Kit — Echo",
     "cost": 1,
     "type": "reaction",
-    "shortEffect": "After an ally breaks a weak point, give the next ally Guarded 2 or clear Panic 2.",
-    "fullEffect": "After an ally breaks a weak point or survives a hunt event, choose: next ally gains Guarded 2, or clear Panic 2. If played after blocking, your next Counter gains +2 damage.",
+    "shortEffect": "Reaction: clear Bleed 3 and prepare party recovery after combat.",
+    "fullEffect": "After an ally breaks a weak point or survives a hunt event, reduce your Bleed by 3. The party heals 1 after combat.",
     "tags": [
       "WoundCare",
       "Support",
@@ -11984,8 +12034,6 @@
     "sourceOriginalName": "FIRST AID KIT",
     "equipmentIndex": 105,
     "mechanicalSignature": "a9d0ccc88ea4",
-    "partyBlock": 2,
-    "panicClear": 2,
     "universalTargeting": true,
     "universalTargetingNote": "Effect resolves against the current combat target; it never requires fighting a specific quarry.",
     "colorAffinity": "green",
@@ -12002,7 +12050,11 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "reduceBleedSelf": 3,
+    "partyHealAfterCombat": 1,
+    "itemFantasyPatch": "first-aid-kit-medical-support",
+    "cardText": "After an ally breaks a weak point or survives a hunt event, reduce your Bleed by 3. The party heals 1 after combat."
   },
   {
     "equipmentName": "Frenzy Drink",
@@ -20330,8 +20382,8 @@
     "cardName": "Hide Cuirass — Brace",
     "cost": 1,
     "type": "skill",
-    "shortEffect": "Gain 2 block and Guarded 3. If hit before your next turn, reduce Blind or Panic by 1.",
-    "fullEffect": "Gain 2 block and Guarded 3. If the next monster hit lands before your next turn, reduce Blind or Panic by 1 after damage. If this would drop you to 0 HP, resolve the card first, then die if still at 0 HP.",
+    "shortEffect": "Brace with body armour: gain 3 block and reduce Bleed 1.",
+    "fullEffect": "Brace with body armour: gain 3 block and reduce Bleed by 1. If the next monster hit lands before your next turn, reduce Panic by 1 after damage.",
     "tags": [
       "Defensive",
       "Party",
@@ -20342,7 +20394,7 @@
     "sourceOriginalName": "LEATHER CUIRASS",
     "equipmentIndex": 176,
     "mechanicalSignature": "0ade6d9ef007",
-    "block": 2,
+    "block": 3,
     "statusReduced": "Blind",
     "guarded": 3,
     "grantedByEquippedArmourSets": [
@@ -20364,7 +20416,10 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "reduceBleedSelf": 1,
+    "itemFantasyPatch": "hide-cuirass-body-wound-control",
+    "cardText": "Brace with body armour: gain 3 block and reduce Bleed by 1. If the next monster hit lands before your next turn, reduce Panic by 1 after damage."
   },
   {
     "equipmentName": "Hide Cuirass",
@@ -20378,8 +20433,8 @@
     "cardName": "Hide Cuirass — Fitted Plate",
     "cost": 1,
     "type": "reaction",
-    "shortEffect": "After damage is previewed, prevent 5 damage. Then give the next ally Guarded 1. Cleanse Panic 1.",
-    "fullEffect": "After incoming damage is previewed, prevent 5 damage with the body slot. Then the next ally gains Guarded 1. If this would drop you to 0 HP, resolve the card first, then die if still at 0 HP. After resolving, cleanse Panic 1 from yourself.",
+    "shortEffect": "Body plate reaction: prevent 5 damage and heal 1 after combat if wounded.",
+    "fullEffect": "After incoming damage is previewed, prevent 5 damage with the body slot. Then heal 1 after combat if wounded.",
     "tags": [
       "Defensive",
       "Party",
@@ -20414,7 +20469,10 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "healAfterCombat": 1,
+    "itemFantasyPatch": "hide-cuirass-body-recovery",
+    "cardText": "After incoming damage is previewed, prevent 5 damage with the body slot. Then heal 1 after combat if wounded."
   },
   {
     "equipmentName": "Hide Visage",
@@ -29010,8 +29068,8 @@
     "cardName": "Scrap Guard — Shield Wall",
     "cost": 1,
     "type": "skill",
-    "shortEffect": "Gain 4 block and give chosen ally Guarded 2. The first Counter from this equipment this battle costs 0. Gain Guarded 1 if first card this turn.",
-    "fullEffect": "Gain 4 block and give chosen ally Guarded 2. Set firstCounterReady for this equipment if unused. If the quarry is Marked, draw 1 then discard 1. If this is your first card this turn, gain Guarded 1.",
+    "shortEffect": "Interpose scrap: gain 4 block, Guarded 1, and prepare a counter.",
+    "fullEffect": "Interpose scrap: gain 4 block and Guarded 1. If the monster is Marked, draw 1 then discard 1 and prepare your next Counter.",
     "tags": [
       "Defensive",
       "Counter",
@@ -29053,7 +29111,9 @@
     "copy2Unlock": "3 successful plays + 1 matching/generic resource.",
     "copy3Unlock": "6 total successful plays + 1 rare/matching quarry resource or 2 generic resources.",
     "copyLimitRule": "Runtime deck may include 1–3 copies of this card from one equipped item instance; never more than 3 from that item.",
-    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance."
+    "copyAuditStatus": "PASS: card can be trained up to 3 copies from one item instance.",
+    "itemFantasyPatch": "scrap-guard-counter-shield",
+    "cardText": "Interpose scrap: gain 4 block and Guarded 1. If the monster is Marked, draw 1 then discard 1 and prepare your next Counter."
   },
   {
     "equipmentName": "Scrap Guard",

@@ -134,6 +134,8 @@ function statusEffectsSummary(card) {
     salvageSelf: amount => `Salvage ${amount}: adds post-combat reward value.`,
     testBonus: amount => `Test Bonus ${amount}: improves relevant tests.`,
     consequenceReduction: amount => `Consequence Reduction ${amount}: softens failed risks/events.`,
+    reduceBleedSelf: amount => `Reduce Bleed ${amount}: lowers this survivor's Bleed.`,
+    targetAvoidance: amount => `Target Avoidance ${amount}: random monster targeting is less likely to choose this survivor.`,
     healAfterCombat: amount => `Heal after combat: restores ${amount} HP after combat and persists.`,
     partyHealAfterCombat: amount => `Heal after combat: party restores ${amount} HP after combat and persists.`
   };
@@ -142,6 +144,52 @@ function statusEffectsSummary(card) {
     return labels[effect.type] ? [labels[effect.type](amount)] : [];
   });
   return parts.join(' ');
+}
+
+function overkillSeverity(overkill, weakPoint) {
+  if (overkill <= 0) return 'None';
+  const sensitive = Boolean(
+    weakPoint?.harvestProfile?.fragile ||
+    weakPoint?.harvestProfile?.overkillSensitive
+  );
+  if (overkill <= 1) return 'Safe';
+  if (sensitive && overkill >= 4) return 'Severe';
+  if (overkill >= 6) return 'Severe';
+  return 'Risky';
+}
+
+function harvestQualityLabel({ willBreak, overkillSeverity: severity, harvestPreview, weakPoint }) {
+  if (!willBreak) return 'Won’t break';
+  if (severity === 'Severe' && (
+    weakPoint?.harvestProfile?.fragile ||
+    weakPoint?.harvestProfile?.overkillSensitive
+  )) {
+    return 'Ruined harvest risk';
+  }
+  if (
+    severity === 'None' ||
+    severity === 'Safe' ||
+    harvestPreview?.expectedQualityHint?.startsWith('Clean')
+  ) {
+    return 'Likely clean harvest';
+  }
+  return 'Likely messy harvest';
+}
+
+function failedBreakConsequenceText(risk) {
+  if (!risk) return 'none';
+  const amount = risk.amount || 1;
+  const labels = {
+    panic: `Panic ${amount}`,
+    panicAndTarget: `Panic ${amount} and become the next target`,
+    marked: 'Marked',
+    bleed: `Bleed ${amount}`,
+    monsterHeal: `monster heals ${amount}`,
+    monsterBlock: `monster gains ${amount} block`,
+    monsterEnrage: `monster enrages ${amount}`,
+    loseBlock: `lose ${amount} block`
+  };
+  return labels[risk.type] || risk.label || risk.type || 'unknown consequence';
 }
 
 export function getCardPreview({
@@ -247,33 +295,98 @@ export function getCardPreview({
             before.monster?.quarryId
           )
         : 'unknown';
-      preview.weakPointProgress = afterPoint.currentBreakDamage || 0;
+      const currentBreakProgress = beforePoint.currentBreakDamage || 0;
+      const projectedBreakProgress = afterPoint.currentBreakDamage || 0;
+      const breakValue = afterPoint.breakValue || 0;
+      const harvestOverkill = Math.max(0, Number(afterPoint.harvestResult?.overkill) || 0);
+      const incomingBreakDamage = weakPointBreakDamage + harvestOverkill;
+      const rawProjectedBreak = currentBreakProgress + incomingBreakDamage;
+      const overkill = Math.max(harvestOverkill, rawProjectedBreak - breakValue);
+      const severity = overkillSeverity(overkill, beforePoint);
+      const willBreakWeakPoint = !beforePoint.broken && Boolean(afterPoint.broken);
+      const riskSuppressed = willBreakWeakPoint ||
+        ['open', 'exposed'].includes(preview.tellState) ||
+        cardTags.includes('safeWeakPoint');
+      preview.weakPointProgress = projectedBreakProgress;
+      preview.weakPointCurrentBreak = currentBreakProgress;
       preview.weakPointBreakValue = afterPoint.breakValue || 0;
-      preview.willBreakWeakPoint = !beforePoint.broken && Boolean(afterPoint.broken);
+      preview.willBreakWeakPoint = willBreakWeakPoint;
+      preview.weakPointProjectedBreak = rawProjectedBreak;
+      preview.breakOutcomeLabel = preview.willBreakWeakPoint ? 'Safe break' : 'Won’t break';
+      preview.overkill = overkill;
+      preview.overkillSeverity = severity;
       preview.breakEffect = preview.willBreakWeakPoint
         ? source.hasMonsterBane
           ? afterPoint.onBreakEffect || ''
           : 'Breaking this part will weaken the monster.'
         : '';
-      preview.failedBreakRisk = !afterPoint.broken
-        ? source.hasMonsterBane
-          ? afterPoint.riskLabel || ''
-          : 'A failed break may provoke a consequence.'
-        : '';
+      preview.failedBreakConsequence = failedBreakConsequenceText(beforePoint.riskOnFailedBreak);
+      preview.failedBreakRiskSuppressed = riskSuppressed;
+      preview.failedBreakRisk = source.hasMonsterBane
+        ? preview.failedBreakConsequence
+        : beforePoint.riskOnFailedBreak
+          ? 'A failed break may provoke a consequence.'
+          : 'none';
       preview.harvestWarning = afterPoint.harvestProfile?.fragile
-        ? 'Fragile: excess break damage may reduce harvest quality.'
+        ? 'Fragile part warning: overkill may reduce rare/specific loot.'
         : '';
       preview.harvestPreview = getWeakPointHarvestPreview({
         weakPoint: beforePoint,
-        breakDamage: weakPointBreakDamage,
+        breakDamage: weakPointBreakDamage + harvestOverkill,
+        currentBreakDamage: currentBreakProgress,
         weaponType,
         cardTags
       });
       if (preview.harvestPreview) {
+        const family = beforePoint.harvestProfile?.targetPartFamily || 'body';
+        const rarePartIds = beforePoint.harvestProfile?.rarePartIds || [];
+        preview.harvestFamily = family;
+        preview.harvestLikelyQuality = harvestQualityLabel({
+          willBreak: preview.willBreakWeakPoint,
+          overkillSeverity: severity,
+          harvestPreview: preview.harvestPreview,
+          weakPoint: beforePoint
+        });
+        preview.harvestRarePartHint = source.hasMonsterBane && rarePartIds.length
+          ? `Rare/specific part possible: ${rarePartIds.join(', ')}`
+          : '';
+        preview.weaponSuitabilityHint = `${suitability.label} weapon`;
+        preview.weakPointBreakdown = {
+          name: beforePoint.name,
+          current: currentBreakProgress,
+          incoming: incomingBreakDamage,
+          breakValue,
+          projected: rawProjectedBreak,
+          willBreak: preview.willBreakWeakPoint,
+          outcomeLabel: preview.breakOutcomeLabel
+        };
+        preview.overkillBreakdown = {
+          amount: overkill,
+          severity,
+          label: overkill <= 0 ? 'No overkill' : `${severity} overkill`
+        };
+        preview.harvestBreakdown = {
+          quality: preview.harvestLikelyQuality,
+          family,
+          warning: preview.harvestWarning,
+          weaponSuitability: suitability.label,
+          rarePartHint: preview.harvestRarePartHint
+        };
+        preview.failedBreakBreakdown = {
+          consequence: preview.failedBreakConsequence,
+          riskText: preview.failedBreakRisk,
+          suppressed: riskSuppressed,
+          suppressionReason: riskSuppressed
+            ? preview.willBreakWeakPoint
+              ? 'this card will break it'
+              : 'the tell is open or this card is safe'
+            : ''
+        };
         preview.modifierBreakdown.push(
           `Break value: ${preview.harvestPreview.breakValue}`,
-          `Incoming break: ${preview.harvestPreview.breakDamage}`,
-          `Overkill: ${preview.harvestPreview.overkill}`,
+          `Incoming break: ${incomingBreakDamage}`,
+          `Projected break: ${preview.harvestPreview.projectedBreakDamage}`,
+          `Overkill: ${preview.harvestPreview.overkill} (${severity})`,
           ...preview.harvestPreview.labels
         );
       }
