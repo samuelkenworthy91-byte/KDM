@@ -6,6 +6,7 @@ import {
 import { disorders } from '../data/disorders.js';
 import { injuries } from '../data/injuries.js';
 import { scars } from '../data/scars.js';
+import { removePanicFromSurvivor } from './deckLogic.js';
 
 const BASIC_IDS = Object.values(resources).filter(item => item.type === 'basic').map(item => item.id);
 const MONSTER_IDS = Object.values(resources).filter(item => item.type === 'monster' && !item.creatureId).map(item => item.id);
@@ -338,16 +339,14 @@ function applyEffects(effects, state, context) {
       next.appliedEffects.push('Hoarder prevented Panic removal');
     } else {
       const amount = typeof effects.removePanic === 'number' ? effects.removePanic : 1;
-      let removedCount = 0;
-      for (let i = 0; i < amount; i++) {
-        const index = next.runSurvivor.personalDeckAdditions.findIndex(addition =>
-          (typeof addition === 'string' ? addition : addition.cardId) === 'panic'
-        );
-        if (index >= 0) {
-          next.runSurvivor.personalDeckAdditions.splice(index, 1);
-          removedCount++;
-        }
-      }
+      const initialCount = (next.runSurvivor.personalDeckAdditions || []).length + (next.runSurvivor.permanentNegativeCards || []).length;
+      
+      const updated = removePanicFromSurvivor(next.runSurvivor, amount);
+      next.runSurvivor = updated;
+      
+      const finalCount = (updated.personalDeckAdditions || []).length + (updated.permanentNegativeCards || []).length;
+      const removedCount = initialCount - finalCount;
+
       if (removedCount > 0) {
         next.appliedEffects.push(`Remove Panic ${removedCount}.`);
       } else {

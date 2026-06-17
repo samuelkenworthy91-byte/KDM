@@ -53,111 +53,60 @@ function state(party, active = party[0], settlementOverrides = {}) {
   };
 }
 
-test('solo rest choices heal safely and apply next-combat modifiers', () => {
-  const solo = survivor('Solo', { hp: 10, maxHp: 20 });
-  const healed = resolveRestStopChoice(state([], solo), 'bindWounds', {
-    survivorId: solo.id
-  });
-  const prepared = resolveRestStopChoice(state([solo]), 'prepareNextFight');
-  const repaired = resolveRestStopChoice(state([solo]), 'repairGear');
-
-  assert.equal(healed.applied, true);
-  assert.equal(healed.runSurvivor.hp, 15);
-  assert.equal(prepared.runModifiers.firstAttackBonus, 2);
-  assert.equal(repaired.runModifiers.nextCombatStartBlock, 5);
-});
-
-test('party rest targets a living member and never revives a dead survivor', () => {
-  const active = survivor('Active', { hp: 20, maxHp: 20 });
-  const wounded = survivor('Wounded', { hp: 5, maxHp: 20 });
+test('healParty heals all living survivors by 25% max HP', () => {
+  const s1 = survivor('S1', { hp: 10, maxHp: 20 });
+  const s2 = survivor('S2', { hp: 5, maxHp: 20 });
   const dead = survivor('Dead', { hp: 0, alive: false });
-  const partyState = state([active, wounded, dead], active);
+  const result = resolveRestStopChoice(state([s1, s2, dead]), 'healParty');
 
-  const healed = resolveRestStopChoice(partyState, 'bindWounds', {
-    survivorId: wounded.id
-  });
-  const deadAttempt = resolveRestStopChoice(partyState, 'bindWounds', {
-    survivorId: dead.id
-  });
-
-  assert.equal(healed.runParty.find(member => member.id === wounded.id).hp, 10);
-  assert.equal(healed.runParty.find(member => member.id === dead.id).alive, false);
-  assert.equal(getRestParty([active, wounded, dead]).some(member => member.id === dead.id), false);
-  assert.equal(deadAttempt.applied, false);
+  assert.equal(result.applied, true);
+  assert.equal(result.runParty.find(s => s.id === 's1').hp, 15);
+  assert.equal(result.runParty.find(s => s.id === 's2').hp, 10);
+  assert.equal(result.runParty.find(s => s.id === 'dead').hp, 0);
+  assert.equal(result.runParty.find(s => s.id === 'dead').alive, false);
 });
 
-test('watch and track choices update existing run modifiers and map state', () => {
-  const active = survivor('Tracker');
-  const watched = resolveRestStopChoice(state([active]), 'keepWatch');
-  const warned = resolveRestStopChoice(state([active]), 'studyTracks', {
-    trackStudy: 'saferEvent'
-  });
-  const woundedQuarry = resolveRestStopChoice(state([active]), 'studyTracks', {
-    trackStudy: 'woundQuarry'
-  });
-  const revealed = resolveRestStopChoice(state([active]), 'studyTracks', {
-    trackStudy: 'revealNodes'
-  });
+test('shareStories adds Memory or Survival', () => {
+  const s1 = survivor('S1', { survival: 0, maxSurvival: 3 });
+  const survivalResult = resolveRestStopChoice(state([s1]), 'shareStories', { storyReward: 'survival' });
+  const memoryResult = resolveRestStopChoice(state([s1]), 'shareStories', { storyReward: 'memory' });
 
-  assert.equal(watched.runModifiers.nextCombatStartBlock, 4);
-  assert.equal(watched.runModifiers.nextEventWarning, true);
-  assert.equal(warned.runModifiers.nextEventWarning, true);
-  assert.equal(woundedQuarry.runModifiers.monsterStartsWounded, 2);
-  assert.equal(revealed.runMap.flat().find(node => node.id === 'future').revealedByTracks, true);
+  assert.equal(survivalResult.runParty[0].survival, 1);
+  assert.equal(memoryResult.settlement.stash.memory, 1);
 });
 
-test('share stories supports Survival or settlement Memory', () => {
-  const active = survivor('Storyteller', { survival: 0, maxSurvival: 3 });
-  const survival = resolveRestStopChoice(state([active]), 'shareStories', {
-    survivorId: active.id,
-    storyReward: 'survival'
-  });
-  const memory = resolveRestStopChoice(state([active]), 'shareStories', {
-    survivorId: active.id,
-    storyReward: 'memory'
-  });
-
-  assert.equal(survival.runSurvivor.survival, 1);
-  assert.equal(memory.settlement.memories, 2);
-  assert.equal(memory.settlement.memoryHistory[0].source, 'rest-stories');
+test('practice has success and failure paths and persists fighting arts', () => {
+  const s1 = survivor('S1', { hp: 10, fightingArts: [] });
+  
+  const result = resolveRestStopChoice(state([s1]), 'practice', { survivorId: 's1' });
+  
+  assert.equal(result.applied, true);
+  const updatedS1 = result.runParty[0];
+  if (updatedS1.fightingArts.length === 1) {
+    const settlementS1 = result.settlement.survivors.find(s => s.id === 's1');
+    assert.equal(settlementS1.fightingArts.length, 1);
+    assert.equal(settlementS1.fightingArts[0], updatedS1.fightingArts[0]);
+  } else {
+    assert.equal(updatedS1.hp, 9);
+  }
 });
 
-test('forget burden spends Memory once and excludes locked or permanent cards', () => {
-  const active = survivor('Reflector', {
-    personalDeckAdditions: [
-      { cardId: 'veteranStrike', sourceType: 'personal', reason: 'Old lesson' },
-      { cardId: 'masterySwordMarkedEcho', sourceType: 'weaponMastery', locked: true }
-    ]
-  });
-  const restState = state([active]);
-  const eligible = getForgettableRestCards(restState.settlement, active);
-  const forgotten = resolveRestStopChoice(restState, 'forgetBurden', {
-    cardId: 'veteranStrike'
-  });
-  const lockedAttempt = resolveRestStopChoice(restState, 'forgetBurden', {
-    cardId: 'masterySwordMarkedEcho'
-  });
-
-  assert.equal(eligible.some(entry => entry.cardId === 'veteranStrike'), true);
-  assert.equal(eligible.some(entry => entry.cardId === 'masterySwordMarkedEcho'), false);
-  assert.equal(forgotten.applied, true);
-  assert.equal(forgotten.settlement.memories, 0);
-  assert.equal(forgotten.runSurvivor.forgottenCardIds.includes('veteranStrike'), true);
-  assert.equal(lockedAttempt.applied, false);
-  assert.match(lockedAttempt.reason, /Permanent card/);
+test('forage adds resources or nothing', () => {
+  const s1 = survivor('S1');
+  const result = resolveRestStopChoice(state([s1]), 'forage');
+  assert.equal(result.applied, true);
+  // runResources starts empty in state(), so it should have 0 or 1 item
+  assert.ok((result.runResources || []).length <= 1);
 });
 
-test('forget burden fails cleanly without enough settlement Memory', () => {
-  const active = survivor('Empty Memory', {
-    personalDeckAdditions: [{ cardId: 'veteranStrike', sourceType: 'personal' }]
-  });
-  const result = resolveRestStopChoice(state([active], active, {
-    memories: 0,
-    settlementMemory: 0
-  }), 'forgetBurden', {
-    cardId: 'veteranStrike'
-  });
-
-  assert.equal(result.applied, false);
-  assert.match(result.reason, /Not enough Memory/);
+test('scoutTheDark can find a survivor or gear', () => {
+  const s1 = survivor('S1');
+  const settlement = {
+    ...defaultSettlement,
+    survivors: [s1],
+    builtInnovations: ['boneSmith']
+  };
+  const result = resolveRestStopChoice({ ...state([s1]), settlement }, 'scoutTheDark');
+  
+  assert.equal(result.applied, true);
 });

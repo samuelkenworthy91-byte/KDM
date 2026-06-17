@@ -1,78 +1,31 @@
-import { cards, starterCardIds } from '../data/cards.js';
+import { cards } from '../data/cards.js';
 import {
-  EARLY_FORGETTING_COST,
-  forgetSurvivorCard,
-  getCardForgetEligibility
-} from './cardForgetting.js';
-import { getPersonalCardId } from './deckLogic.js';
-import { gainMemories, spendMemories } from './memoryEconomy.js';
-import { treatWound } from '../data/woundTables.js';
+  generalFightingArts
+} from '../data/fightingArts.js';
+import { resources } from '../data/resources.js';
+import { gearRegistry } from '../data/overhaul/gearRegistry.js';
 
 const living = survivor => survivor?.alive !== false && Number(survivor?.hp) > 0;
 
 export function getRestParty(party = [], activeSurvivor = null) {
-  const members = party.filter(living);
+  const members = (party || []).filter(living);
   if (members.length) return members;
   return living(activeSurvivor) ? [activeSurvivor] : [];
-}
-
-export function getForgettableRestCards(settlement, survivor) {
-  if (!survivor) return [];
-  const additions = [
-    ...(survivor.personalDeckAdditions || []),
-    ...(survivor.permanentNegativeCards || [])
-  ];
-  const candidates = [
-    ...starterCardIds.map(cardId => ({ cardId, addition: null })),
-    ...additions.map(addition => ({
-      cardId: getPersonalCardId(addition),
-      addition
-    }))
-  ];
-
-  return [...new Map(candidates.map(candidate => [candidate.cardId, candidate])).values()]
-    .filter(candidate => candidate.cardId && getCardForgetEligibility({
-      settlement,
-      survivor,
-      cardId: candidate.cardId,
-      card: cards[candidate.cardId],
-      addition: candidate.addition
-    }).eligible)
-    .map(candidate => ({
-      ...candidate,
-      name: cards[candidate.cardId]?.name || 'Unknown / Legacy'
-    }));
-}
-
-export function revealNextMapNodes(map = [], currentNode = null) {
-  const connectedIds = new Set(currentNode?.connections || []);
-  const nextIds = new Set(
-    map.flat()
-      .filter(node => connectedIds.has(node.id))
-      .flatMap(node => node.connections || [])
-  );
-  if (!nextIds.size) connectedIds.forEach(id => nextIds.add(id));
-  return map.map(row => row.map(node => (
-    nextIds.has(node.id) ? { ...node, revealedByTracks: true } : node
-  )));
 }
 
 function updatePartyMember(party, survivorId, updater) {
   return party.map(survivor => survivor.id === survivorId ? updater(survivor) : survivor);
 }
 
-function bindWounds(survivor) {
-  const lightLocation = Object.entries(survivor.hitLocations || {})
-    .find(([, wound]) => wound.wounded && !wound.severe)?.[0];
-  const rested = lightLocation ? treatWound(survivor, lightLocation, 'rest') : survivor;
-  const healing = Math.max(
-    0,
-    Math.ceil(rested.maxHp * 0.25) - (rested.injuries?.includes('twistedAnkle') ? 1 : 0)
-  );
-  return {
-    ...rested,
-    hp: Math.min(rested.maxHp, rested.hp + healing)
-  };
+function pickRandom(array) {
+  if (!array || !array.length) return null;
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function generateRandomSurvivorName() {
+  const prefixes = ['Aga', 'Bar', 'Dax', 'Ere', 'Fen', 'Gyl', 'Hek', 'Iva', 'Jor', 'Kyl'];
+  const suffixes = ['m', 'n', 'th', 'ra', 'lo', 'us', 'ia', 'da', 'on', 'el'];
+  return pickRandom(prefixes) + pickRandom(suffixes);
 }
 
 export function resolveRestStopChoice(state, choiceId, options = {}) {
@@ -82,174 +35,241 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
   const party = getRestParty(sourceParty, state.runSurvivor);
   const activeId = options.survivorId || state.runSurvivor?.id || party[0]?.id;
   const target = party.find(survivor => survivor.id === activeId);
-  const activeTarget = party.find(survivor => survivor.id === state.runSurvivor?.id) || party[0];
+  
   const base = {
     ...state,
     runParty: sourceParty,
-    runModifiers: { ...(state.runModifiers || {}) }
+    appliedEffects: []
   };
 
-  if ((!target && ['bindWounds', 'shareStories'].includes(choiceId)) ||
-    (!activeTarget && choiceId === 'forgetBurden')) {
+  if (!party.length && choiceId !== 'scoutTheDark') {
     return { ...base, applied: false, reason: 'No living survivor is available.' };
   }
 
-  if (choiceId === 'bindWounds') {
-    if (target.hp >= target.maxHp &&
-      !Object.values(target.hitLocations || {}).some(wound => wound.wounded && !wound.severe)) {
-      return { ...base, applied: false, reason: 'This survivor has no wounds to bind.' };
-    }
-    const runParty = updatePartyMember(sourceParty, target.id, bindWounds);
+  // 1. Heal Party
+  if (choiceId === 'healParty') {
+    const runParty = sourceParty.map(survivor => {
+      if (!living(survivor)) return survivor;
+      const healAmount = Math.max(1, Math.round(survivor.maxHp * 0.25));
+      return {
+        ...survivor,
+        hp: Math.min(survivor.maxHp, (survivor.hp || 0) + healAmount)
+      };
+    });
     return {
       ...base,
       runParty,
-      runSurvivor: runParty.find(survivor => survivor.id === target.id),
-      applied: true
+      applied: true,
+      outcomeText: 'The party tends to their wounds and finds a moment of respite.'
     };
   }
 
-  if (choiceId === 'prepareNextFight') {
-    return {
-      ...base,
-      runModifiers: {
-        ...base.runModifiers,
-        firstAttackBonus: (base.runModifiers.firstAttackBonus || 0) + 2
-      },
-      applied: true
-    };
-  }
-
-  if (choiceId === 'keepWatch') {
-    return {
-      ...base,
-      runModifiers: {
-        ...base.runModifiers,
-        nextCombatStartBlock: (base.runModifiers.nextCombatStartBlock || 0) + 4,
-        nextEventWarning: true
-      },
-      applied: true
-    };
-  }
-
+  // 2. Share Stories
   if (choiceId === 'shareStories') {
-    if (options.storyReward === 'memory') {
+    const reward = options.storyReward || 'survival'; // 'memory' or 'survival'
+    if (reward === 'memory') {
+      const settlement = {
+        ...state.settlement,
+        stash: {
+          ...(state.settlement?.stash || {}),
+          memory: (state.settlement?.stash?.memory || 0) + 1
+        }
+      };
       return {
         ...base,
-        settlement: gainMemories(state.settlement, 1, {
-          source: 'rest-stories',
-          description: `${target.name} shared a story during the hunt.`,
-          survivorIds: [target.id],
-          huntId: state.currentHuntId
-        }),
-        applied: true
+        settlement,
+        applied: true,
+        outcomeText: 'Tales of old provide new insights for the settlement.'
+      };
+    } else {
+      const runParty = sourceParty.map(survivor => {
+        if (!living(survivor)) return survivor;
+        return {
+          ...survivor,
+          survival: Math.min(survivor.maxSurvival || 3, (survivor.survival || 0) + 1)
+        };
+      });
+      return {
+        ...base,
+        runParty,
+        applied: true,
+        outcomeText: 'Shared determination bolsters everyone\'s will to live.'
       };
     }
-    if ((target.survival || 0) >= (target.maxSurvival || 3)) {
-      return { ...base, applied: false, reason: 'This survivor is already at maximum Survival.' };
-    }
-    const runParty = updatePartyMember(sourceParty, target.id, survivor => ({
-      ...survivor,
-      survival: Math.min(survivor.maxSurvival || 3, (survivor.survival || 0) + 1)
-    }));
-    return {
-      ...base,
-      runParty,
-      runSurvivor: runParty.find(survivor => survivor.id === target.id),
-      applied: true
-    };
   }
 
-  if (choiceId === 'forgetBurden') {
-    const forgetTarget = activeTarget;
-    const cardId = options.cardId;
-    const additions = [
-      ...(forgetTarget.personalDeckAdditions || []),
-      ...(forgetTarget.permanentNegativeCards || [])
-    ];
-    const addition = additions.find(item => getPersonalCardId(item) === cardId);
-    if (!starterCardIds.includes(cardId) && !addition) {
-      return { ...base, applied: false, reason: 'Choose an eligible personal card.' };
-    }
-    const card = cards[cardId];
-    const eligibility = getCardForgetEligibility({
-      settlement: state.settlement,
-      survivor: forgetTarget,
-      cardId,
-      card,
-      addition
-    });
-    if (!eligibility.eligible) return { ...base, applied: false, reason: eligibility.reason };
-    const settlement = spendMemories(state.settlement, EARLY_FORGETTING_COST, {
-      source: 'rest-reflection',
-      description: `${forgetTarget.name} forgot ${card.name} at a rest stop.`,
-      survivorIds: [forgetTarget.id],
-      huntId: state.currentHuntId
-    });
-    if (!settlement) return { ...base, applied: false, reason: 'Not enough Memory.' };
-    const method = settlement.builtMemoryInnovations?.includes('riteOfForgetting')
-      ? 'Rite of Forgetting at Rest'
-      : 'Rest Reflection';
-    const forget = survivor =>
-      forgetSurvivorCard(survivor, cardId, method, settlement.lanternYear, card);
-    const runParty = updatePartyMember(sourceParty, forgetTarget.id, forget);
-    const settlementSurvivors = settlement.survivors.map(survivor =>
-      survivor.id === forgetTarget.id ? forget(survivor) : survivor
-    );
-    return {
-      ...base,
-      settlement: {
-        ...settlement,
-        survivors: settlementSurvivors,
-        livingSurvivors: Array.isArray(settlement.livingSurvivors)
-          ? settlement.livingSurvivors.map(survivor =>
-            survivor.id === forgetTarget.id ? forget(survivor) : survivor
+  // 3. Practice
+  if (choiceId === 'practice') {
+    if (!target) return { ...base, applied: false, reason: 'Select a survivor to practice.' };
+    const roll = Math.random() * 100;
+    if (roll < 25) {
+      // Success: random Fighting Art
+      const available = generalFightingArts.filter(art =>
+        !(target.fightingArts || []).includes(art.id)
+      );
+      const art = pickRandom(available);
+      if (art) {
+        const updater = s => ({
+          ...s,
+          fightingArts: [...(s.fightingArts || []), art.id]
+        });
+        const runParty = updatePartyMember(sourceParty, target.id, updater);
+        const settlement = {
+          ...state.settlement,
+          survivors: (state.settlement?.survivors || []).map(s =>
+            s.id === target.id ? updater(s) : s
           )
-          : settlementSurvivors.filter(living)
-      },
-      runParty,
-      runSurvivor: runParty.find(survivor => survivor.id === forgetTarget.id),
-      applied: true
+        };
+        return {
+          ...base,
+          runParty,
+          settlement,
+          applied: true,
+          outcomeText: `${target.name} discovers a new technique under pressure: ${art.name}.`
+        };
+      } else {
+        return {
+          ...base,
+          applied: true,
+          outcomeText: `${target.name} practices intensely but has reached their limit of traditional techniques.`
+        };
+      }
+    } else {
+      // Failure: 1 wound
+      const runParty = updatePartyMember(sourceParty, target.id, s => ({
+        ...s,
+        hp: Math.max(0, (s.hp || 0) - 1)
+      }));
+      return {
+        ...base,
+        runParty,
+        applied: true,
+        outcomeText: `${target.name} pushes too hard and sustains an injury.`
+      };
+    }
+  }
+
+  // 4. Forage
+  if (choiceId === 'forage') {
+    const roll = Math.random() * 100;
+    let resourceId = null;
+    let outcomeText = '';
+
+    if (roll < 20) {
+      outcomeText = 'The search yielded nothing but dust and shadow.';
+    } else if (roll < 40) {
+      resourceId = 'hide';
+      outcomeText = 'Found a scrap of useful hide.';
+    } else if (roll < 60) {
+      resourceId = 'organ';
+      outcomeText = 'Recovered a preserved organ.';
+    } else if (roll < 80) {
+      resourceId = 'bone';
+      outcomeText = 'Found a sturdy length of bone.';
+    } else {
+      // Random quarry resource
+      const currentQuarryId = state.currentQuarryId || state.monster?.quarryId;
+      const quarryResources = Object.values(resources).filter(r => r.creatureId === currentQuarryId);
+      if (quarryResources.length) {
+        const r = pickRandom(quarryResources);
+        resourceId = r.id;
+        outcomeText = `Found a rare ${r.name} from the local area.`;
+      } else {
+        resourceId = 'scrap';
+        outcomeText = 'Found some generic scrap in the absence of local quarry remains.';
+      }
+    }
+
+    const runResources = [...(state.runResources || [])];
+    if (resourceId) runResources.push(resourceId);
+
+    return {
+      ...base,
+      runResources,
+      applied: true,
+      outcomeText
     };
   }
 
-  if (choiceId === 'repairGear') {
-    return {
-      ...base,
-      runModifiers: {
-        ...base.runModifiers,
-        nextCombatStartBlock: (base.runModifiers.nextCombatStartBlock || 0) + 5
-      },
-      applied: true
-    };
-  }
+  // 5. Scout the Dark
+  if (choiceId === 'scoutTheDark') {
+    const roll = Math.random() * 100;
 
-  if (choiceId === 'studyTracks') {
-    if (options.trackStudy === 'revealNodes') {
+    if (roll < 20) {
+      // Encounter (standard fight node)
       return {
         ...base,
-        runMap: revealNextMapNodes(state.runMap, state.currentNode),
-        applied: true
+        applied: true,
+        nextNodeType: 'fight',
+        outcomeText: 'Scouting reveals a hidden threat! Prepare for an immediate confrontation.'
       };
-    }
-    if (options.trackStudy === 'woundQuarry') {
+    } else if (roll < 30) {
+      // New Survivor
+      const name = generateRandomSurvivorName();
+      const newSurvivor = {
+        id: `survivor-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        name,
+        hp: 4,
+        maxHp: 4,
+        survival: 1,
+        maxSurvival: 3,
+        alive: true,
+        traits: [],
+        fightingArts: [],
+        personalDeckAdditions: [],
+        equippedGear: ['cloth', 'stoneCircle'] // Basic legal loadout
+      };
+      const settlement = {
+        ...state.settlement,
+        survivors: [...(state.settlement?.survivors || []), newSurvivor]
+      };
       return {
         ...base,
-        runModifiers: {
-          ...base.runModifiers,
-          monsterStartsWounded: (base.runModifiers.monsterStartsWounded || 0) + 2
-        },
-        applied: true
+        settlement,
+        applied: true,
+        outcomeText: `A lost soul named ${name} was found wandering the dark and has joined the settlement.`
+      };
+    } else if (roll < 40) {
+      // Random gear from unlocked building
+      const builtInnovations = state.settlement?.builtInnovations || [];
+      const availableGear = gearRegistry.filter(g => builtInnovations.includes(g.buildingId));
+      const gear = pickRandom(availableGear);
+      
+      if (gear) {
+        const settlement = {
+          ...state.settlement,
+          stash: {
+            ...(state.settlement?.stash || {}),
+            [gear.id]: (state.settlement?.stash?.[gear.id] || 0) + 1
+          }
+        };
+        return {
+          ...base,
+          settlement,
+          applied: true,
+          outcomeText: `Found a discarded but functional ${gear.name}. It has been sent back to the settlement.`
+        };
+      } else {
+        const runResources = [...(state.runResources || []), 'brokenLantern'];
+        return {
+          ...base,
+          runResources,
+          applied: true,
+          outcomeText: 'Found some broken lantern parts. No advanced gear was available to scavenge.'
+        };
+      }
+    } else {
+      // Quiet route
+      return {
+        ...base,
+        applied: true,
+        outcomeText: 'The path ahead is clear and quiet. No extra rewards or dangers found.'
       };
     }
-    return {
-      ...base,
-      runModifiers: {
-        ...base.runModifiers,
-        nextEventWarning: true
-      },
-      applied: true
-    };
   }
 
   return { ...base, applied: false, reason: 'Unknown rest choice.' };
 }
+
+export function getForgettableRestCards() { return []; }
+export function revealNextMapNodes(map = []) { return map; }

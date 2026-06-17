@@ -6,6 +6,7 @@ import { getNemesisForLanternYear } from '../data/nemesisEncounters.js';
 import { quarries } from '../data/quarries.js';
 import { getProficiencyLevel } from '../data/weaponProficiency.js';
 import { spendMemories } from './memoryEconomy.js';
+import { removePanicFromSurvivor } from './deckLogic.js';
 
 function addUnique(values, value) {
   return [...new Set([...(values || []), value])];
@@ -59,18 +60,6 @@ function effectText(effect, detail = '') {
   return detail || labels[effect.type] || effect.type;
 }
 
-function removePanic(additions, amount) {
-  let remaining = amount;
-  return (additions || []).filter(addition => {
-    const cardId = addition.cardId || addition;
-    if (cardId === 'panic' && remaining > 0) {
-      remaining -= 1;
-      return false;
-    }
-    return true;
-  });
-}
-
 function applySurvivorEffect(settlement, effect, nominatedSurvivorIds) {
   return updateNominatedSurvivors(settlement, nominatedSurvivorIds, survivor => {
     if (effect.type === 'addSurvivorTrait') {
@@ -106,15 +95,7 @@ function applySurvivorEffect(settlement, effect, nominatedSurvivorIds) {
       };
     }
     if (effect.type === 'removePanicFromSurvivorDeck') {
-      return {
-        ...survivor,
-        personalDeckAdditions: removePanic(
-          survivor.personalDeckAdditions, effect.amount || 1
-        ),
-        permanentNegativeCards: removePanic(
-          survivor.permanentNegativeCards, effect.amount || 1
-        )
-      };
+      return removePanicFromSurvivor(survivor, effect.amount || 1);
     }
     if (effect.type === 'gainWeaponXp') {
       const current = survivor.weaponProficiency?.[effect.weaponType] || { xp: 0 };

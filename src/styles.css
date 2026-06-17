@@ -1005,15 +1005,18 @@ select {
 
 /* Card Container and Flip logic */
 .card-container {
-  perspective: 1000px;
-  min-height: 240px;
+  perspective: 1200px;
+  min-height: 320px;
+  height: 100%;
   position: relative;
+  margin-bottom: 1rem;
 }
 
 .card-inner {
   position: relative;
   width: 100%;
   height: 100%;
+  min-height: 320px;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
@@ -1031,19 +1034,21 @@ select {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
 }
 
 .card-back {
   transform: rotateY(180deg);
   background-color: #171512;
   border: 1px solid #76572d;
-  display: flex;
-  flex-direction: column;
   cursor: default;
   overflow: hidden;
 }
 
 .card-back-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1065,6 +1070,7 @@ select {
   flex-grow: 1;
   overflow-y: auto;
   line-height: 1.4;
+  background: #171512;
 }
 
 .preview-list {
@@ -1120,15 +1126,16 @@ select {
   position: absolute;
   bottom: 0.5rem;
   right: 0.5rem;
-  padding: 0.2rem 0.4rem;
-  font-size: 0.65rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.7rem;
   background: #2a2a2a;
   border: 1px solid #555;
-  color: #aaa;
+  color: #eee;
   z-index: 10;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-radius: 2px;
+  cursor: pointer;
 }
 
 .flip-button.back {
@@ -1139,17 +1146,18 @@ select {
 .flip-button:hover:not(:disabled) {
   background: #3b2816;
   color: #ded0b4;
-  border-color: #76572d;
+  border-color: #d09b48;
 }
 
 .card-front {
-  display: flex;
-  flex-direction: column;
+  background-color: #222;
+  border: 1px solid #555;
 }
 
 .card-body {
   flex-grow: 1;
   margin: 0.5rem 0;
+  overflow-y: auto;
 }
 
 .simple-text {
@@ -1160,17 +1168,17 @@ select {
 }
 
 .card-footer {
+  flex-shrink: 0;
   border-top: 1px solid rgba(255,255,255,0.05);
   padding-top: 0.4rem;
+  font-size: 0.75rem;
 }
 
 .card {
   position: relative;
-  min-height: 100%;
   width: 100%;
-  border: 1px solid #555;
+  height: 100%;
   padding: 1rem 0.75rem;
-  background-color: #222;
   color: #e0e0e0;
   text-align: left;
   cursor: pointer;
@@ -1184,12 +1192,12 @@ select {
 
 .card:hover:not(.disabled) {
   border-color: #d09b48;
-  transform: translateY(-2px);
 }
 
 .card h3 {
   margin-top: 0;
   padding-right: 1.5rem;
+  font-size: 1.1rem;
 }
 
 .card-type,

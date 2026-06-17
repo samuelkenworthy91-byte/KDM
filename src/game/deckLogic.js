@@ -214,3 +214,34 @@ export function discardCard(hand, discard, cardIndex) {
     discard: [...discard, card]
   };
 }
+
+/**
+ * Removes one or more Panic cards from all survivor card locations.
+ */
+export function removePanicFromSurvivor(survivor, amount = 1) {
+  let remaining = amount;
+  const filterPanic = (list) => {
+    if (!list || remaining <= 0) return list;
+    return list.filter(item => {
+      const cardId = typeof item === 'string' ? item : item?.cardId || item?.id;
+      if (cardId === 'panic' && remaining > 0) {
+        remaining -= 1;
+        return false;
+      }
+      return true;
+    });
+  };
+
+  const next = {
+    ...survivor,
+    personalDeckAdditions: filterPanic(survivor.personalDeckAdditions),
+    permanentNegativeCards: filterPanic(survivor.permanentNegativeCards),
+    // If in combat, these may be present
+    hand: filterPanic(survivor.hand),
+    drawPile: filterPanic(survivor.drawPile),
+    discardPile: filterPanic(survivor.discardPile),
+    exhaustPile: filterPanic(survivor.exhaustPile)
+  };
+
+  return next;
+}

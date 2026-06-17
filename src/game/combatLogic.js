@@ -702,10 +702,18 @@ export function playCard(cardIndex, state) {
   let firstBlockEffect = true;
   const panicInDiscard = () => discardPile.filter(item => item.id === 'panic').length;
   const removePanicAny = () => {
-    const piles = [hand, discardPile, drawPile];
+    const piles = [hand, discardPile, drawPile, exhaustPile];
     const target = piles.find(pile => pile.some(item => item.id === 'panic'));
     if (!target) return false;
-    target.splice(target.findIndex(item => item.id === 'panic'), 1);
+    const index = target.findIndex(item => item.id === 'panic');
+    if (index < 0) return false;
+    
+    // Mutate the specific pile array
+    if (target === hand) hand = hand.filter((_, i) => i !== index);
+    else if (target === discardPile) discardPile = discardPile.filter((_, i) => i !== index);
+    else if (target === drawPile) drawPile = drawPile.filter((_, i) => i !== index);
+    else if (target === exhaustPile) exhaustPile = exhaustPile.filter((_, i) => i !== index);
+    
     return true;
   };
 
