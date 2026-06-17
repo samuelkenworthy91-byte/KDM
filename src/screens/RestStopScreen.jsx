@@ -38,7 +38,9 @@ export default function RestStopScreen({
   settlement,
   party,
   activeSurvivor,
-  onChoose
+  onChoose,
+  result,
+  onContinue
 }) {
   const livingParty = useMemo(
     () => getRestParty(party, activeSurvivor),
@@ -58,49 +60,69 @@ export default function RestStopScreen({
     });
   };
 
+  const selectedChoice = result ? choices.find(c => c.id === result.choiceId) : null;
+
   return (
     <section className="event-screen">
       <p className="eyebrow">Rest Stop</p>
-      <h2>A Brief Shelter</h2>
-      <p>There is enough time for one meaningful preparation before the hunt continues.</p>
+      
+      {!result ? (
+        <>
+          <h2>A Brief Shelter</h2>
+          <p>There is enough time for one meaningful preparation before the hunt continues.</p>
 
-      <div className="rest-selection-context">
-        <label className="field-label" htmlFor="rest-survivor">Focus Survivor (for Practice)</label>
-        <select
-          id="rest-survivor"
-          value={survivorId}
-          onChange={event => setSurvivorId(event.target.value)}
-        >
-          {livingParty.map(survivor => (
-            <option value={survivor.id} key={survivor.id}>
-              {survivor.name} - HP {survivor.hp}/{survivor.maxHp}, Survival {survivor.survival || 0}
-            </option>
-          ))}
-        </select>
+          <div className="rest-selection-context">
+            <label className="field-label" htmlFor="rest-survivor">Focus Survivor (for Practice)</label>
+            <select
+              id="rest-survivor"
+              value={survivorId}
+              onChange={event => setSurvivorId(event.target.value)}
+            >
+              {livingParty.map(survivor => (
+                <option value={survivor.id} key={survivor.id}>
+                  {survivor.name} - HP {survivor.hp}/{survivor.maxHp}, Survival {survivor.survival || 0}
+                </option>
+              ))}
+            </select>
 
-        <label className="field-label" htmlFor="story-reward">Share Stories reward (applies to all)</label>
-        <select
-          id="story-reward"
-          value={storyReward}
-          onChange={event => setStoryReward(event.target.value)}
-        >
-          <option value="survival">Gain 1 Survival each</option>
-          <option value="memory">Gain 1 Settlement Memory</option>
-        </select>
-      </div>
+            <label className="field-label" htmlFor="story-reward">Share Stories reward (applies to all)</label>
+            <select
+              id="story-reward"
+              value={storyReward}
+              onChange={event => setStoryReward(event.target.value)}
+            >
+              <option value="survival">Gain 1 Survival each</option>
+              <option value="memory">Gain 1 Settlement Memory</option>
+            </select>
+          </div>
 
-      <div className="event-choices">
-        {choices.map(choice => (
-          <button
-            type="button"
-            key={choice.id}
-            onClick={() => choose(choice.id)}
-          >
-            <strong>{choice.name}</strong>
-            <span>{formatValueForDisplay(choice.description)}</span>
+          <div className="event-choices">
+            {choices.map(choice => (
+              <button
+                type="button"
+                key={choice.id}
+                onClick={() => choose(choice.id)}
+              >
+                <strong>{choice.name}</strong>
+                <span>{formatValueForDisplay(choice.description)}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="rest-result-view">
+          <h2>{selectedChoice?.name || 'Rest Outcome'}</h2>
+          <div className="outcome-box">
+            <p className="outcome-text">{result.outcomeText}</p>
+            {result.nextNodeType === 'fight' && (
+              <p className="danger-text">Prepare for combat!</p>
+            )}
+          </div>
+          <button type="button" className="continue-button" onClick={onContinue}>
+            Continue
           </button>
-        ))}
-      </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -484,6 +484,7 @@ export default function App() {
   const [pendingQuarryDiscoveryId, setPendingQuarryDiscoveryId] = useState(null);
   const [currentHuntId, setCurrentHuntId] = useState(null);
   const [retreatResult, setRetreatResult] = useState(null);
+  const [restResult, setRestResult] = useState(null);
 
   const getRuntimeSnapshot = (screenOverride = screen) => ({
     screen: screenOverride,
@@ -519,7 +520,8 @@ export default function App() {
     nemesisResult,
     pendingQuarryDiscoveryId,
     currentHuntId,
-    retreatResult
+    retreatResult,
+    restResult
   });
 
   const applyRuntime = runtime => {
@@ -557,6 +559,7 @@ export default function App() {
     setPendingQuarryDiscoveryId(safe.pendingQuarryDiscoveryId);
     setCurrentHuntId(safe.currentHuntId);
     setRetreatResult(safe.retreatResult);
+    setRestResult(safe.restResult);
     setScreen(safe.screen);
   };
 
@@ -2329,7 +2332,9 @@ export default function App() {
       runModifiers,
       runMap,
       currentNode,
-      currentHuntId
+      currentHuntId,
+      currentQuarryId: selectedQuarry,
+      runResources
     }, choiceId, options);
     if (!result.applied) return;
 
@@ -2346,9 +2351,10 @@ export default function App() {
       };
     });
 
-    if (result.settlement !== settlement) setSettlement(result.settlement);
+    if (result.settlement && result.settlement !== settlement) setSettlement(result.settlement);
     setRunParty(nextParty);
     setRunSurvivor(nextActive);
+    setRunResources(result.runResources || runResources);
     setRunModifiers(result.runModifiers || runModifiers);
     setRunMap(result.runMap || runMap);
     setPartyCombatBonuses(nextPartyBonuses);
@@ -2357,7 +2363,27 @@ export default function App() {
         .filter(gear => equipment[gear.equipmentId]);
       setRunDeck(buildRunDeck({ survivor: nextActive, equippedGear }));
     }
-    completeCurrentNode();
+    
+    // Scout the Dark might trigger a fight immediately
+    if (result.nextNodeType === 'fight') {
+      setRestResult({
+        ...result,
+        choiceId,
+        onContinue: () => selectNode({ ...currentNode, type: 'fight' })
+      });
+    } else {
+      setRestResult({
+        ...result,
+        choiceId,
+        onContinue: completeCurrentNode
+      });
+    }
+  };
+
+  const handleRestContinue = () => {
+    const onContinue = restResult?.onContinue || completeCurrentNode;
+    setRestResult(null);
+    onContinue();
   };
 
   const handleLootChoice = resourceIds => {
@@ -3583,6 +3609,8 @@ export default function App() {
             party={runParty}
             activeSurvivor={runSurvivor}
             onChoose={handleRestChoice}
+            result={restResult}
+            onContinue={handleRestContinue}
           />
         );
       case 'survivorProgress':

@@ -91,15 +91,22 @@ test('practice has success and failure paths and persists fighting arts', () => 
   }
 });
 
-test('forage adds resources or nothing', () => {
+test('forage adds resources or nothing and provides outcomeText', () => {
   const s1 = survivor('S1');
-  const result = resolveRestStopChoice(state([s1]), 'forage');
+  const initialState = { ...state([s1]), currentQuarryId: 'paleHuntLion', runResources: [] };
+  const result = resolveRestStopChoice(initialState, 'forage');
+  
   assert.equal(result.applied, true);
-  // runResources starts empty in state(), so it should have 0 or 1 item
-  assert.ok((result.runResources || []).length <= 1);
+  assert.ok(result.outcomeText.length > 0);
+  
+  if (result.runResources.length > 0) {
+    assert.ok(result.outcomeText.includes('Found') || result.outcomeText.includes('Recovered'));
+  } else {
+    assert.ok(result.outcomeText.includes('nothing'));
+  }
 });
 
-test('scoutTheDark can find a survivor or gear', () => {
+test('scoutTheDark provides outcomeText for all paths', () => {
   const s1 = survivor('S1');
   const settlement = {
     ...defaultSettlement,
@@ -109,4 +116,5 @@ test('scoutTheDark can find a survivor or gear', () => {
   const result = resolveRestStopChoice({ ...state([s1]), settlement }, 'scoutTheDark');
   
   assert.equal(result.applied, true);
+  assert.ok(result.outcomeText.length > 0);
 });

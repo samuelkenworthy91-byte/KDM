@@ -45,11 +45,11 @@ export default function Card({
   const frontText = formatCardFrontText(card);
 
   return (
-    <div className={`card-container ${isFlipped ? 'flipped' : ''}`}>
-      <div className="card-inner">
+    <div className="card-shell">
+      <div className={`card-inner ${isFlipped ? 'flipped' : ''}`}>
         {/* Front of Card */}
         <div
-          className={`card card-front ${disabled ? 'disabled' : ''}`}
+          className={`card card-face card-front ${disabled ? 'disabled' : ''}`}
           onClick={disabled ? undefined : onPlay}
         >
           <div className="card-cost">{card.unplayable ? '-' : card.cost}</div>
@@ -77,7 +77,7 @@ export default function Card({
         </div>
 
         {/* Back of Card */}
-        <div className="card card-back">
+        <div className="card card-face card-back">
           <div className="card-back-header">
             <h3>Tactical Preview</h3>
             <button
