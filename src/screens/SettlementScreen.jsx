@@ -41,6 +41,7 @@ import {
   weaponProficiencyDefinitions,
   weaponTypes
 } from '../data/weaponProficiency.js';
+import { getSimpleCardSummary, getCardTag } from '../utils/cardSummaries.js';
 import {
   canAffordCost,
   canBuildUnlocked,
@@ -127,13 +128,39 @@ function getCleanGearSummary(recipe) {
   return `${recipe.slot || recipe.itemType || 'Gear'} for survivor loadouts.`;
 }
 
-function cardLine(cardId) {
+function SimpleCard({ cardId }) {
   const card = cards[cardId];
-  if (!card) return { name: cardId, text: 'Unknown / legacy card.' };
-  return {
-    name: card.name || cardId,
-    text: card.shortEffect || card.description || ''
-  };
+  if (!card) return <li><strong>{cardId}</strong> - Unknown / legacy card.</li>;
+
+  const summary = getSimpleCardSummary(card);
+  const tag = getCardTag(card);
+  const benefits = getHarvestBenefitLabels(card);
+  const fullText = card.fullEffect || card.shortEffect || card.description || '';
+
+  return (
+    <li className="simple-card-entry" style={{ marginBottom: '1rem', listStyle: 'none', borderLeft: '2px solid #444', paddingLeft: '0.75rem' }}>
+      <div className="simple-card-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <strong style={{ color: '#ded0b4' }}>{card.name || cardId}</strong>
+        {card.cost > 0 && <span className="card-cost" style={{ fontSize: '0.85rem', color: '#a69c8d' }}>({card.cost} Energy)</span>}
+        <span className="card-tag-badge" style={{ fontSize: '0.75rem', background: '#3b342b', padding: '1px 6px', borderRadius: '3px', color: '#bcae96', textTransform: 'uppercase' }}>{tag}</span>
+      </div>
+      <p className="simple-card-summary" style={{ margin: '0.25rem 0', fontSize: '0.95rem' }}>{summary}</p>
+      {benefits.length > 0 && <p style={{ margin: '0.25rem 0' }}><small style={{ color: '#d09b48' }}> {benefits.join(' ')}</small></p>}
+
+      <details className="advanced-rules-toggle" style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+        <summary style={{ cursor: 'pointer', color: '#76572d' }}>Advanced Details</summary>
+        <div className="advanced-rules-content" style={{ marginTop: '0.4rem', padding: '0.5rem', background: '#0f0e0d', border: '1px solid #302c27' }}>
+           <p style={{ margin: '0 0 0.4rem' }}><strong>Full Text:</strong> {fullText}</p>
+           {card.statusApplied && Object.keys(card.statusApplied).length > 0 && (
+             <p style={{ margin: '0 0 0.4rem' }}><strong>Mechanical:</strong> {Object.entries(card.statusApplied).map(([k, v]) => `${k} ${v}`).join(', ')}</p>
+           )}
+           {card.tags?.length > 0 && (
+             <p style={{ margin: '0', fontSize: '0.75rem', color: '#888' }}>Keywords: {card.tags.join(', ')}</p>
+           )}
+        </div>
+      </details>
+    </li>
+  );
 }
 
 function GearCardList({ recipe }) {
@@ -141,57 +168,34 @@ function GearCardList({ recipe }) {
   const hasPhaseCards = variants.hunt?.cards?.length || variants.showdown?.cards?.length;
   if (hasPhaseCards) {
     return (
-      <>
+      <div className="gear-card-list">
         {variants.hunt?.cards?.length > 0 && (
-          <>
-            <p className="muted-text"><strong>Hunt cards:</strong></p>
-            <ul>{variants.hunt.cards.map(cardId => {
-              const line = cardLine(cardId);
-              const benefits = getHarvestBenefitLabels(cards[cardId]);
-              return (
-                <li key={cardId}>
-                  <strong>{line.name}</strong> - {line.text}
-                  {benefits.length > 0 && <small> {benefits.join(' ')}</small>}
-                </li>
-              );
-            })}</ul>
-          </>
+          <div style={{ marginBottom: '1rem' }}>
+            <p className="muted-text" style={{ marginBottom: '0.5rem' }}><strong>Hunt cards:</strong></p>
+            <ul style={{ padding: 0, margin: 0 }}>
+              {variants.hunt.cards.map(cardId => <SimpleCard key={cardId} cardId={cardId} />)}
+            </ul>
+          </div>
         )}
         {variants.showdown?.cards?.length > 0 && (
-          <>
-            <p className="muted-text"><strong>Showdown cards:</strong></p>
-            <ul>{variants.showdown.cards.map(cardId => {
-              const line = cardLine(cardId);
-              const benefits = getHarvestBenefitLabels(cards[cardId]);
-              return (
-                <li key={cardId}>
-                  <strong>{line.name}</strong> - {line.text}
-                  {benefits.length > 0 && <small> {benefits.join(' ')}</small>}
-                </li>
-              );
-            })}</ul>
-          </>
+          <div>
+            <p className="muted-text" style={{ marginBottom: '0.5rem' }}><strong>Showdown cards:</strong></p>
+            <ul style={{ padding: 0, margin: 0 }}>
+              {variants.showdown.cards.map(cardId => <SimpleCard key={cardId} cardId={cardId} />)}
+            </ul>
+          </div>
         )}
-      </>
+      </div>
     );
   }
   if (!recipe.cardPackage?.length) return null;
   return (
-    <>
-      <p className="muted-text"><strong>Cards:</strong></p>
-      <ul>
-        {recipe.cardPackage.map(cardId => {
-          const line = cardLine(cardId);
-          const benefits = getHarvestBenefitLabels(cards[cardId]);
-          return (
-            <li key={cardId}>
-              <strong>{line.name}</strong> - {line.text}
-              {benefits.length > 0 && <small> {benefits.join(' ')}</small>}
-            </li>
-          );
-        })}
+    <div className="gear-card-list">
+      <p className="muted-text" style={{ marginBottom: '0.5rem' }}><strong>Cards:</strong></p>
+      <ul style={{ padding: 0, margin: 0 }}>
+        {recipe.cardPackage.map(cardId => <SimpleCard key={cardId} cardId={cardId} />)}
       </ul>
-    </>
+    </div>
   );
 }
 
