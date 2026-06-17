@@ -1007,7 +1007,7 @@ select {
 .card-shell {
   position: relative;
   width: 100%;
-  min-height: 340px;
+  height: 340px;
   perspective: 1200px;
   margin-bottom: 1rem;
 }
@@ -1181,7 +1181,6 @@ select {
 }
 
 .card {
-  position: relative;
   width: 100%;
   height: 100%;
   padding: 1rem 0.75rem;
