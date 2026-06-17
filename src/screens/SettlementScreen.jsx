@@ -921,7 +921,8 @@ export default function SettlementScreen({
     (hasEarlyForgettingAccess(settlement) ||
       ['quietNight', 'taboo', 'painLessons'].some(id => builtActionIds.has(id))) && 'recovery',
     builtActionIds.has('shrineOfNames') && 'legacy',
-    ownedInnovationEntries.some(item => item.unlockedTab === 'survival') && 'survival'
+    ownedInnovationEntries.some(item => item.unlockedTab === 'survival') && 'survival',
+    activeSurvivor && settlement.population > 0 && !Boolean(settlement.pendingTimelineEvent) && 'startHunt'
   ].filter(Boolean);
   const hasCentralActions = actionTabs.length > 0;
   const settlementTabs = hasCentralActions
@@ -1661,6 +1662,34 @@ export default function SettlementScreen({
                 </article>
               ))}
             </div>
+          )}
+
+          {activeActionTab === 'startHunt' && (
+            <article className="item-card">
+              <h4>Start Hunt</h4>
+              <p>Prepare your survivors and begin the next hunt.</p>
+              {onBeginHunt ? (
+                <button
+                  type="button"
+                  className="primary-action"
+                  disabled={!activeSurvivor || settlement.population <= 0 || Boolean(settlement.pendingTimelineEvent)}
+                  onClick={onBeginHunt}
+                >
+                  {settlement.pendingTimelineEvent
+                    ? 'Resolve the Lantern Year decision before hunting'
+                    : `Hunt ${quarries[selectedQuarry]?.name} Level ${selectedLevel} with ${activeSurvivor ? getSurvivorDisplayName(activeSurvivor) : 'no survivor'}`}
+                </button>
+              ) : (
+                <button type="button" disabled>
+                  Begin Hunt
+                </button>
+              )}
+              {!onBeginHunt && (
+                <p className="muted-text">
+                  No hunt-starting function found. This should connect to the existing hunt initialization logic.
+                </p>
+              )}
+            </article>
           )}
         </div>
       )}
