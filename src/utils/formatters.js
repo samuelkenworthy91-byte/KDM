@@ -191,6 +191,48 @@ export function formatHistoryDetail(detail) {
   return formatValueForDisplay(detail, 'history detail');
 }
 
+export function formatCardFrontText(card) {
+  if (!card) return '';
+  const effects = card.effects || [];
+  if (effects.length === 0) return card.description || '';
+
+  const labels = {
+    globalBlockCardBonus: amount => `All Block cards give ${signed(amount)} more Block this fight.`,
+    dotDamageMultiplier: amount => `Bleed, Burn and Poison deal ${amount === 2 ? 'double' : amount + 'x'} damage this fight.`,
+    targetAvoidance: amount => `This survivor is much less likely to be targeted.`,
+    partyAfterCombatHeal: amount => `After the fight, each wounded survivor heals ${amount} HP.`,
+    consequenceReduction: amount => 'Makes bad weak-point results less punishing.',
+    damage: amount => `Deal ${amount} damage.`,
+    multiHitDamage: (amount, hits) => `Deal ${amount} damage ${hits} times.`,
+    block: amount => `Gain ${amount} block.`,
+    gainBlock: amount => `Gain ${amount} block.`,
+    survival: amount => `Gain ${amount} Survival.`,
+    draw: amount => `Draw ${amount} card${amount > 1 ? 's' : ''}.`,
+    bleedMonster: amount => `Apply ${amount} Bleed.`,
+    burnMonster: amount => `Apply ${amount} Burn.`,
+    poisonMonster: amount => `Apply ${amount} Poison.`,
+    markMonster: () => 'Mark the monster.',
+    vulnerableMonster: amount => `Apply ${amount} Vulnerable.`,
+    staggerMonster: amount => `Apply ${amount} Staggered.`,
+    removeMonsterBlock: amount => `Remove ${amount} monster block.`,
+    removeAllMonsterBlock: () => 'Remove all monster block.'
+  };
+
+  const simpleTexts = effects.map(effect => {
+    if (labels[effect.type]) {
+      const amount = effect.amount || effect.value || 0;
+      return labels[effect.type](amount, effect.hits);
+    }
+    return null;
+  }).filter(Boolean);
+
+  if (simpleTexts.length > 0) {
+    return simpleTexts.join(' ');
+  }
+
+  return card.description || '';
+}
+
 export function formatValueForDisplay(value, label = 'value') {
   if (value == null) return '';
   if (typeof value === 'string') return value;

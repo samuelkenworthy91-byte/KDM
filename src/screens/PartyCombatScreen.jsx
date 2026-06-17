@@ -485,6 +485,16 @@ export default function PartyCombatScreen({
                   selectedWeakPoint,
                   party: combat.members
                 })}
+                monster={combat.monster}
+                survivor={active.survivor}
+                combatState={{
+                  ...active,
+                  monster: combat.monster,
+                  intentIndex: combat.intentIndex,
+                  selectedWeakPointId,
+                  hasMonsterBane: baneRevealsWeakPoints
+                }}
+                party={combat.members}
                 disabled={card.unplayable || card.cost > active.survivor.energy}
                 onPlay={() => setCombat(current => playPartyCard(index, current))}
               />

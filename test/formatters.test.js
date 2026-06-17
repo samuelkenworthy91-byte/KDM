@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  formatCardFrontText,
   formatCostForDisplay,
   formatEffectForDisplay,
   formatEffectsForDisplay,
@@ -52,4 +53,17 @@ test('formats reward, modifier, history, and unknown objects without returning o
   ];
   values.forEach(value => assert.equal(typeof value, 'string'));
   assert.match(values[3], /legacyShape/);
+});
+
+test('formatCardFrontText simplifies common card effects', () => {
+  const card = {
+    id: 'test-card',
+    effects: [
+      { type: 'damage', amount: 5 },
+      { type: 'globalBlockCardBonus', amount: 1 }
+    ]
+  };
+  const text = formatCardFrontText(card);
+  assert.match(text, /Deal 5 damage/);
+  assert.match(text, /All Block cards give \+1 more Block this fight/);
 });

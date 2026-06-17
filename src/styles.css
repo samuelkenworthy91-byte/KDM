@@ -999,29 +999,192 @@ select {
 
 .hand {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+/* Card Container and Flip logic */
+.card-container {
+  perspective: 1000px;
+  min-height: 240px;
+  position: relative;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.card-container.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-front, .card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-sizing: border-box;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+  background-color: #171512;
+  border: 1px solid #76572d;
+  display: flex;
+  flex-direction: column;
+  cursor: default;
+  overflow: hidden;
+}
+
+.card-back-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #3b342b;
+  background: #25211d;
+}
+
+.card-back-header h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #d8c7a5;
+  font-family: Georgia, serif;
+}
+
+.card-back-content {
+  padding: 0.75rem;
+  font-size: 0.82rem;
+  flex-grow: 1;
+  overflow-y: auto;
+  line-height: 1.4;
+}
+
+.preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.preview-row {
+  border-bottom: 1px solid #302c27;
+  padding-bottom: 0.65rem;
+}
+
+.preview-row:last-child {
+  border-bottom: none;
+}
+
+.preview-wp-name {
+  font-weight: bold;
+  color: #e8bd69;
+  margin-bottom: 0.15rem;
+}
+
+.preview-stats {
+  margin-bottom: 0.15rem;
+  color: #e0e0e0;
+}
+
+.preview-result {
+  font-weight: bold;
+  margin-bottom: 0.15rem;
+}
+
+.preview-result.breaks { color: #8fcf72; }
+.preview-result.fails { color: #d46d6d; }
+
+.preview-effect, .preview-harvest, .preview-risk {
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
+}
+
+.preview-effect { color: #c9b58f; }
+.preview-harvest { color: #9d917f; }
+.preview-risk { color: #ffaa00; }
+
+.no-previews {
+  text-align: center;
+  color: #9d917f;
+  padding-top: 2rem;
+}
+
+.flip-button {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.65rem;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #aaa;
+  z-index: 10;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 2px;
+}
+
+.flip-button.back {
+  position: static;
+  margin-left: 0.5rem;
+}
+
+.flip-button:hover:not(:disabled) {
+  background: #3b2816;
+  color: #ded0b4;
+  border-color: #76572d;
+}
+
+.card-front {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-body {
+  flex-grow: 1;
+  margin: 0.5rem 0;
+}
+
+.simple-text {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #ddd0b9;
+  margin: 0;
+}
+
+.card-footer {
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 0.4rem;
 }
 
 .card {
   position: relative;
-  min-height: 170px;
+  min-height: 100%;
+  width: 100%;
   border: 1px solid #555;
   padding: 1rem 0.75rem;
   background-color: #222;
   color: #e0e0e0;
   text-align: left;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.card:hover:not(:disabled) {
-  border-color: #d09b48;
-  transform: translateY(-2px);
-}
-
-.card:disabled {
+.card.disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.card:hover:not(.disabled) {
+  border-color: #d09b48;
+  transform: translateY(-2px);
 }
 
 .card h3 {

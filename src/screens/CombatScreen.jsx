@@ -197,6 +197,9 @@ export default function CombatScreen({
                 combatState: combat,
                 monster: combat.monster
               })}
+              monster={combat.monster}
+              survivor={combat.survivor}
+              combatState={combat}
               disabled={disabled}
               onPlay={() => handlePlayCard(index)}
             />
