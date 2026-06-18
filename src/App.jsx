@@ -71,7 +71,7 @@ import {
   rollLowHpCondition
 } from './game/conditionLogic.js';
 import { calculateIntimacyProjections, resolveEvent } from './game/eventLogic.js';
-import { buildRunDeck, getCardsFromIds, getPersonalCardId } from './game/deckLogic.js';
+import { buildRunDeck, getCardsFromIds, getPersonalCardId, removePanicFromSurvivor } from './game/deckLogic.js';
 import {
   EARLY_FORGETTING_COST,
   forgetSurvivorCard,
@@ -1966,7 +1966,9 @@ export default function App() {
           [actionId]: current.lanternYear
         },
         survivors: current.survivors.map(item => item.id === survivorId
-          ? forgetCardForSurvivor(item, cardId, config.method, current.lanternYear)
+          ? cardId === 'panic'
+            ? removePanicFromSurvivor(item, 1) // Remove 1 Panic card
+            : forgetSurvivorCard(item, cardId, config.method, current.lanternYear, removableCard)
           : item)
       };
     });
