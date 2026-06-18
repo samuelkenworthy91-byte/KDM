@@ -4,6 +4,7 @@ import {
 } from '../data/fightingArts.js';
 import { resources } from '../data/resources.js';
 import { gearRegistry } from '../data/overhaul/gearRegistry.js';
+import { createSurvivor, createGearInstance } from './saveLogic.js';
 
 const living = survivor => survivor?.alive !== false && Number(survivor?.hp) > 0;
 
@@ -206,48 +207,119 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
     } else if (roll < 30) {
       // New Survivor
       const name = generateRandomSurvivorName();
-      const newSurvivor = {
-        id: `survivor-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        name,
-        hp: 4,
-        maxHp: 4,
-        survival: 1,
-        maxSurvival: 3,
-        alive: true,
-        traits: [],
-        fightingArts: [],
-        personalDeckAdditions: [],
-        equippedGear: ['cloth', 'stoneCircle'] // Basic legal loadout
+      let survivor = createSurvivor(name); // This gives hp:30, maxHp:30, etc.
+
+      // Determine unlocked gear based on settlement innovations
+      const builtInnovations = state.settlement?.builtInnovations || [];
+      const unlockedGear = gearRegistry.filter(g => builtInnovations.includes(g.buildingId));
+      const basicGear = gearRegistry.filter(g => g.buildingId === 'lanternHearth');
+
+      // Helper to check if gear is equippable
+      const isEquippable = (g) => g.isEquippable !== false;
+
+      // Strict category helpers (mutually exclusive)
+      const isWeaponGear = (g) => {
+        if (!isEquippable(g)) return false;
+        // Weapon if has weaponType and not armour/tool indicators
+        return !!g.weaponType && !(g.armorType || g.armourType) && !(['head', 'torso', 'arms', 'waist', 'legs', 'feet', 'hands', 'shield'].includes(g.slot || ''));
       };
+
+      const isArmourGear = (g) => {
+        if (!isEquippable(g)) return false;
+        // Armour if has armour type or slot in body slots, and not weapon
+        return !!(g.armorType || g.armourType) && !g.weaponType && (['head', 'torso', 'arms', 'waist', 'legs', 'feet', 'hands', 'shield'].includes(g.slot || ''));
+      };
+
+      const isToolGear = (g) => {
+        if (!isEquippable(g)) return false;
+        // Tool if equippable, not weapon, not armour
+        return !isWeaponGear(g) && !isArmourGear(g);
+      };
+
+      // Build pools with fallbacks: unlocked -> basic -> full registry
+      const weaponPool = [
+        ...unlockedGear.filter(isWeaponGear),
+        ...basicGear.filter(isWeaponGear),
+        ...gearRegistry.filter(isWeaponGear)
+      ];
+      const armourPool = [
+        ...unlockedGear.filter(isArmourGear),
+        ...basicGear.filter(isArmourGear),
+        ...gearRegistry.filter(isArmourGear)
+      ];
+      const toolPool = [
+        ...unlockedGear.filter(isToolGear),
+        ...basicGear.filter(isToolGear),
+        ...gearRegistry.filter(isToolGear)
+      ];
+
+      // Helper to pick one random item from an array
+      const pickOne = (arr) => {
+        if (!arr || arr.length === 0) return null;
+        return arr[Math.floor(Math.random() * arr.length)];
+      };
+
+      // Pick gear for the survivor: 1 weapon, 2 armour, 1 tool
+      let selectedWeapon, selectedArmor1, selectedArmor2, selectedTool;
+      let attempts = 0;
+      const maxAttempts = 5;
+      do {
+        selectedWeapon = pickOne(weaponPool);
+        selectedArmor1 = pickOne(armourPool);
+        selectedArmor2 = pickOne(armourPool); // independent pick (may be same)
+        selectedTool = pickOne(toolPool);
+        attempts++;
+        if (attempts >= maxAttempts) break;
+      } while (!selectedWeapon || !selectedArmor1 || !selectedArmor2 || !selectedTool);
+
+      // Create gear instances
+      const boundGear = [];
+      if (selectedWeapon) boundGear.push(createGearInstance(selectedWeapon.id));
+      if (selectedArmor1) boundGear.push(createGearInstance(selectedArmor1.id));
+      if (selectedArmor2) boundGear.push(createGearInstance(selectedArmor2.id));
+      if (selectedTool) boundGear.push(createGearInstance(selectedTool.id));
+
+      // Final safety: if we still don't have 4 items, fill with any equippable gear from pools (should not happen with fallbacks)
+      if (boundGear.length < 4) {
+        const needed = 4 - boundGear.length;
+        const allPools = [...weaponPool, ...armourPool, ...toolPool];
+        for (let i = 0; i < needed; i++) {
+          const randomGear = pickOne(allPools);
+          if (randomGear) {
+            boundGear.push(createGearInstance(randomGear.id));
+          }
+        }
+      }
+
+      // Assign bound gear to survivor
+      survivor.boundGear = boundGear;
+      // Add survivor to settlement
       const settlement = {
         ...state.settlement,
-        survivors: [...(state.settlement?.survivors || []), newSurvivor]
+        survivors: [...(state.settlement?.survivors || []), survivor]
       };
       return {
         ...base,
         settlement,
         applied: true,
-        outcomeText: `A lost soul named ${name} was found wandering the dark and has joined the settlement.`
+        outcomeText: `A lost soul named ${survivor.name} was found wandering the dark and has joined the settlement, equipped with 1 weapon, 2 armour pieces and 1 tool.`
       };
     } else if (roll < 40) {
       // Random gear from unlocked building
       const builtInnovations = state.settlement?.builtInnovations || [];
       const availableGear = gearRegistry.filter(g => builtInnovations.includes(g.buildingId));
       const gear = pickRandom(availableGear);
-      
+
       if (gear) {
         const settlement = {
           ...state.settlement,
-          stash: {
-            ...(state.settlement?.stash || {}),
-            [gear.id]: (state.settlement?.stash?.[gear.id] || 0) + 1
-          }
+          armory: [...(state.settlement?.armory || []), createGearInstance(gear.id)]
         };
         return {
           ...base,
           settlement,
           applied: true,
-          outcomeText: `Found a discarded but functional ${gear.name}. It has been sent back to the settlement.`
+          outcomeText: `Found a discarded but functional ${gear.name}. It has been added to the settlement's armory.`
         };
       } else {
         const runResources = [...(state.runResources || []), 'brokenLantern'];
