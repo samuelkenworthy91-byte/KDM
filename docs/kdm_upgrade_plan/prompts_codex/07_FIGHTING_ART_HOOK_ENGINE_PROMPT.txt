@@ -1,0 +1,48 @@
+CODEX VERSION
+
+Use this prompt with Codex. Codex may patch multiple related files in this stage, but it must stay inside the current stage and avoid broad rewrites.
+
+Before editing, inspect the relevant current repo files and compare them with docs/kdm-upgrade-plan/reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+PROMPT 07 - FIGHTING ART HOOK ENGINE
+
+You are patching repo samuelkenworthy91-byte/KDM.
+Work carefully. Prefer focused patches. Do not broad-rewrite unrelated systems.
+Read the uploaded TXT docs in docs/kdm-upgrade-plan/ before changing code, especially reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+
+Goal:
+Create a clean hook system for fighting arts before adding complex new arts.
+
+Tasks:
+1. Add src/game/fightingArtLogic.js or equivalent.
+2. Support hook points listed in reference_docs/09_FIGHTING_ARTS_REWORK.txt.
+3. Integrate hooks into combatLogic.js without broad rewriting App.jsx.
+4. Preserve currently implemented simple fighting arts where possible.
+5. Add tests for at least:
+   - combat start hook
+   - card played hook
+   - status applied hook
+   - weak point broken hook
+   - Panic gained/removed hook
+6. Do not add the full new fighting art list yet; just engine and compatibility.
+
+
+
+Validation commands to run before committing:
+npm run build
+npm run test
+git status
+
+If validation passes, commit and push with:
+git add -A
+git commit -m "<clear short commit message>"
+git push origin main
+git rev-parse HEAD
+
+Extra Codex safety rules:
+- Do not combine this with later prompts.
+- Do not rewrite entire large files unless there is no safer targeted patch.
+- Preserve save compatibility and unknown legacy fallbacks.
+- If a file has old and new systems side by side, migrate safely before deleting.
+- Keep card/intention wording exactly aligned to the docs; do not invent new wording or balance changes.

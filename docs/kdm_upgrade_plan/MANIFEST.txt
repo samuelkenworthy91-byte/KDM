@@ -1,0 +1,30 @@
+MANIFEST - KDM UPGRADE PACK V3 DUAL PROMPTS
+
+Root files:
+- 00_READ_ME_IMPLEMENTATION_ORDER.txt
+- PROMPT_USAGE_GUIDE.txt
+- MANIFEST.txt
+
+Reference docs:
+- reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt
+- reference_docs/01_CURRENT_REPO_AUDIT_AND_DELETE_TARGETS.txt
+- reference_docs/02_MASTER_SYSTEM_RULES.txt
+- reference_docs/03_RESOURCE_TAGS_AND_BASIC_POOL.txt
+- reference_docs/04_INNOVATION_COST_AND_PAYMENT_RULES.txt
+- reference_docs/05_MEMORY_ECONOMY_AND_RETREAT_RULES.txt
+- reference_docs/06_INNOVATION_DECK_REWORK.txt
+- reference_docs/07_SETTLEMENT_ACTIONS_AND_MEMORY_TRAINING.txt
+- reference_docs/08_GEAR_AFFINITY_AND_CARD_TRAINING_INTERACTIONS.txt
+- reference_docs/09_FIGHTING_ARTS_REWORK.txt
+- reference_docs/10_POPULATION_INTIMACY_AND_LOVE_JUICE.txt
+- reference_docs/11_SAVE_MIGRATION_AND_TEST_REQUIREMENTS.txt
+
+Prompt sets:
+- prompts_codex/                 Use with Codex.
+- prompts_fcc_claude_safe/       Use with fcc-claude or weaker runners.
+
+Extra fcc micro-prompts included for risky stages:
+- 02A_FCC_RESOURCE_HELPER_ONLY.txt
+- 02B_FCC_EXPLICIT_QUARRY_TAG_MAP_ONLY.txt
+- 05A_FCC_PAYMENT_HELPERS_ONLY.txt
+- 05B_FCC_REPLACE_AUTO_PAYMENT_ONLY.txt

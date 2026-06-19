@@ -1,0 +1,27 @@
+FCC-CLAUDE MICRO PROMPT 05A - INNOVATION PAYMENT HELPERS ONLY
+
+Do not change UI in this micro-prompt.
+Create or update small helper functions only.
+
+Goal:
+Add helpers that can answer:
+- what resources can pay a hide slot
+- what resources can pay an organ slot
+- what resources can pay a bone slot
+- whether a selected payment is valid for a stash
+- whether one resource copy is being used twice
+
+Exact innovation payment cost:
+1 Memory + one hide-slot resource + one organ-slot resource + one bone-slot resource.
+
+Rules:
+- scrap cannot pay body slots.
+- sinew can pay organ.
+- loveJuice can pay organ.
+- multi-tag resources can be offered in multiple selectors but one copy cannot pay two slots.
+- non-basic or rare resources must be flagged for warning.
+
+Validation:
+npm run build
+npm run test
+git status

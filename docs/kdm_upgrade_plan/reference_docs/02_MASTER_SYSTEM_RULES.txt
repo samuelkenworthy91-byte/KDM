@@ -1,0 +1,62 @@
+MASTER SYSTEM RULES
+
+Core resources:
+There are exactly six basic resources:
+- bone
+- hide
+- organ
+- sinew
+- scrap
+- loveJuice
+
+Important classification:
+- sinew is a basic resource but counts as Organ for body-material costs.
+- loveJuice is a basic but slightly rarer resource. It counts as Organ for body-material costs and has a special intimacy use.
+- scrap is a basic resource but is not a body material. It should not satisfy the Bone/Hide/Organ innovation cost unless a specific innovation or action says it can.
+
+Core innovation cost:
+Each innovation attempt costs:
+- 1 Memory
+- 1 Hide-eligible resource
+- 1 Organ-eligible resource
+- 1 Bone-eligible resource
+
+Innovation count:
+There is no once-per-settlement-phase cap. Players may innovate as many times as they can pay the cost.
+
+Payment selection:
+- The player must choose which exact resources to spend.
+- Do not auto-spend rare or quarry-specific resources.
+- If a selected resource is quarry-specific, rare, strange, level3Rare, loveJuice, or otherwise valuable, show a warning.
+- One resource instance can fill only one cost slot. A resource with materialTags ['bone','organ'] can be selected for Bone or Organ, but not both at the same time.
+
+Memory economy:
+- After successful hunt/showdown, gain Memory equal to the number of survivors who return alive.
+- Retreat gives 0 Memory.
+- Full party death gives 0 Memory.
+- Death/burial Memory should not be default. It may be added only by later innovations such as Mourning Song or Graves.
+
+Retreat:
+Retreat is not a farming strategy. It should be costly.
+Default retreat should:
+- give 0 Memory
+- count as no quarry victory
+- give no innovation pool expansion
+- lose unconfirmed resources where applicable
+- apply meaningful consequence/Panic/injury risk as already supported by retreatLogic
+
+Love Juice:
+- New resource id: loveJuice.
+- Display name: Love Juice.
+- Type suggestion: basicRare or basic.
+- materialTags: ['organ'].
+- dropWeight: lower than bone/hide/organ/sinew/scrap.
+- Special use: before resolving one intimacy attempt, spend 1 Love Juice to negate negative outcomes from that attempt.
+- It does not guarantee a birth unless the actual roll succeeds.
+- If the roll would cause a negative/tragedy/no-resource penalty, Love Juice prevents the negative and is consumed.
+
+Gear/card system:
+- Do not make fighting arts add fake colour affinity.
+- Colour affinity remains equipment-based.
+- Innovations can unlock visibility, threshold bonuses, and training around affinity.
+- Fighting arts can reward playing Red/Blue/Green/Purple cards or threshold states.

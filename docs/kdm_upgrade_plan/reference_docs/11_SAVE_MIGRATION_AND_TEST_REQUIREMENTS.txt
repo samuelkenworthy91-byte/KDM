@@ -1,0 +1,49 @@
+SAVE MIGRATION AND TEST REQUIREMENTS
+
+Migration requirements:
+- Ensure old saves without loveJuice load safely.
+- Ensure old saves with claw/fur/horn/ichor/monsterTooth/strangeEye keep those resources, but they no longer count as basic generic drops.
+- Add materialTags at runtime for old resources if saved resource objects exist anywhere.
+- Maintain memories and settlementMemory as synced aliases until old UI code is fully removed.
+- Migrate builtMemoryInnovations into innovationDeckState.builtInnovationIds where appropriate.
+- Do not crash on unknown/legacy innovation ids.
+- Pending newborn/intimacy state must survive migration.
+- Old innovation history should still display, even if paidResources was an array rather than slot mapping.
+
+Tests to add/update:
+1. resources.test.js
+- genericResourceIds equals ['bone','hide','organ','sinew','scrap','loveJuice'].
+- sinew materialTags includes organ.
+- loveJuice materialTags includes organ and has lower genericDropWeight.
+- old generic claw/fur/horn are not in genericResourceIds.
+
+2. innovationPayment.test.js
+- can innovate with basic hide+organ+bone.
+- can use sinew for organ slot.
+- can use loveJuice for organ slot but marks warning.
+- can use paleLionClaw as bone and paleLionMane as hide.
+- one multi-tag resource cannot fill two slots with one copy.
+- no auto-spend of quarry-specific resources.
+
+3. memoryEconomy.test.js
+- victory with 4 survivors gives 4 Memory.
+- victory with 2 survivors gives 2 Memory.
+- full party death gives 0 Memory.
+- retreat gives 0 Memory.
+- burial gives no Memory unless a future innovation explicitly gates it.
+
+4. intimacy.test.js
+- Love Juice prevents negative outcome from one intimacy attempt.
+- Love Juice is consumed when used.
+- Love Juice does not guarantee success.
+- modifiers are returned as displayable rows.
+
+5. innovationLogic.test.js
+- applying innovation adds consequence ids.
+- old memory innovation ids are migrated or rendered safely.
+- multiple innovations in one phase are allowed if costs can be paid.
+
+Always run:
+- npm run build
+- npm run test
+- git status

@@ -1,0 +1,205 @@
+RESOURCE TAGS AND BASIC POOL
+
+Six basic resources:
+- bone: basic, materialTags ['bone']
+- hide: basic, materialTags ['hide']
+- organ: basic, materialTags ['organ']
+- sinew: basic, materialTags ['organ'] because sinew is classed as organ in this ruleset
+- scrap: basic, materialTags ['scrap']; not valid for the Bone/Hide/Organ innovation slots unless a rule says so
+- loveJuice: basic but slightly rarer, materialTags ['organ']; special intimacy protection use
+
+Required code shape:
+function resource(id, name, type, description, creatureId, options = {}) {
+  return {
+    id,
+    name,
+    type,
+    description,
+    ...(creatureId ? { creatureId } : {}),
+    materialTags: options.materialTags || [],
+    basicResource: Boolean(options.basicResource),
+    genericDropWeight: options.genericDropWeight ?? 0,
+    specialUse: options.specialUse || null
+  };
+}
+
+Explicit genericResourceIds:
+export const genericResourceIds = ['bone', 'hide', 'organ', 'sinew', 'scrap', 'loveJuice'];
+
+Suggested generic drop weights:
+- bone: 60
+- hide: 60
+- organ: 60
+- sinew: 60
+- scrap: 45
+- loveJuice: 12
+
+Rule for multi-tag resources:
+A resource can have one or two body material tags. If it has two, one copy can pay for only one selected slot at payment time.
+
+Current explicit resource tag map:
+RESOURCE_ID | NAME | SOURCE | MATERIAL_TAGS | NOTE
+bone | Bone | basic | bone | Basic body resource.
+hide | Hide | basic | hide | Basic body resource.
+organ | Organ | basic | organ | Basic body resource.
+sinew | Sinew | basic | organ | Sinew is one of the six basics and counts as Organ for body-cost payments.
+scrap | Scrap | basic | scrap | Basic non-body resource; does not satisfy Bone/Hide/Organ innovation slots unless a specific rule says so.
+loveJuice | Love Juice | basicRare | organ | New slightly rarer basic resource; counts as Organ and can be spent to negate negatives from one intimacy attempt.
+claw | Claw | legacyGeneric | bone | Old generic; no longer basic. Keep for legacy saves, counts as Bone if retained.
+fur | Fur | legacyGeneric | hide | Old generic; no longer basic. Keep for legacy saves, counts as Hide if retained.
+horn | Horn | legacyGeneric | bone | Old generic; no longer basic. Keep for legacy saves, counts as Bone if retained.
+ichor | Ichor | legacyGeneric | organ | Old generic/rare; no longer basic. Keep for legacy saves, counts as Organ if retained.
+monsterTooth | Monster Tooth | legacyGeneric | bone | Old generic/rare; no longer basic. Keep for legacy saves, counts as Bone if retained.
+strangeEye | Strange Eye | legacyGeneric | organ | Old generic/strange; no longer basic. Keep for legacy saves, counts as Organ if retained.
+paleLionHide | Pale Lion Hide | paleHuntLion | hide | Hide from lion.
+paleLionClaw | Pale Lion Claw | paleHuntLion | bone | Claws/fangs/tooth parts count as Bone.
+paleLionSinew | Pale Lion Sinew | paleHuntLion | organ | Sinew/tissue counts as Organ.
+paleLionMane | Pale Lion Mane | paleHuntLion | hide | Mane/fur/hair counts as Hide.
+paleLionEye | Pale Lion Eye | paleHuntLion | organ | Eyes/glands/hearts/lungs count as Organ.
+elderPaleFang | Elder Pale Fang | paleHuntLion | bone | Fang counts as Bone.
+whiteHeart | White Heart | paleHuntLion | organ | Heart counts as Organ.
+perfectMane | Perfect Mane | paleHuntLion | hide | Mane counts as Hide.
+wailingHorn | Wailing Horn | wailingAntelope | bone | Horn counts as Bone.
+wailingOrgan | Wailing Organ | wailingAntelope | organ | Organ counts as Organ.
+wailingHide | Wailing Hide | wailingAntelope | hide | Hide counts as Hide.
+screamingSinew | Screaming Sinew | wailingAntelope | organ | Sinew counts as Organ.
+stomachStone | Stomach Stone | wailingAntelope | bone,organ | Hard stomach object: may satisfy Bone or Organ, one slot only.
+endlessMarrow | Endless Marrow | wailingAntelope | bone,organ | Marrow is bone/organ crossover, one slot only.
+ashFeather | Ash Feather | ashPhoenix | hide | Feathers/mantles count as Hide.
+phoenixAsh | Phoenix Ash | ashPhoenix | organ,scrap | Living ash is usable as Organ or Scrap, one slot only.
+timeBone | Time Bone | ashPhoenix | bone | Bone counts as Bone.
+burntOrgan | Burnt Organ | ashPhoenix | organ | Organ counts as Organ.
+memoryGlass | Memory Glass | ashPhoenix | organ,scrap | Strange preserved memory matter: Organ or Scrap, one slot only.
+unspentFeather | Unspent Feather | ashPhoenix | hide | Feather counts as Hide.
+thunderGland | Thunder Gland | bloatedGodling | organ | Gland counts as Organ.
+bloatedHide | Bloated Hide | bloatedGodling | hide | Hide counts as Hide.
+denseOrgan | Dense Organ | bloatedGodling | organ | Organ counts as Organ.
+stormBone | Storm Bone | bloatedGodling | bone | Bone counts as Bone.
+livingThunderCore | Living Thunder Core | bloatedGodling | bone,organ | Core is hard living tissue: Bone or Organ, one slot only.
+crackedMolar | Cracked Molar | bloatedGodling | bone | Tooth counts as Bone.
+silkGland | Silk Gland | silkMatriarch | organ | Gland counts as Organ.
+chitinThread | Chitin Thread | silkMatriarch | organ | Thread/sinew-like tissue counts as Organ.
+venomSac | Venom Sac | silkMatriarch | organ | Sac counts as Organ.
+webbedHide | Webbed Hide | silkMatriarch | hide | Hide counts as Hide.
+broodCrown | Brood Crown | silkMatriarch | bone | Hardened crown/chitin counts as Bone.
+spiderEye | Spider Eye | silkMatriarch | organ | Eye counts as Organ.
+bloomPetal | Bloom Petal | bloomKnight | hide | Petal/leather-like layer counts as Hide.
+duelistThorn | Duelist Thorn | bloomKnight | bone | Thorn counts as Bone.
+polishedStem | Polished Stem | bloomKnight | bone | Rigid stem counts as Bone.
+floralSinew | Floral Sinew | bloomKnight | organ | Sinew counts as Organ.
+perfectThornHeart | Bloom Knight | bloomKnight | bone,organ | Heart around thorn: Bone or Organ, one slot only.
+knightSeed | Knight Seed | bloomKnight | organ | Seed counts as Organ.
+chitinPlate | Chitin Plate | chitinCrusader | bone,hide | Shell plate can be Bone or Hide, one slot only.
+dungCore | Dung Core | chitinCrusader | organ,scrap | Core can be Organ or Scrap, one slot only.
+beetleHorn | Beetle Horn | chitinCrusader | bone | Horn counts as Bone.
+resinBlood | Resin Blood | chitinCrusader | organ | Blood/resin counts as Organ.
+crusaderHeartplate | Crusader Heartplate | chitinCrusader | bone,organ | Heartplate: Bone or Organ, one slot only.
+jewelWing | Jewel Wing | chitinCrusader | hide | Wing plate counts as Hide.
+drakeScale | Drake Scale | drakeEmperor | hide | Scale counts as Hide.
+crystalBone | Drake Emperor | drakeEmperor | bone | Bone counts as Bone.
+fireGland | Fire Gland | drakeEmperor | organ | Gland counts as Organ.
+imperialHorn | Imperial Horn | drakeEmperor | bone | Horn counts as Bone.
+emperorFlameMarrow | Emperor Flame Marrow | drakeEmperor | bone,organ | Marrow is Bone or Organ, one slot only.
+moltenEye | Molten Eye | drakeEmperor | organ | Eye counts as Organ.
+sunShell | Sun Shell | sunSovereign | bone,hide | Shell can be Bone or Hide, one slot only.
+radiantEye | Radiant Eye | sunSovereign | organ | Eye counts as Organ.
+solarIchor | Solar Ichor | sunSovereign | organ | Ichor counts as Organ.
+blindingScale | Blinding Scale | sunSovereign | hide | Scale counts as Hide.
+captiveNoon | Captive Noon | sunSovereign | organ,scrap | Bead/energy matter can be Organ or Scrap, one slot only.
+warmPearl | Warm Pearl | sunSovereign | bone,organ | Pearl can be Bone or Organ, one slot only.
+prideMane | Pride Mane | prideKing | hide | Mane counts as Hide.
+kingClaw | King Claw | prideKing | bone | Claw counts as Bone.
+goldenFang | Golden Fang | prideKing | bone | Fang counts as Bone.
+regalHide | Regal Hide | prideKing | hide | Hide counts as Hide.
+judgmentEye | Judgment Eye | prideKing | organ | Eye counts as Organ.
+crownHeart | Crown Heart | prideKing | organ | Heart counts as Organ.
+crimsonScale | Crimson Scale | crimsonCrocodile | hide | Scale counts as Hide.
+riverTooth | River Tooth | crimsonCrocodile | bone | Tooth counts as Bone.
+bloodMudOrgan | Blood-Mud Organ | crimsonCrocodile | organ | Organ counts as Organ.
+crocodileEye | Crocodile Eye | crimsonCrocodile | organ | Eye counts as Organ.
+redLeather | Red Leather | crimsonCrocodile | hide | Leather counts as Hide.
+riverKingHeart | River King Heart | crimsonCrocodile | organ | Heart counts as Organ.
+frogdogTongue | Frogdog Tongue | frogdog | organ | Tongue counts as Organ.
+rubberyHide | Rubbery Hide | frogdog | hide | Hide counts as Hide.
+toxicGland | Toxic Gland | frogdog | organ | Gland counts as Organ.
+wetBone | Wet Bone | frogdog | bone | Bone counts as Bone.
+bulgingEye | Bulging Eye | frogdog | organ | Eye counts as Organ.
+manyMouthGland | Many-Mouth Gland | frogdog | organ | Gland counts as Organ.
+smogPipe | Smog Pipe | smogSingers | organ | Hollow organ counts as Organ.
+sootLung | Soot Lung | smogSingers | organ | Lung counts as Organ.
+harmonyBone | Harmony Bone | smogSingers | bone | Bone counts as Bone.
+tarFeather | Tar Feather | smogSingers | hide,organ | Feather/tar tissue can be Hide or Organ, one slot only.
+chokingMask | Choking Mask | smogSingers | bone,hide | Natural mask can be Bone or Hide, one slot only.
+finalChorusLung | Final Chorus Lung | smogSingers | organ | Lung counts as Organ.
+
+Generated additionalFamilies tag map:
+These resources are generated by src/data/resources.js from additionalFamilies. Add tags by generated id/name or by applying name heuristics before export.
+RESOURCE_ID | NAME | SOURCE | MATERIAL_TAGS
+theKingInspiredResource1 | Crown Fragment | theKingInspired | bone,scrap
+theKingInspiredResource2 | Command Sinew | theKingInspired | organ
+theKingInspiredResource3 | Royal Ichor | theKingInspired | organ
+cruelCollectorResource1 | Hook Finger | cruelCollector | bone
+cruelCollectorResource2 | Collection Hide | cruelCollector | hide
+cruelCollectorResource3 | Catalog Eye | cruelCollector | organ
+wanderingKillerResource1 | Road Blade | wanderingKiller | bone,scrap
+wanderingKillerResource2 | Dust Sinew | wanderingKiller | organ
+wanderingKillerResource3 | Killer Token | wanderingKiller | scrap
+maskedJudgeResource1 | Verdict Shard | maskedJudge | bone,scrap
+maskedJudgeResource2 | Mask Leather | maskedJudge | hide
+maskedJudgeResource3 | Sentence Eye | maskedJudge | organ
+regalKnightResource1 | Regal Plate | regalKnight | bone,hide
+regalKnightResource2 | Courtly Bone | regalKnight | bone
+regalKnightResource3 | Banner Sinew | regalKnight | organ
+shadowStalkerResource1 | Shadow Hide | shadowStalker | hide
+shadowStalkerResource2 | Night Claw | shadowStalker | bone
+shadowStalkerResource3 | Dark Eye | shadowStalker | organ
+mirrorTyrantResource1 | Mirror Scale | mirrorTyrant | hide
+mirrorTyrantResource2 | Reflected Organ | mirrorTyrant | organ
+mirrorTyrantResource3 | Silver Bone | mirrorTyrant | bone
+blackKnightInspiredResource1 | Black Plate | blackKnightInspired | bone,hide
+blackKnightInspiredResource2 | Iron Marrow | blackKnightInspired | bone,organ
+blackKnightInspiredResource3 | Oath Fang | blackKnightInspired | bone
+redWitchesInspiredResource1 | Red Thread | redWitchesInspired | organ
+redWitchesInspiredResource2 | Coven Organ | redWitchesInspired | organ
+redWitchesInspiredResource3 | Hex Eye | redWitchesInspired | organ
+childEaterInspiredResource1 | Hunger Tooth | childEaterInspired | bone
+childEaterInspiredResource2 | Cradle Bone | childEaterInspired | bone
+childEaterInspiredResource3 | Dread Organ | childEaterInspired | organ
+pariahInspiredResource1 | Exile Hide | pariahInspired | hide
+pariahInspiredResource2 | Pariah Bone | pariahInspired | bone
+pariahInspiredResource3 | Forsaken Eye | pariahInspired | organ
+watcherInspiredResource1 | Watcher Plate | watcherInspired | bone,hide
+watcherInspiredResource2 | Lantern Marrow | watcherInspired | bone,organ
+watcherInspiredResource3 | Vigil Eye | watcherInspired | organ
+goldSmokeKnightInspiredResource1 | Gold Smoke Plate | goldSmokeKnightInspired | bone,hide
+goldSmokeKnightInspiredResource2 | Gilded Bone | goldSmokeKnightInspired | bone
+goldSmokeKnightInspiredResource3 | Smoke Eye | goldSmokeKnightInspired | organ
+gamblerInspiredResource1 | Chance Bone | gamblerInspired | bone
+gamblerInspiredResource2 | Wager Organ | gamblerInspired | organ
+gamblerInspiredResource3 | Loaded Eye | gamblerInspired | organ
+godhandInspiredResource1 | Hand Bone | godhandInspired | bone
+godhandInspiredResource2 | Divine Sinew | godhandInspired | organ
+godhandInspiredResource3 | God Ichor | godhandInspired | organ
+wanderersPackResource1 | Wanderer Token | wanderersPack | scrap
+wanderersPackResource2 | Road Hide | wanderersPack | hide
+wanderersPackResource3 | Far Eye | wanderersPack | organ
+scoutPackResource1 | Scout Token | scoutPack | scrap
+scoutPackResource2 | Trail Sinew | scoutPack | organ
+scoutPackResource3 | Horizon Eye | scoutPack | organ
+whiteBoxPackResource1 | White Fragment | whiteBoxPack | bone,scrap
+whiteBoxPackResource2 | Curio Hide | whiteBoxPack | hide
+whiteBoxPackResource3 | Box Eye | whiteBoxPack | organ
+strainPackResource1 | Strain Organ | strainPack | organ
+strainPackResource2 | Twisted Bone | strainPack | bone
+strainPackResource3 | Mutation Eye | strainPack | organ
+philosophyPackResource1 | Thought Bone | philosophyPack | bone
+philosophyPackResource2 | Question Organ | philosophyPack | organ
+philosophyPackResource3 | Idea Eye | philosophyPack | organ
+
+Name heuristic fallback for future resources:
+- contains hide, leather, pelt, mane, fur, feather, scale, wing, cloak, plate-like skin => hide
+- contains bone, fang, tooth, claw, horn, shell, shard, plate, crown, thorn, stem, marrow => bone
+- contains organ, heart, eye, gland, lung, sac, ichor, blood, sinew, tongue, thread, seed, core => organ
+- contains token, scrap, fragment, blade, mirror, glass, metal, shard, due, verdict => scrap, unless a stronger body tag is obvious
+
+Do not rely only on heuristics for existing resources. Existing resources should receive explicit materialTags from the map above.

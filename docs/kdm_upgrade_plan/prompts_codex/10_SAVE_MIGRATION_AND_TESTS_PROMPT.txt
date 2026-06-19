@@ -1,0 +1,43 @@
+CODEX VERSION
+
+Use this prompt with Codex. Codex may patch multiple related files in this stage, but it must stay inside the current stage and avoid broad rewrites.
+
+Before editing, inspect the relevant current repo files and compare them with docs/kdm-upgrade-plan/reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+PROMPT 10 - SAVE MIGRATION AND TESTS
+
+You are patching repo samuelkenworthy91-byte/KDM.
+Work carefully. Prefer focused patches. Do not broad-rewrite unrelated systems.
+Read the uploaded TXT docs in docs/kdm-upgrade-plan/ before changing code, especially reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+
+Goal:
+Make old saves safe after all system changes.
+
+Tasks:
+1. Update normalizeSettlement/save migration so missing loveJuice, materialTags, action state and innovation payment history do not crash.
+2. Migrate builtMemoryInnovations into innovationDeckState.builtInnovationIds where appropriate.
+3. Support old innovationHistory entries with paidResources arrays and new entries with slot mappings.
+4. Keep old resources in stash but stop treating old claw/fur/horn/ichor/monsterTooth/strangeEye as generic basic drops.
+5. Ensure old pending newborn/intimacy state loads.
+6. Add/expand tests listed in reference_docs/11_SAVE_MIGRATION_AND_TEST_REQUIREMENTS.txt.
+
+
+
+Validation commands to run before committing:
+npm run build
+npm run test
+git status
+
+If validation passes, commit and push with:
+git add -A
+git commit -m "<clear short commit message>"
+git push origin main
+git rev-parse HEAD
+
+Extra Codex safety rules:
+- Do not combine this with later prompts.
+- Do not rewrite entire large files unless there is no safer targeted patch.
+- Preserve save compatibility and unknown legacy fallbacks.
+- If a file has old and new systems side by side, migrate safely before deleting.
+- Keep card/intention wording exactly aligned to the docs; do not invent new wording or balance changes.
