@@ -381,6 +381,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
   const handSize = HAND_SIZE + (runBonus.extraFirstTurnDraw || 0) + (arts.includes('focusedBreath') ? 1 : 0);
   const maxHp = runBonus.survivor?.maxHp || 30;
   const currentHp = runBonus.survivor?.hp ?? maxHp;
+  const affinityBonus = runBonus.affinityBonus || {};
   const quarryId = monsterOverride.quarryId;
   const conditionSurvival =
     (scars.includes('deadEyeCalm') ? 1 : 0) +
@@ -523,6 +524,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     hasMonsterBane: Boolean(runBonus.hasMonsterBane),
     cardsPlayedThisTurn: 0,
     attacksPlayedThisTurn: 0,
+    firstBlockPlayed: false,
     survivalSpentThisTurn: 0,
     blockGainedThisTurn: 0,
     cardDiscardedThisTurn: false,
@@ -551,7 +553,15 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     testBonus: 0,
     consequenceReduction: 0,
     salvageTokens: 0,
-    afterCombatHealing: 0,
+    afterCombatHealing: runBonus.afterCombatHealing || 0,
+    affinityBonus,
+    affinityTotals: runBonus.affinityTotals || {},
+    affinityTriggers: {
+      redFightAttackUsed: false,
+      redWoundDrawUsed: false,
+      greenFightHealUsed: false,
+      greenCleanseUsed: false
+    },
     activeAuras: [],
     // Delayed effects
     pendingEnergy: 0,
@@ -615,6 +625,8 @@ export function playCard(cardIndex, state) {
   const weaponCardsPlayed = { ...(state.weaponCardsPlayed || {}) };
   const weaponMasteryUsed = { ...(state.weaponMasteryUsed || {}) };
   const weaponTurnTriggers = { ...(state.weaponTurnTriggers || {}) };
+  const affinityBonus = state.affinityBonus || {};
+  const affinityTriggers = { ...(state.affinityTriggers || {}) };
   const previousWeaponPlays = weaponCardsPlayed[weaponType] || 0;
   const firstWeaponCard = Boolean(weaponType && previousWeaponPlays === 0);
   const firstWeaponCardThisTurn = Boolean(weaponType && !(weaponTurnTriggers[weaponType] > 0));
@@ -912,6 +924,8 @@ export function playCard(cardIndex, state) {
       (!state.firstAttackPlayed ? state.firstAttackBonus || 0 : 0) +
       (isAttack ? nextAttackBonus : 0) +
       proficiencyDamageBonus +
+      (isAttack && !state.firstAttackPlayed && !affinityTriggers.redFightAttackUsed && affinityBonus.redLevel >= 1 ? 1 : 0) +
+      (isAttack && (state.attacksPlayedThisTurn || 0) === 0 && affinityBonus.redLevel >= 2 ? 1 : 0) +
       (state.fightingArts?.includes('bloodMemory') && state.woundHistory?.length ? 1 : 0) +
       (state.fightingArts?.includes('boneSetWrong') &&
         ['hammer', 'club', 'axe', 'grandWeapon', 'scythe'].includes(weaponType) ? 1 : 0) +
@@ -945,6 +959,19 @@ export function playCard(cardIndex, state) {
       ? applyDirectDamage(monster, monsterDamage)
       : applyDamage(monster, monsterDamage);
     const dealt = Math.max(0, hpBefore - monster.hp);
+    if (isAttack && !state.firstAttackPlayed && affinityBonus.redLevel >= 1) {
+      affinityTriggers.redFightAttackUsed = true;
+    }
+    if (
+      isAttack &&
+      weaponType &&
+      dealt > 0 &&
+      affinityBonus.redLevel >= 3 &&
+      !affinityTriggers.redWoundDrawUsed
+    ) {
+      drawAmount(1);
+      affinityTriggers.redWoundDrawUsed = true;
+    }
     if (selectedWeakPoint && amount > 0) {
       weakPointAttempted = true;
       let flatBreakBonus = selectedWeakPoint.marked || monster.marked ? 1 : 0;
@@ -1038,6 +1065,19 @@ export function playCard(cardIndex, state) {
       nextAttackMarks = false;
     }
   };
+  const applyAffinityHealing = amount => {
+    const bonus = affinityBonus.greenLevel >= 1 && !affinityTriggers.greenFightHealUsed ? 1 : 0;
+    survivor = applyHealingToSurvivor(survivor, amount + bonus).survivor;
+    if (affinityBonus.greenLevel >= 1) affinityTriggers.greenFightHealUsed = true;
+    if (
+      affinityBonus.greenLevel >= 3 &&
+      !affinityTriggers.greenCleanseUsed &&
+      ((survivor.bleed || 0) > 0 || (survivor.poison || 0) > 0)
+    ) {
+      survivor = { ...survivor, bleed: 0, poison: 0 };
+      affinityTriggers.greenCleanseUsed = true;
+    }
+  };
 
   card.effects.forEach(rawEffect => {
     const effect = { ...rawEffect, type: normalizeEffectType(rawEffect.type) };
@@ -1110,10 +1150,12 @@ export function playCard(cardIndex, state) {
             .filter(passive => passive.type === 'firstBlockBonus')
             .reduce((total, passive) => total + (passive.value || 0), 0)
           : 0;
+        const affinityBlockBonus = !state.firstBlockPlayed && firstBlockEffect && affinityBonus.blueLevel >= 1 ? 1 : 0;
         const gained = Math.max(0, effect.amount + auraBlockBonus + artBlockBonus - penalty) +
           (!isAttack ? preparedConsumed : 0) +
           (state.hasMonsterBane ? effect.bonusIfMonsterBane || 0 : 0) +
-          tellBonus;
+          tellBonus +
+          affinityBlockBonus;
         survivor = { ...survivor, block: survivor.block + gained };
         blockGainedThisTurn += gained;
         firstBlockEffect = false;
@@ -1124,7 +1166,8 @@ export function playCard(cardIndex, state) {
         activeAuras = nextBlockAura.auras;
         const auraBlockBonus = activeAuraAmount(activeAuras, 'globalBlockCardBonus') + nextBlockAura.amount;
         const isLowHp = survivor.hp < survivor.maxHp / 2;
-        const block = (isLowHp ? effect.lowHpAmount : effect.amount) + auraBlockBonus;
+        const affinityBlockBonus = !state.firstBlockPlayed && firstBlockEffect && affinityBonus.blueLevel >= 1 ? 1 : 0;
+        const block = (isLowHp ? effect.lowHpAmount : effect.amount) + auraBlockBonus + affinityBlockBonus;
         const penalty = !state.firstBlockPlayed && firstBlockEffect &&
           state.injuries?.includes('crackedRibs') ? 1 : 0;
         survivor = { ...survivor, block: survivor.block + Math.max(0, block - penalty) };
@@ -1156,13 +1199,13 @@ export function playCard(cardIndex, state) {
         break;
       case 'heal':
       case 'healSelf':
-        survivor = applyHealingToSurvivor(survivor, effect.amount).survivor;
+        applyAffinityHealing(effect.amount);
         break;
       case 'healTarget':
-        survivor = applyHealingToSurvivor(survivor, effect.amount).survivor;
+        applyAffinityHealing(effect.amount);
         break;
       case 'healParty':
-        survivor = applyHealingToSurvivor(survivor, effect.amount).survivor;
+        applyAffinityHealing(effect.amount);
         emittedPartyEffects.push({
           target: 'all',
           effectType: 'heal',
@@ -1173,17 +1216,17 @@ export function playCard(cardIndex, state) {
         break;
       case 'healIfBelowHalf':
         if (survivor.hp > 0 && survivor.hp < survivor.maxHp / 2) {
-          survivor = applyHealingToSurvivor(survivor, effect.amount).survivor;
+          applyAffinityHealing(effect.amount);
         }
         break;
       case 'healIfWounded':
         if (survivor.hp > 0 && survivor.hp < survivor.maxHp) {
-          survivor = applyHealingToSurvivor(survivor, effect.amount).survivor;
+          applyAffinityHealing(effect.amount);
         }
         break;
       case 'healIfWoundedOrBlock':
         if (survivor.hp > 0 && survivor.hp < survivor.maxHp) {
-          survivor = applyHealingToSurvivor(survivor, effect.heal).survivor;
+          applyAffinityHealing(effect.heal);
         }
         else if (survivor.hp > 0) {
           survivor.block += effect.block;
@@ -1701,6 +1744,7 @@ export function playCard(cardIndex, state) {
     cardsPlayedThisTurn: (state.cardsPlayedThisTurn || 0) + 1,
     attacksPlayedThisTurn: (state.attacksPlayedThisTurn || 0) + (isAttack ? 1 : 0),
     blockGainedThisTurn,
+    affinityTriggers,
     cardDiscardedThisTurn,
     previousCardType: card.type,
     weaponCardsPlayed,

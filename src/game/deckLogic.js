@@ -1,5 +1,6 @@
 import { cards, starterCardIds } from '../data/cards.js';
 import { equipment, getEquipment } from '../data/equipment.js';
+import { calculateAffinityTotals, getItemAffinities } from './affinityLogic.js';
 
 export function getStarterDeck() {
   return getCardsFromIds(starterCardIds, 'Starter deck', 'starter');
@@ -136,6 +137,7 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
         weaponType: item.weaponType || null,
         gearInstanceId: resolved.gearInstanceId,
         sourceGearId: resolved.equipmentId,
+        affinities: getItemAffinities(item),
         colorAffinity: item.colorAffinity || card.colorAffinity || '',
         colorAffinityName: item.colorAffinityName || card.colorAffinityName || '',
         keywords: [...new Set([...(card.keywords || []), ...(item.keywords || [])])]
@@ -143,13 +145,7 @@ export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] 
     }
   });
 
-  const affinityCounts = equippedGear.reduce((counts, itemOrId) => {
-    const item = resolveEquippedGear(itemOrId)?.item;
-    if (item?.colorAffinity) {
-      counts[item.colorAffinity] = (counts[item.colorAffinity] || 0) + 1;
-    }
-    return counts;
-  }, {});
+  const affinityCounts = calculateAffinityTotals(equippedGear);
   Object.values(cards)
     .filter(card => card.grantedByAffinity && card.affinityThresholdRequired)
     .forEach(card => {

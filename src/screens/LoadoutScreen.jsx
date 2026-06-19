@@ -18,6 +18,17 @@ import {
 import { formatValueForDisplay } from '../utils/formatters.js';
 import { getSurvivorDisplayName } from '../game/survivorIdentity.js';
 import { getHarvestBenefitLabels } from '../game/harvestRewardLogic.js';
+import {
+  calculateAffinityTotals,
+  formatAffinityTotals,
+  getActiveAffinityBonuses,
+  getItemAffinities
+} from '../game/affinityLogic.js';
+
+function AffinityLine({ item }) {
+  const labels = formatAffinityTotals(getItemAffinities(item));
+  return <p>Affinity: {labels.length ? labels.join(', ') : 'None'}</p>;
+}
 
 function GearCards({ gear }) {
   const item = getEquipment(gear.equipmentId);
@@ -33,6 +44,7 @@ function GearCards({ gear }) {
       <p>
         Type: {item?.weaponType || 'Non-weapon'} | Hands: {item?.hands ?? 0} | Slot: {item?.slot}
       </p>
+      <AffinityLine item={item} />
       <p>Keywords: {item?.keywords?.join(', ') || 'Survival'}</p>
       <p>{formatValueForDisplay(item?.passiveText)}</p>
       {item?.affectsOtherSurvivors && <p className="effect-text">Affects other survivors.</p>}
@@ -76,6 +88,9 @@ export default function LoadoutScreen({
     .map(gear => equipment[gear.equipmentId])
     .filter(item => item?.proficiencyXpGranted && item.weaponType)
     .map(item => item.weaponType))];
+  const affinityTotals = calculateAffinityTotals(allRunGear);
+  const affinityLabels = formatAffinityTotals(affinityTotals);
+  const activeAffinityBonuses = getActiveAffinityBonuses(affinityTotals);
   const validProficiencyTypes = availableWeaponTypes.length
     ? availableWeaponTypes
     : ['fistAndTooth'];
@@ -160,6 +175,7 @@ export default function LoadoutScreen({
                 Type: {item.weaponType || 'Non-weapon'} |{' '}
                 Hands: {item.hands ?? 0} | Slot: {item.slot}
               </p>
+              <AffinityLine item={item} />
               <p>Keywords: {item.keywords?.join(', ') || 'Survival'}</p>
               <p>{formatValueForDisplay(item.passiveText)}</p>
               {item.affectsOtherSurvivors && (
@@ -197,6 +213,23 @@ export default function LoadoutScreen({
         })}
       </div>
       {!armory.length && <p>The settlement armory is empty.</p>}
+
+      <section className="gear-card-summary">
+        <h3>Affinity</h3>
+        <p>{affinityLabels.length ? affinityLabels.join(', ') : 'No affinity from selected gear.'}</p>
+        <h4>Active Affinity Bonuses</h4>
+        {activeAffinityBonuses.length ? (
+          <ul>
+            {activeAffinityBonuses.map(bonus => (
+              <li key={`${bonus.color}-${bonus.threshold}`}>
+                <strong>{bonus.label}</strong> - {bonus.description}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No affinity thresholds active.</p>
+        )}
+      </section>
 
       <section className="gear-card-summary">
         <h3>Cards Added by Gear</h3>

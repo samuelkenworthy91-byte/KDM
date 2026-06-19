@@ -25,6 +25,89 @@ function isLegacyCompatibilityGear(item) {
   return legacyCompatibilityEquipmentIds.has(item.id);
 }
 
+const affinityColors = ['red', 'blue', 'green', 'purple'];
+
+function normalizeAffinities(raw = {}) {
+  return affinityColors.reduce((affinities, color) => ({
+    ...affinities,
+    [color]: Math.max(0, Number(raw[color]) || 0)
+  }), {});
+}
+
+function addAffinity(base, color, value = 1) {
+  if (!affinityColors.includes(color)) return base;
+  return { ...base, [color]: (base[color] || 0) + value };
+}
+
+function inferGearAffinities(item, metadata = {}) {
+  let affinities = normalizeAffinities(item.affinities || item.affinity || item.colorAffinity || {});
+  const text = [
+    item.id,
+    item.name,
+    item.itemType,
+    item.loadoutCategory,
+    item.slot,
+    item.bodySlot,
+    item.weaponType,
+    item.passiveText,
+    ...(item.keywords || []),
+    ...(metadata.keywords || []),
+    ...(metadata.styleTags || [])
+  ].filter(Boolean).join(' ').toLowerCase();
+  const hasAnyAffinity = () => affinityColors.some(color => affinities[color] > 0);
+
+  if (item.weaponType) {
+    if (['grandWeapon', 'axe', 'sword', 'katana', 'katar', 'fistAndTooth'].includes(item.weaponType)) {
+      affinities = addAffinity(affinities, 'red');
+    } else if (item.weaponType === 'shield') {
+      affinities = addAffinity(affinities, 'blue');
+      if (/(bash|spike|fang|crimson|fire|storm|surge|pounce)/.test(text)) affinities = addAffinity(affinities, 'red');
+    } else if (['dagger', 'bow', 'whip', 'spear'].includes(item.weaponType)) {
+      affinities = addAffinity(affinities, 'purple');
+      if (/(bleed|burn|fire|axe|strike|breaker|damage|crimson|thunder|dragon|drake)/.test(text)) {
+        affinities = addAffinity(affinities, 'red');
+      }
+    } else {
+      affinities = addAffinity(affinities, 'red');
+    }
+  }
+
+  if (item.loadoutCategory === 'armor' || item.itemType === 'armor' || item.bodySlot) {
+    affinities = addAffinity(affinities, 'blue');
+    if (/(heal|wound|warmth|bind|recovery|silk|verdant)/.test(text)) affinities = addAffinity(affinities, 'green');
+    if (/(aggressive|riposte|counter|fire|drake|crimson|predator|pounce)/.test(text)) affinities = addAffinity(affinities, 'red');
+  }
+
+  if (item.loadoutCategory === 'tool' || ['tool', 'instrument', 'survivalGear', 'consumable'].includes(item.itemType)) {
+    affinities = addAffinity(affinities, 'green');
+    if (/(harvest|weak|eye|lens|needle|snare|hook|gauge|chalk|hunt|mark|precision|resource|loot)/.test(text)) {
+      affinities = addAffinity(affinities, 'purple');
+    }
+    if (/(fire|burn|blood|bleed|crimson|tooth|claw|fang|damage|risky|warpaint)/.test(text)) {
+      affinities = addAffinity(affinities, 'red');
+    }
+  }
+
+  if (/(heal|wound|poison|cleanse|organ|flask|broth|salve|bandage|medicine|wrap)/.test(text)) {
+    affinities = addAffinity(affinities, 'green');
+  }
+  if (/(harvest|weak|mark|marked|eye|lens|needle|knife|dagger|bow|snare|hook|hunt|loot|resource|precision)/.test(text)) {
+    affinities = addAffinity(affinities, 'purple');
+  }
+  if (/(shield|guard|block|armor|armour|plate|shell|chitin|fortress|buckler|targe|vest|helm|greaves)/.test(text)) {
+    affinities = addAffinity(affinities, 'blue');
+  }
+  if (/(grand|axe|cleaver|katana|sword|katar|burn|bleed|fire|drake|dragon|crimson|storm|thunder|emperor|damage)/.test(text)) {
+    affinities = addAffinity(affinities, 'red');
+  }
+
+  if (!hasAnyAffinity()) affinities = addAffinity(affinities, 'green');
+  return affinityColors.reduce((capped, color) => ({
+    ...capped,
+    [color]: affinities[color] > 0 ? 1 : 0
+  }), {});
+}
+
 const currentEquipmentById = Object.fromEntries(
   gearCatalog
     .filter(item => !isLegacyCompatibilityGear(item))
@@ -38,6 +121,11 @@ const currentEquipmentById = Object.fromEntries(
         currentSource: 'gearOverhaulCatalog'
       };
       const metadata = getGearMetadata(normalized);
+      normalized.affinities = inferGearAffinities(normalized, metadata);
+      const primaryAffinity = affinityColors.find(color => normalized.affinities[color] > 0) || '';
+      normalized.colorAffinity = normalized.colorAffinity || primaryAffinity;
+      normalized.colorAffinityName = normalized.colorAffinityName ||
+        (primaryAffinity ? `${primaryAffinity.charAt(0).toUpperCase()}${primaryAffinity.slice(1)}` : '');
       normalized.weaponType = normalized.weaponType || metadata.weaponType;
       normalized.slot = normalized.slot || metadata.slot;
       normalized.hands = Number(normalized.hands ?? metadata.hands ?? 0) || 0;

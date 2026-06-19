@@ -37,9 +37,10 @@ export default function LootRewardScreen({
   bossReward,
   brokenWeakPoints = [],
   wounds = [],
+  extraSelections = 0,
   onChoose
 }) {
-  const chooseCount = level;
+  const chooseCount = level + Math.max(0, Number(extraSelections) || 0);
   const [selected, setSelected] = useState([]);
   const offers = choices.map(normalizeOffer);
   const toggleChoice = offerId => {
@@ -97,7 +98,10 @@ export default function LootRewardScreen({
           ).join(', ')}
         </p>
       )}
-      <p>Choose {chooseCount} monster {chooseCount === 1 ? 'part' : 'parts'}.</p>
+      <p>
+        Choose {chooseCount} monster {chooseCount === 1 ? 'part' : 'parts'}.
+        {extraSelections > 0 ? ` Purple affinity grants +${extraSelections} extra selection.` : ''}
+      </p>
       <div className="loot-choice-grid">
         {offers.map(offer => {
           const resource = resources[offer.resourceId];

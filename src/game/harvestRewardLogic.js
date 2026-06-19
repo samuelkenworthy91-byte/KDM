@@ -169,12 +169,16 @@ export function buildHarvestRewardOffers({
   harvestResults = [],
   rarityUpgrade = 0,
   qualityUpgrade = 0,
+  quarryLevelBonus = 0,
+  extraOfferCount = 0,
   offerSeed
 } = {}) {
   const quarry = quarries[quarryId];
   if (!quarry) return [];
   const random = seededRandom(offerSeed);
   const candidates = [];
+  const effectiveQuarryLevel = Math.min(3, Math.max(1, Number(quarryLevel) + Number(quarryLevelBonus || 0)));
+  const totalRarityUpgrade = Number(rarityUpgrade || 0) + (effectiveQuarryLevel > Number(quarryLevel) ? 1 : 0);
   const pools = quarryPools(quarryId);
 
   genericCommonPool().forEach(resourceId => {
@@ -186,39 +190,42 @@ export function buildHarvestRewardOffers({
       'messy',
       'Generic fallback material is common on any hunt.',
       { bucket: 'commonGeneric' },
-      quarryLevel,
-      rarityUpgrade
+      effectiveQuarryLevel,
+      totalRarityUpgrade
     );
   });
   pools.creature.forEach(resourceId => {
-    addCandidate(candidates, resourceId, HARVEST_BASE_WEIGHTS.creatureSpecific, 'quarryPool', 'messy', `${quarry.name} quarry pool.`, { bucket: 'creatureSpecific' }, quarryLevel, rarityUpgrade);
+    addCandidate(candidates, resourceId, HARVEST_BASE_WEIGHTS.creatureSpecific, 'quarryPool', 'messy', `${quarry.name} quarry pool.`, { bucket: 'creatureSpecific' }, effectiveQuarryLevel, totalRarityUpgrade);
   });
   pools.rare.forEach(resourceId => {
-    addCandidate(candidates, resourceId, HARVEST_BASE_WEIGHTS.rare, 'quarryPool', 'clean', 'Rare part odds require quality or level support.', { bucket: 'rare' }, quarryLevel, rarityUpgrade);
+    addCandidate(candidates, resourceId, HARVEST_BASE_WEIGHTS.rare, 'quarryPool', 'clean', 'Rare part odds require quality or level support.', { bucket: 'rare' }, effectiveQuarryLevel, totalRarityUpgrade);
   });
   pools.strange.forEach(resourceId => {
-    addCandidate(candidates, resourceId, HARVEST_BASE_WEIGHTS.strange, 'quarryPool', 'clean', 'Strange part odds require quality or level support.', { bucket: 'strange' }, quarryLevel, rarityUpgrade);
+    addCandidate(candidates, resourceId, HARVEST_BASE_WEIGHTS.strange, 'quarryPool', 'clean', 'Strange part odds require quality or level support.', { bucket: 'strange' }, effectiveQuarryLevel, totalRarityUpgrade);
   });
   pools.level3Rare.forEach(resourceId => {
-    addCandidate(candidates, resourceId, quarryLevel >= 3 ? 5 : HARVEST_BASE_WEIGHTS.level3Rare, 'quarryPool', 'clean', 'Level 3 rare requires apex quarry quality.', { bucket: 'level3Rare' }, quarryLevel, rarityUpgrade);
+    addCandidate(candidates, resourceId, effectiveQuarryLevel >= 3 ? 5 : HARVEST_BASE_WEIGHTS.level3Rare, 'quarryPool', 'clean', 'Level 3 rare requires apex quarry quality.', { bucket: 'level3Rare' }, effectiveQuarryLevel, totalRarityUpgrade);
   });
 
   harvestResults.forEach(result => addWeakPointCandidates({
     candidates,
     result: qualityUpgrade && result.quality === 'messy' ? { ...result, quality: 'clean' } : result,
-    quarryLevel,
-    rarityUpgrade
+    quarryLevel: effectiveQuarryLevel,
+    rarityUpgrade: totalRarityUpgrade
   }));
 
   if (!candidates.length) return [];
   const offerRanges = { 1: [3, 4], 2: [4, 6], 3: [5, 8] };
-  const [min, max] = offerRanges[quarryLevel] || offerRanges[1];
-  const count = min + Math.floor(random() * (max - min + 1));
+  const [min, max] = offerRanges[effectiveQuarryLevel] || offerRanges[1];
+  const count = min + Math.floor(random() * (max - min + 1)) + Math.max(0, Number(extraOfferCount) || 0);
   let drawn = Array.from({ length: count }, () => drawWeighted(candidates, random));
   drawn = ensureOffer(drawn, candidates, offer => offer.source === 'generic', random);
   drawn = ensureOffer(drawn, candidates, offer => offer.source === 'quarryPool' && offer.rarityTier === 'creature', random);
   if (harvestResults.some(result => result.quality === 'clean')) {
     drawn = ensureOffer(drawn, candidates, offer => offer.source === 'weakPoint', random);
+  }
+  if (effectiveQuarryLevel > Number(quarryLevel)) {
+    drawn = ensureOffer(drawn, candidates, offer => ['rare', 'strange', 'level3Rare'].includes(offer.rarityTier), random);
   }
   return combineOffers(drawn.map(({ weight, ...offer }) => ({ ...offer })));
 }

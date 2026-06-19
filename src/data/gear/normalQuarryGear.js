@@ -255,7 +255,7 @@ function mechanicTargetEffect(mechanic, amount = 1) {
   return setupEffect(mechanic, amount);
 }
 
-function makeCard({ sourceGearId, name, cost, description, effects, type = 'skill', tags = [], weaponType = null }) {
+function makeCard({ sourceGearId, name, cost, description, effects, type = 'skill', tags = [], weaponType = null, exhaust = false }) {
   return {
     id: cardId(sourceGearId, name),
     name,
@@ -267,6 +267,7 @@ function makeCard({ sourceGearId, name, cost, description, effects, type = 'skil
     sourceType: 'equipment',
     sourceGearId,
     ...(weaponType ? { weaponType } : {}),
+    ...(exhaust ? { exhaust: true } : {}),
     implemented: true
   };
 }
@@ -441,10 +442,11 @@ function makeInstrumentItem(suite) {
     makeCard({
       sourceGearId: id,
       name: 'Sustained Rhythm',
-      cost: 1,
-      description: `[AURA] Until your next turn, cards using ${suite.mechanicPair} are +1 stronger.`,
-      effects: [{ type: 'aura', auraType: 'globalDamageBonus', amount: 1 }],
-      tags: ['gear', 'instrument', 'aura', 'normal', slugify(suite.mechanic)]
+      cost: 3,
+      description: `[AURA] Cards using ${suite.mechanicPair} are +1 stronger this fight. Exhaust.`,
+      effects: [{ type: 'aura', auraType: 'globalDamageBonus', amount: 1, duration: 'combat' }],
+      tags: ['gear', 'instrument', 'aura', 'normal', slugify(suite.mechanic)],
+      exhaust: true
     }),
     makeCard({
       sourceGearId: id,

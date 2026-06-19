@@ -55,6 +55,11 @@ import { genericResourceIds, resources as resourceData } from './data/resources.
 import { getQuarryDiscoveryEvent } from './data/quarryDiscoveryEvents.js';
 import { createMonsterWeakPoints, getBrokenWeakPointRewards } from './data/weakPoints.js';
 import { buildHarvestRewardOffers } from './game/harvestRewardLogic.js';
+import {
+  calculateAffinityTotals,
+  getAffinityCombatBonus,
+  getPurpleHarvestBonus
+} from './game/affinityLogic.js';
 import { treatWound } from './data/woundTables.js';
 import {
   addResources,
@@ -405,6 +410,13 @@ function getLoadoutBonus(settlement, monsterId, quarryId) {
     counterDamageBonus: 0,
     monsterStartsWounded: 0
   };
+  const affinityTotals = calculateAffinityTotals(activeSurvivor?.boundGear || []);
+  const affinityBonus = getAffinityCombatBonus(affinityTotals);
+  bonus.affinityTotals = affinityTotals;
+  bonus.affinityBonus = affinityBonus;
+  bonus.startingBlock += affinityBonus.startingBlock;
+  bonus.afterCombatHealing = affinityBonus.afterCombatHealing;
+  bonus.purpleHarvestBonus = getPurpleHarvestBonus(affinityTotals);
 
   equipped.forEach(item => {
     if (item.id === 'hideWraps') bonus.startingBlock += 3;
@@ -1123,17 +1135,24 @@ export default function App() {
       }
       const isBoss = currentNode?.type === 'boss';
       setBossGenericRewards(isBoss ? rollTierGenericBossRewards(selectedQuarry, selectedLevel) : []);
+      const purpleHarvestBonus = getPurpleHarvestBonus(calculateAffinityTotals(
+        living.flatMap(survivor => survivor.boundGear || [])
+      ));
       setPendingCombatVictory({
         huntResultId: createHuntResultId(),
         isBoss,
         survivors: living,
         brokenWeakPoints,
         harvestResults,
-        wounds: combatResult.wounds || []
+        wounds: combatResult.wounds || [],
+        extraLootSelections: purpleHarvestBonus.extraSelections
       });
       setLootChoices(buildHarvestRewardOffers({
         quarryId: selectedQuarry,
         quarryLevel: selectedLevel,
+        quarryLevelBonus: purpleHarvestBonus.quarryLevelBonus,
+        extraOfferCount: purpleHarvestBonus.extraOfferCount,
+        rarityUpgrade: purpleHarvestBonus.rarityUpgrade,
         brokenWeakPoints,
         harvestResults,
         combatWounds: combatResult.wounds || [],
@@ -1171,14 +1190,19 @@ export default function App() {
       ? rollTierGenericBossRewards(selectedQuarry, selectedLevel)
       : [];
     setBossGenericRewards(genericRewards);
+    const purpleHarvestBonus = getPurpleHarvestBonus(calculateAffinityTotals(survivorAfterCombat.boundGear || []));
     setPendingCombatVictory({
       huntResultId: createHuntResultId(),
       isBoss,
-      survivor: survivorAfterCombat
+      survivor: survivorAfterCombat,
+      extraLootSelections: purpleHarvestBonus.extraSelections
     });
     setLootChoices(buildHarvestRewardOffers({
       quarryId: selectedQuarry,
       quarryLevel: selectedLevel,
+      quarryLevelBonus: purpleHarvestBonus.quarryLevelBonus,
+      extraOfferCount: purpleHarvestBonus.extraOfferCount,
+      rarityUpgrade: purpleHarvestBonus.rarityUpgrade,
       party: [survivorAfterCombat],
       runModifiers,
       offerSeed: `${currentHuntId || Date.now()}:${currentNode?.id || 'combat'}:${selectedQuarry}:${selectedLevel}`
@@ -3575,6 +3599,7 @@ export default function App() {
             bossReward={pendingCombatVictory?.isBoss}
             brokenWeakPoints={pendingCombatVictory?.brokenWeakPoints || []}
             wounds={pendingCombatVictory?.wounds || []}
+            extraSelections={pendingCombatVictory?.extraLootSelections || 0}
             onChoose={handleLootChoice}
           />
         );
