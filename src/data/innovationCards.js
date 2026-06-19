@@ -356,6 +356,38 @@ export const innovationCards = {
   trophyRites: card('trophyRites', 'Trophy Rites', 'ritual', 'The settlement decides which trophies belong to the living.', ['Records victories over those who come to collect.'], { tags: ['nemesis', 'memory'] }),
   settlementLaw: card('settlementLaw', 'Settlement Law', 'law', 'Spoken rules give shape to punishments and protections.', ['The settlement remembers the verdict it survived.'], { tags: ['nemesis', 'law'] }),
   mirrorDoctrine: card('mirrorDoctrine', 'Mirror Doctrine', 'knowledge', 'Strength is studied together with the weakness it casts behind it.', ['Records the fall of the reflective tyrant.'], { tags: ['nemesis', 'knowledge'] })
+  ,
+  nightDrills: card('nightDrills', 'Night Drills', 'training', 'Intense nocturnal practice hones survivor readiness.', ['Unlocks Memory Training action.'], {
+    tags: ['training'],
+    actionUnlocks: ['memoryTraining'],
+    limit: 'Once per Lantern Year across the settlement.',
+    playerSummary: 'Spend 1 Memory to conduct Memory Training with one survivor.',
+    howToUse: 'Choose a survivor in the Training tab.',
+    actionLocation: 'Settlement > Actions > Training',
+    whyItMatters: 'Focused night training prepares survivors for the horrors of the hunt.',
+    unlockedTab: 'training',
+    tutorialSteps: [
+      'Open Settlement > Survivors and expand the survivor to train.',
+      'Choose Memory Training in the Training tab.',
+      'Training costs 1 Memory and the settlement may perform it once each Lantern Year.'
+    ]
+  })
+  ,
+  memoryPit: card('memoryPit', 'Memory Pit', 'training', 'A dark pit forces survivors to confront their fears.', ['Unlocks Memory Training action with greater risk and reward.'], {
+    tags: ['training'],
+    actionUnlocks: ['memoryTraining'],
+    limit: 'Once per Lantern Year across the settlement.',
+    playerSummary: 'Spend 1 Memory to conduct high-risk Memory Training with one survivor.',
+    howToUse: 'Choose a survivor in the Training tab.',
+    actionLocation: 'Settlement > Actions > Training',
+    whyItMatters: 'The Memory Pit offers greater rewards but dangers for survivor development.',
+    unlockedTab: 'training',
+    tutorialSteps: [
+      'Open Settlement > Survivors and expand the survivor to train.',
+      'Choose Memory Training in the Training tab.',
+      'Training costs 1 Memory and the settlement may perform it once each Lantern Year.'
+    ]
+  })
 };
 
 export const innovationCardList = Object.values(innovationCards);
