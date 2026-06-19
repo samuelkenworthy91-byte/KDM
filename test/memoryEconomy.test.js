@@ -57,7 +57,18 @@ test('only living returners award memories and dead survivors can be queued', ()
   assert.equal(queued.pendingDeathResolutions.length, 2);
 });
 
-test('burial grants memory while resource recovery grants no memory', () => {
+test('full party death awards no memories', () => {
+  const party = [
+    { id: 'dead-1', name: 'Dead One', hp: 0, alive: false },
+    { id: 'dead-2', name: 'Dead Two', hp: 0, alive: false }
+  ];
+  const awarded = awardHuntReturnMemories(settlement(), party, 'hunt-failed');
+
+  assert.equal(awarded.memories, 0);
+  assert.equal(awarded.memoryHistory.length, 0);
+});
+
+test('burial and resource recovery grant no memory by default', () => {
   const resolution = createDeathResolution(
     { id: 'dead-1', name: 'Mara' },
     { id: 'resolution-1', timestamp: '2026-01-01T00:00:00.000Z' }
@@ -71,8 +82,10 @@ test('burial grants memory while resource recovery grants no memory', () => {
     'hide'
   );
 
-  assert.equal(buried.memories, 1);
-  assert.equal(buried.memoryHistory[0].source, 'burial');
+  assert.equal(buried.memories, 0);
+  assert.equal(buried.memoryHistory.length, 0);
+  assert.equal(buried.pendingDeathResolutions[0].status, 'resolved');
+  assert.equal(buried.pendingDeathResolutions[0].choice, 'bury');
   assert.equal(recovered.memories, 0);
   assert.equal(recovered.stash.hide, 1);
 });
@@ -91,7 +104,7 @@ test('legacy settlement memory migrates into the authoritative balance', () => {
   assert.equal(migrated.memoryHistory[0].source, 'legacy-save');
 });
 
-test('hunt events expose a memory award result type', () => {
+test('hunt events do not grant memory by default', () => {
   const award = createHuntEventMemoryAward(2, 'The party records a strange light.');
   const next = gainMemories(settlement(), award.amount, {
     source: award.source,
@@ -99,6 +112,7 @@ test('hunt events expose a memory award result type', () => {
   });
 
   assert.equal(award.type, 'memoryAward');
-  assert.equal(next.memories, 2);
-  assert.equal(next.memoryHistory[0].source, 'hunt-event');
+  assert.equal(award.amount, 0);
+  assert.equal(next.memories, 0);
+  assert.equal(next.memoryHistory.length, 0);
 });

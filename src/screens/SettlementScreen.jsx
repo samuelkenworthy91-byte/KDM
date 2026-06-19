@@ -1158,7 +1158,7 @@ export default function SettlementScreen({
         <div className="settlement-stats">
           <span>Population: {settlement.population}</span>
           <span>Hunt party slots: {settlement.maxHuntPartySize}/4</span>
-          <span title="Gain Memory from successful intimacy, living hunt returns, hunt events, and burial. Spend it on innovation, rest, training, newborn development, and intimacy protection.">
+          <span title="Gain Memory when survivors return alive from a successful hunt. Retreat gives no Memory. Some innovations may unlock extra Memory sources.">
             Memories: {memoryBalance}
           </span>
           <span>Lantern Year: {settlement.lanternYear}</span>
@@ -1195,7 +1195,7 @@ export default function SettlementScreen({
           <details className="memory-ledger">
             <summary>Memory Ledger ({settlement.memoryHistory?.length || 0} transactions)</summary>
             <p className="muted-text">
-              Gain: successful intimacy, living hunt returns, hunt events, and burial.
+              Gain Memory when survivors return alive from a successful hunt. Retreat gives no Memory. Some innovations may unlock extra Memory sources.
               Spend: innovation, rest, training, newborn development, and intimacy protection.
             </p>
             {(settlement.memoryHistory || []).slice(0, 20).map(entry => (
@@ -2175,7 +2175,7 @@ export default function SettlementScreen({
           })()}
 
           <p className="muted-text">One attempt is allowed per Lantern Year. A disastrous roll can kill a participant.</p>
-          <p className="effect-text">A successful intimacy grants 1 Memory.</p>
+          <p className="effect-text">Intimacy does not grant Memory by default.</p>
           {intimacyUsedThisYear && <p className="missing">Unavailable: intimacy was already attempted this Lantern Year.</p>}
           {!livingMales.length && <p className="missing">Unavailable: no living male survivor.</p>}
           {!livingFemales.length && <p className="missing">Unavailable: no living female survivor.</p>}

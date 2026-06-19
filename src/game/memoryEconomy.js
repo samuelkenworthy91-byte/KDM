@@ -119,13 +119,7 @@ export function resolveDeathMemoryChoice(settlement, resolutionId, choice, resou
   };
 
   if (choice === 'bury') {
-    return gainMemories(next, 1, {
-      source: 'burial',
-      description: `${resolution.survivorName} was laid to rest.`,
-      survivorIds: [resolution.survivorId].filter(Boolean),
-      huntId: resolution.huntId,
-      lanternYear: resolution.lanternYear
-    });
+    return next;
   }
 
   if (choice === 'recover-resource') {
@@ -145,8 +139,8 @@ export function resolveDeathMemoryChoice(settlement, resolutionId, choice, resou
 export function createHuntEventMemoryAward(amount, description = 'A hunt event preserved a memory.') {
   return {
     type: 'memoryAward',
-    amount: normalizeAmount(amount),
+    amount: 0,
     source: 'hunt-event',
-    description
+    description: description || 'No Memory gained from hunt events under the current economy.'
   };
 }

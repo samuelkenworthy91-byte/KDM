@@ -3158,26 +3158,19 @@ export default function App() {
         roll,
         outcome,
         populationChange,
-        memoryAwarded: pendingNewborn ? 1 : 0,
+        memoryAwarded: 0,
         memorySpentOnMitigation: options.mitigateRisk ? 1 : 0,
         deathName: deathSurvivor?.name || null
       };
       if (pendingNewborn) pendingNewborn.historyTimestamp = historyEntry.timestamp;
-      const intimacyMemorySettlement = pendingNewborn
-        ? gainMemories(memorySettlement, 1, {
-          source: 'successful-intimacy',
-          description: 'A successful intimacy created a lasting settlement memory.',
-          survivorIds: [male.id, female.id]
-        })
-        : memorySettlement;
       const resolvedSettlement = deathSurvivor
-        ? queueDeathResolutions(intimacyMemorySettlement, [
+        ? queueDeathResolutions(memorySettlement, [
           createDeathResolution(deathSurvivor, {
             cause: 'Intimacy tragedy',
             lanternYear: current.lanternYear
           })
         ])
-        : intimacyMemorySettlement;
+        : memorySettlement;
 
       return {
         ...resolvedSettlement,

@@ -126,11 +126,30 @@ test('Event Resolution Logic', async (t) => {
       addPanic: 1
     }, context), [
       'Gain Bone x1.',
-      'Gain Settlement Memory x1.',
+      'No Memory gained under the current economy.',
       'Next combat: +2 starting Block.',
       'The quarry starts wounded by 2.',
       'Gain Panic 1.'
     ]);
+  });
+
+  await t.test('positive event memory effects do not grant memory by default', () => {
+    const result = resolveEvent({
+      id: 'memoryEvent',
+      choices: [{
+        id: 'remember',
+        text: 'Remember',
+        outcomeText: 'A memory would have been gained.',
+        effects: { gainSettlementMemory: 2 }
+      }]
+    }, {
+      id: 'remember',
+      outcomeText: 'A memory would have been gained.',
+      effects: { gainSettlementMemory: 2 }
+    }, state, { ...context, settlementMemory: 0 });
+
+    assert.equal(result.settlementMemoryDelta, 0);
+    assert.deepEqual(result.appliedEffects, ['No Memory gained under the current economy.']);
   });
 
   await t.test('unknown effects are reported safely', () => {

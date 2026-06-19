@@ -53,7 +53,9 @@ export function formatEventEffect(key, value, context = {}) {
     case 'gainRandomResource':
       return `Gain ${value.amount || 1} random ${value.pool || 'hunt'} resource${(value.amount || 1) === 1 ? '' : 's'}.`;
     case 'gainSettlementMemory':
-      return `Gain Settlement Memory x${value}.`;
+      return value > 0
+        ? 'No Memory gained under the current economy.'
+        : `Lose Settlement Memory x${Math.abs(value)}.`;
     case 'loseHp':
       return `Lose HP x${value}.`;
     case 'healHp':
@@ -165,9 +167,13 @@ function applyEffects(effects, state, context) {
   if (effects.gainSettlementMemory) {
     handledKeys.add('gainSettlementMemory');
     const minimumDelta = -(Number(context.settlementMemory) || 0);
-    const delta = Math.max(minimumDelta, effects.gainSettlementMemory);
+    const delta = effects.gainSettlementMemory > 0
+      ? 0
+      : Math.max(minimumDelta, effects.gainSettlementMemory);
     next.settlementMemoryDelta += delta;
-    next.appliedEffects.push(delta >= 0 ? `Gain Settlement Memory x${delta}.` : `Lose Settlement Memory x${Math.abs(delta)}.`);
+    next.appliedEffects.push(delta >= 0
+      ? 'No Memory gained under the current economy.'
+      : `Lose Settlement Memory x${Math.abs(delta)}.`);
   }
   if (effects.loseHp) {
     handledKeys.add('loseHp');
