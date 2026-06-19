@@ -27,10 +27,10 @@ import {
 } from './data/fightingArts.js';
 import { graveLegacies } from './data/graveLegacies.js';
 import { getIntentTargetRule } from './game/monsterTargeting.js';
-import { startingTraits } from './data/memoryInnovations.js';
 import {
   innovationCards,
-  QUARRY_INNOVATION_POOL
+  QUARRY_INNOVATION_POOL,
+  startingTraits
 } from './data/innovationCards.js';
 import {
   calculateAvailableQuarryTiers,
@@ -51,7 +51,11 @@ import {
   applyWeaponProficiencyXp,
   getProficientWeaponSummary
 } from './data/weaponProficiency.js';
-import { genericResourceIds, resources as resourceData } from './data/resources.js';
+import {
+  genericResourceIds,
+  resourceCanPayMaterial,
+  resources as resourceData
+} from './data/resources.js';
 import { getQuarryDiscoveryEvent } from './data/quarryDiscoveryEvents.js';
 import { createMonsterWeakPoints, getBrokenWeakPointRewards } from './data/weakPoints.js';
 import { buildHarvestRewardOffers } from './game/harvestRewardLogic.js';
@@ -154,6 +158,33 @@ import RunSummaryScreen from './screens/RunSummaryScreen.jsx';
 import SettlementScreen from './screens/SettlementScreen.jsx';
 import SurvivorProgressScreen from './screens/SurvivorProgressScreen.jsx';
 import TitleScreen from './screens/TitleScreen.jsx';
+
+function chooseInnovationPayment(stash = {}) {
+  const resourceUnits = Object.entries(stash).flatMap(([resourceId, count]) => (
+    Array.from({ length: Math.max(0, Math.floor(Number(count) || 0)) }, () => resourceId)
+  ));
+  const slots = ['hide', 'organ', 'bone'];
+
+  const assignSlot = (remainingSlots, remainingResources, payment = []) => {
+    if (!remainingSlots.length) return payment;
+    const [slot, ...nextSlots] = remainingSlots;
+
+    for (let index = 0; index < remainingResources.length; index += 1) {
+      const resourceId = remainingResources[index];
+      if (!resourceCanPayMaterial(resourceId, slot)) continue;
+      const nextPayment = assignSlot(
+        nextSlots,
+        remainingResources.filter((_, resourceIndex) => resourceIndex !== index),
+        [...payment, resourceId]
+      );
+      if (nextPayment) return nextPayment;
+    }
+
+    return null;
+  };
+
+  return assignSlot(slots, resourceUnits);
+}
 
 function applyChildTrait(survivor, rawTraitId, recordInnate = true) {
   const traitId = normalizeChildTraitId(rawTraitId);
@@ -1801,44 +1832,14 @@ export default function App() {
 
   const handleAttemptInnovation = () => {
     const drawable = getDrawableInnovationIdsForSettlement(settlement);
-    const basicIds = ['bone', 'hide', 'sinew', 'organ', 'scrap', 'claw'];
-    const resourceAliases = {
-      crackedMolar: 'bone', wailingHorn: 'bone', stormBone: 'bone', crystalBone: 'bone', harmonyBone: 'bone', timeBone: 'bone',
-      paleLionHide: 'hide', wailingHide: 'hide', bloatedHide: 'hide', webbedHide: 'hide', rubberyHide: 'hide',
-      screamingSinew: 'sinew', paleLionSinew: 'sinew', floralSinew: 'sinew',
-      wailingOrgan: 'organ', denseOrgan: 'organ', burntOrgan: 'organ', bloodMudOrgan: 'organ', smogPipe: 'organ', sootLung: 'organ',
-      paleLionClaw: 'claw'
-    };
-
-    const availableResources = [];
-    Object.entries(settlement.stash).forEach(([id, count]) => {
-      if (count <= 0) return;
-      const isBasic = basicIds.includes(id);
-      const isAlias = Boolean(resourceAliases[id]);
-      if (isBasic || isAlias) {
-        for (let i = 0; i < count; i++) {
-          availableResources.push(id);
-        }
-      }
-    });
-
-    const resourceCost = settlement.temporarySettlementModifiers?.delayedWork ? 4 : 3;
+    const payment = chooseInnovationPayment(settlement.stash);
     if (
       !canSpendMemories(settlement, 1) ||
-      availableResources.length < resourceCost ||
+      !payment ||
       !drawable.length
     ) {
       return;
     }
-
-    // Prioritize basic resources for payment, then aliases
-    const payment = [...availableResources]
-      .sort((a, b) => {
-        const aBasic = basicIds.includes(a) ? 0 : 1;
-        const bBasic = basicIds.includes(b) ? 0 : 1;
-        return aBasic - bBasic;
-      })
-      .slice(0, resourceCost);
 
     const choices = drawInnovationCandidates(settlement, 3);
     updateSettlement(current => {

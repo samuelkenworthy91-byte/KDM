@@ -1,5 +1,7 @@
-import { innovationCards } from '../data/innovationCards.js';
-import { memoryInnovations } from '../data/memoryInnovations.js';
+import {
+  innovationCards,
+  MEMORY_ACTION_INNOVATION_IDS
+} from '../data/innovationCards.js';
 import { normalizeDefeatedQuarryLevels } from '../data/quarries.js';
 import { getInnovationDefinition } from './innovationModel.js';
 
@@ -92,7 +94,7 @@ export function applyInnovationChoice(settlement, innovationId, timestamp = new 
   const state = settlement.innovationDeckState || {};
   if (state.builtInnovationIds?.includes(innovationId)) return settlement;
 
-  const memoryInnovation = Boolean(memoryInnovations[innovationId]);
+  const memoryInnovation = MEMORY_ACTION_INNOVATION_IDS.includes(innovationId);
   const maxHuntPartySize = innovationId === 'trailSignals'
     ? Math.max(2, settlement.maxHuntPartySize || 1)
     : innovationId === 'sharedBurden'

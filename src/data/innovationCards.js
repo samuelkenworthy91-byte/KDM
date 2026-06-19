@@ -9,6 +9,8 @@ const destinationFor = (category, options) => {
   return 'Settlement > Innovations';
 };
 
+export const defaultInnovationCost = { memory: 1, materials: { hide: 1, organ: 1, bone: 1 } };
+
 const card = (
   id, name, category, description, effects, options = {}
 ) => {
@@ -25,13 +27,21 @@ const card = (
     prerequisites: options.prerequisites || options.unlockRequirement || { type: 'pool' },
     deckWeight: Number.isFinite(options.deckWeight) ? options.deckWeight : 1,
     costType: options.costType || 'innovationAttempt',
-    buildCost: options.buildCost || { settlementMemory: 1, basicResources: 3 },
-    memoryCost: Number.isFinite(options.memoryCost) ? options.memoryCost : 1,
+    innovationCost: options.innovationCost || defaultInnovationCost,
+    memoryCost: Number.isFinite(options.memoryCost)
+      ? options.memoryCost
+      : (options.innovationCost || defaultInnovationCost).memory,
     unlockRequirement: options.unlockRequirement || { type: 'pool' },
     addsToInnovationPool: options.addsToInnovationPool || [],
     unlocksRecipes,
     unlocksBuildings,
-    unlocks: options.unlocks || [...unlocksBuildings, ...unlocksRecipes],
+    actionUnlocks: options.actionUnlocks || [],
+    limit: options.limit || 'Permanent once built.',
+    unlocks: options.unlocks || [
+      ...unlocksBuildings,
+      ...unlocksRecipes,
+      ...(options.actionUnlocks || [])
+    ],
     settlementBoostSummary: options.settlementBoostSummary || safeEffects[0] || description,
     playerSummary: options.playerSummary || options.settlementBoostSummary || safeEffects[0] || description,
     howToUse: options.howToUse || `Use this from ${uiDestination}.`,
@@ -68,6 +78,22 @@ export const BASE_INNOVATION_POOL_IDS = [
 ];
 
 export const innovationCards = {
+  lanternHearth: card(
+    'lanternHearth', 'Lantern Hearth', 'core',
+    'The center of settlement life. Built when the settlement is founded.',
+    ['The settlement can organize hunts.'],
+    {
+      innovationCost: { memory: 0, materials: {} },
+      prerequisites: { type: 'ownedAtStart' },
+      unlockRequirement: { type: 'ownedAtStart' },
+      deckWeight: 0,
+      tags: ['core', 'starting'],
+      playerSummary: 'The campaign starts with this settlement core already owned.',
+      howToUse: 'It is active from settlement creation.',
+      actionLocation: 'Settlement',
+      whyItMatters: 'Lantern Hearth is the foundation that allows hunts and settlement records.'
+    }
+  ),
   language: card(
     'language', 'Language', 'culture',
     'Survivors learn to preserve meaning, warning and names.',
@@ -189,7 +215,7 @@ export const innovationCards = {
   ),
   riteOfForgetting: card('riteOfForgetting', 'Rite of Forgetting', 'ritual', 'A lesson can be named and released into smoke.', ['Preserves Guided Reflection: forget one eligible personal or basic card per survivor each year for 1 Memory.'], {
     tags: ['memory'],
-    unlocks: ['forgetCard'],
+    actionUnlocks: ['forgetCard'],
     uiDestination: 'Settlement > Actions > Recovery',
     playerSummary: 'Spend Memory to remove one unwanted eligible card from a survivor.',
     howToUse: 'Choose a survivor and eligible personal or basic card in the Recovery tab.',
@@ -215,6 +241,8 @@ export const innovationCards = {
   }),
   painLessons: card('painLessons', 'Pain Lessons', 'training', 'Wounds are studied until they become instruction.', ['Unlocks injury-to-scar treatment.'], {
     tags: ['treatment'],
+    actionUnlocks: ['painLessons'],
+    limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Turn one survivor injury into a permanent scar once per year.',
     howToUse: 'Choose an injured survivor and the injury to transform in the Recovery tab.',
     actionLocation: 'Settlement > Actions > Recovery',
@@ -224,7 +252,8 @@ export const innovationCards = {
   monsterStories: card('monsterStories', 'Monster Stories', 'knowledge', 'Quarry tales reveal recurring weaknesses.', ['Monster Bane is more likely after victory.'], { tags: ['bane'] }),
   quietNight: card('quietNight', 'Quiet Night', 'recovery', 'One night is kept free of work and retelling.', ['Remove one Panic per Lantern Year and double healing from Memory-based rest.'], {
     tags: ['recovery'],
-    unlocks: ['quietNight'],
+    actionUnlocks: ['quietNight'],
+    limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 1 Memory to remove Panic from one survivor once per year.',
     howToUse: 'Choose a survivor carrying Panic in the Recovery tab.',
     actionLocation: 'Settlement > Actions > Recovery',
@@ -239,7 +268,8 @@ export const innovationCards = {
   }),
   weaponDrills: card('weaponDrills', 'Weapon Drills', 'training', 'Repeated forms become dependable techniques.', ['Add one basic training card to a survivor each Lantern Year for 1 Memory.'], {
     tags: ['training'],
-    unlocks: ['weaponDrills'],
+    actionUnlocks: ['weaponDrills'],
+    limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 1 Memory to teach a survivor one basic training card.',
     howToUse: 'Choose a survivor and training card in the Training tab.',
     actionLocation: 'Settlement > Actions > Training',
@@ -253,6 +283,8 @@ export const innovationCards = {
   }),
   taboo: card('taboo', 'Taboo', 'law', 'One poisonous story is forbidden.', ['Remove one curse per Lantern Year.'], {
     tags: ['law'],
+    actionUnlocks: ['taboo'],
+    limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 2 Memory to permanently remove one curse or Panic once per year.',
     howToUse: 'Choose an affected survivor in the Recovery tab.',
     actionLocation: 'Settlement > Actions > Recovery',
@@ -261,6 +293,8 @@ export const innovationCards = {
   }),
   shrineOfNames: card('shrineOfNames', 'Shrine of Names', 'legacy', 'The living carry strength beneath recorded names.', ['Grant a survivor +1 max HP.'], {
     tags: ['legacy'],
+    actionUnlocks: ['shrineOfNames'],
+    limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 2 Memory to give one living survivor +1 maximum HP.',
     howToUse: 'Choose the survivor to honor in the Legacy tab.',
     actionLocation: 'Settlement > Actions > Legacy',
@@ -325,6 +359,27 @@ export const innovationCards = {
 };
 
 export const innovationCardList = Object.values(innovationCards);
+
+export const memoryActionInnovationList = innovationCardList.filter(card => card.actionUnlocks?.length);
+export const MEMORY_ACTION_INNOVATION_IDS = memoryActionInnovationList.map(card => card.id);
+
+export const startingTraits = {
+  steady: {
+    id: 'steady',
+    name: 'Steady',
+    effect: 'Start the first combat of each hunt with +1 block.'
+  },
+  bold: {
+    id: 'bold',
+    name: 'Bold',
+    effect: 'The first attack of each hunt deals +1 damage.'
+  },
+  watchful: {
+    id: 'watchful',
+    name: 'Watchful',
+    effect: 'The first event choice each hunt shows a warning note.'
+  }
+};
 
 export const QUARRY_INNOVATION_POOL = {
   paleHuntLion: ['boneSmith', 'skinnery', 'lionTrophyHall', 'clawLore'],

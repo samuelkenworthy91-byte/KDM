@@ -2,7 +2,7 @@ import { childTraits } from './childTraits.js';
 import { disorders } from './disorders.js';
 import { fightingArts } from './fightingArts.js';
 import { injuries } from './injuries.js';
-import { startingTraits } from './memoryInnovations.js';
+import { startingTraits } from './innovationCards.js';
 import { scars } from './scars.js';
 import { weaponProficiencyDefinitions } from './weaponProficiency.js';
 import { woundTables } from './woundTables.js';

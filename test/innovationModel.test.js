@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  defaultInnovationCost
+} from '../src/data/innovationCards.js';
+import {
   getInnovationDefinition,
   normalizeInnovationDeckState,
   normalizeInnovationDefinition
@@ -20,7 +23,8 @@ test('normalizes existing innovation fields without changing their mechanics', (
   const normalized = normalizeInnovationDefinition(source.id, source);
 
   assert.equal(normalized.name, source.name);
-  assert.equal(normalized.memoryCost, 4);
+  assert.deepEqual(normalized.innovationCost, defaultInnovationCost);
+  assert.equal(normalized.memoryCost, 1);
   assert.equal(normalized.settlementBoostSummary, source.effect);
   assert.deepEqual(normalized.unlocks, ['weaponDrills']);
   assert.deepEqual(normalized.mechanicalEffects, source.mechanicalEffects);

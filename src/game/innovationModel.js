@@ -1,3 +1,5 @@
+import { defaultInnovationCost } from '../data/innovationCards.js';
+
 const uniqueIds = values => [...new Set(
   (Array.isArray(values) ? values : []).filter(value => typeof value === 'string' && value)
 )];
@@ -19,6 +21,7 @@ export function createLegacyInnovationDefinition(id) {
     settlementBoostSummary: 'This saved innovation is not present in the current data catalog.',
     mechanicalEffects: {},
     unlocks: [],
+    innovationCost: null,
     memoryCost: null,
     tutorialTitle: 'Legacy innovation',
     tutorialSteps: [],
@@ -59,11 +62,12 @@ export function normalizeInnovationDefinition(id, definition) {
       'Effect not described.',
     mechanicalEffects: definition.mechanicalEffects || {},
     unlocks,
-    memoryCost: Number.isFinite(definition.memoryCost)
-      ? definition.memoryCost
-      : Number.isFinite(definition.costMemory)
-        ? definition.costMemory
-        : null,
+    innovationCost: definition.innovationCost || defaultInnovationCost,
+    memoryCost: Number.isFinite(definition.innovationCost?.memory)
+      ? definition.innovationCost.memory
+      : Number.isFinite(definition.memoryCost)
+        ? definition.memoryCost
+        : defaultInnovationCost.memory,
     tutorialTitle: definition.tutorialTitle || `Using ${definition.name || 'Unknown / Legacy'}`,
     tutorialSteps: normalizeTutorialSteps(definition.tutorialSteps),
     uiDestination: definition.uiDestination || 'Settlement > Innovations',

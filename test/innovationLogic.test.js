@@ -3,7 +3,9 @@ import test from 'node:test';
 
 import {
   BASE_INNOVATION_POOL_IDS,
+  defaultInnovationCost,
   innovationCards,
+  memoryActionInnovationList,
   QUARRY_INNOVATION_POOL
 } from '../src/data/innovationCards.js';
 import {
@@ -11,7 +13,6 @@ import {
   drawInnovationCandidates,
   getInnovationDeckEntries
 } from '../src/game/innovationLogic.js';
-import { memoryInnovationList } from '../src/data/memoryInnovations.js';
 import { normalizeSettlement } from '../src/game/saveLogic.js';
 
 function settlement(overrides = {}) {
@@ -47,8 +48,20 @@ test('every innovation card has a summary, destination, and tutorial', () => {
   });
 });
 
-test('memory innovations expose plain-language action locations', () => {
-  memoryInnovationList.forEach(innovation => {
+test('innovation cards use the unified exact innovation cost', () => {
+  Object.values(innovationCards).forEach(card => {
+    assert.equal(card.buildCost, undefined, `${card.id} must not use legacy buildCost`);
+    assert.equal(card.innovationCost?.materials?.basicResources, undefined, `${card.id} must not use generic basicResources`);
+    if (card.id === 'lanternHearth') {
+      assert.deepEqual(card.innovationCost, { memory: 0, materials: {} });
+    } else {
+      assert.deepEqual(card.innovationCost, defaultInnovationCost, `${card.id} needs the default exact cost`);
+    }
+  });
+});
+
+test('memory action innovations are unified cards with plain-language action locations', () => {
+  memoryActionInnovationList.forEach(innovation => {
     assert.ok(innovation.playerSummary, `${innovation.id} needs a player summary`);
     assert.ok(innovation.howToUse, `${innovation.id} needs usage instructions`);
     assert.ok(innovation.actionLocation, `${innovation.id} needs an action location`);
@@ -65,7 +78,7 @@ test('memory innovations expose plain-language action locations', () => {
   };
   Object.entries(expectedTabs).forEach(([id, tab]) => {
     assert.equal(
-      memoryInnovationList.find(innovation => innovation.id === id)?.unlockedTab,
+      memoryActionInnovationList.find(innovation => innovation.id === id)?.unlockedTab,
       tab
     );
   });
@@ -104,10 +117,28 @@ test('choosing an innovation applies unlocks, history, and tutorial state atomic
   assert.equal(next.settlementHistory[0].type, 'innovation-acquired');
 });
 
+test('starting innovation is free and owned at campaign start', () => {
+  const migrated = normalizeSettlement({ survivors: [] });
+
+  assert.ok(migrated.innovationDeckState.builtInnovationIds.includes('lanternHearth'));
+  assert.ok(migrated.builtInnovations.includes('lanternHearth'));
+  assert.deepEqual(innovationCards.lanternHearth.innovationCost, { memory: 0, materials: {} });
+});
+
 test('deck-acquired memory innovations retain existing action compatibility', () => {
   const next = applyInnovationChoice(settlement(), 'weaponDrills');
 
   assert.ok(next.builtMemoryInnovations.includes('weaponDrills'));
+});
+
+test('legacy memory innovation ids migrate into the unified innovation deck', () => {
+  const migrated = normalizeSettlement({
+    survivors: [],
+    builtMemoryInnovations: ['weaponDrills']
+  });
+
+  assert.ok(migrated.innovationDeckState.builtInnovationIds.includes('weaponDrills'));
+  assert.ok(migrated.builtMemoryInnovations.includes('weaponDrills'));
 });
 
 test('legacy innovation ids survive save migration and render in owned state', () => {

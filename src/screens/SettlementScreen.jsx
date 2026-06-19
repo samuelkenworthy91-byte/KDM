@@ -11,15 +11,15 @@ import {
   getEquipment
 } from '../data/equipment.js';
 import { fightingArts } from '../data/fightingArts.js';
-import { innovationCards } from '../data/innovationCards.js';
+import {
+  innovationCards,
+  memoryActionInnovationList,
+  startingTraits
+} from '../data/innovationCards.js';
 import { injuries } from '../data/injuries.js';
 import { getNextTimelineMilestone } from '../data/lanternTimeline.js';
 import { nemesisEncounters, nemesisList } from '../data/nemesisEncounters.js';
 import { innovationList, innovations } from '../data/innovations.js';
-import {
-  memoryInnovationList,
-  startingTraits
-} from '../data/memoryInnovations.js';
 import { disorders } from '../data/disorders.js';
 import { scars } from '../data/scars.js';
 import { getSurvivorModifiers } from '../data/survivorModifiers.js';
@@ -34,7 +34,10 @@ import {
   quarries,
   quarryList
 } from '../data/quarries.js';
-import { resources } from '../data/resources.js';
+import {
+  resourceCanPayMaterial,
+  resources
+} from '../data/resources.js';
 import {
   getActiveProficiencyPassive,
   getWeaponMasteryCardId,
@@ -120,6 +123,43 @@ function CostList({ cost, stash }) {
       })}
     </div>
   );
+}
+
+function formatInnovationCost(cost) {
+  if (!cost) return 'Unknown';
+  const parts = [];
+  if (cost.memory) parts.push(`${cost.memory} Memory`);
+  Object.entries(cost.materials || {}).forEach(([material, amount]) => {
+    if (amount > 0) parts.push(`${formatValueForDisplay(material)} ${amount}`);
+  });
+  return parts.length ? parts.join(', ') : 'Free';
+}
+
+function getInnovationMaterialAvailability(stash) {
+  return ['hide', 'organ', 'bone'].reduce((availability, material) => ({
+    ...availability,
+    [material]: Object.entries(stash || {}).reduce((total, [resourceId, count]) => (
+      resourceCanPayMaterial(resourceId, material) ? total + Math.max(0, Number(count) || 0) : total
+    ), 0)
+  }), {});
+}
+
+function canCoverInnovationMaterials(stash) {
+  const resourceUnits = Object.entries(stash || {}).flatMap(([resourceId, count]) => (
+    Array.from({ length: Math.max(0, Math.floor(Number(count) || 0)) }, () => resourceId)
+  ));
+  const slots = ['hide', 'organ', 'bone'];
+
+  const assignSlot = (remainingSlots, remainingResources) => {
+    if (!remainingSlots.length) return true;
+    const [slot, ...nextSlots] = remainingSlots;
+    return remainingResources.some((resourceId, index) => (
+      resourceCanPayMaterial(resourceId, slot) &&
+      assignSlot(nextSlots, remainingResources.filter((_, resourceIndex) => resourceIndex !== index))
+    ));
+  };
+
+  return assignSlot(slots, resourceUnits);
 }
 
 function getCleanGearSummary(recipe) {
@@ -856,7 +896,7 @@ export default function SettlementScreen({
   const rumouredInnovations = settlementStructures.filter(item =>
     !settlement.builtInnovations.includes(item.id) && !canBuildUnlocked(item, settlement)
   );
-  const builtMemoryInnovations = memoryInnovationList.filter(item =>
+  const builtMemoryInnovations = memoryActionInnovationList.filter(item =>
     settlement.builtMemoryInnovations.includes(item.id)
   );
   const innovationDeckEntries = getInnovationDeckEntries(settlement);
@@ -865,11 +905,11 @@ export default function SettlementScreen({
   const ownedInnovationEntries = ownedInnovationIds.map(id =>
     getInnovationDefinition(innovationCards, id)
   );
-  const basicResourceCount = ['bone', 'hide', 'sinew', 'organ', 'scrap', 'claw']
-    .reduce((total, resourceId) => total + (settlement.stash[resourceId] || 0), 0);
+  const innovationMaterialAvailability = getInnovationMaterialAvailability(settlement.stash);
+  const hasInnovationMaterials = canCoverInnovationMaterials(settlement.stash);
   const canAttemptInnovation =
     settlement.settlementMemory >= 1 &&
-    basicResourceCount >= 3 &&
+    hasInnovationMaterials &&
     drawableInnovationIds.length > 0;
   const nextTimelineMilestone = getNextTimelineMilestone(settlement.lanternYear);
   const armouryData = useMemo(() => {
@@ -1188,7 +1228,7 @@ export default function SettlementScreen({
             <span>
               <strong>Memory Actions Available</strong>
               {settlement.builtMemoryInnovations
-                .flatMap(id => memoryInnovationList.find(item => item.id === id)?.actionUnlocks || [])
+                .flatMap(id => innovationCards[id]?.actionUnlocks || [])
                 .filter(actionId => getMemoryActionStatus(actionId) === 'Available in Actions').length}
             </span>
           </div>
@@ -1402,7 +1442,7 @@ export default function SettlementScreen({
               </p>
             )}
             {settlement.builtMemoryInnovations.flatMap(id => {
-              const innovation = memoryInnovationList.find(item => item.id === id);
+              const innovation = innovationCards[id];
               if (id === 'riteOfForgetting') return [];
               return (innovation?.actionUnlocks || []).map(actionId => (
                 <p key={actionId}>
@@ -1412,7 +1452,7 @@ export default function SettlementScreen({
               ));
             })}
             {!hasEarlyForgettingAccess(settlement) && !settlement.builtMemoryInnovations.some(id =>
-              memoryInnovationList.find(item => item.id === id)?.actionUnlocks?.length
+              innovationCards[id]?.actionUnlocks?.length
             ) && <p className="muted-text">Build a memory innovation to unlock survivor actions.</p>}
           </section>
           <div className="item-grid">
@@ -1478,7 +1518,7 @@ export default function SettlementScreen({
           {activeActionTab === 'training' && (
             <article className="item-card">
               <h4>Weapon Drills</h4>
-              <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'weaponDrills')} />
+              <InnovationClarity innovation={innovationCards.weaponDrills} />
               <label className="field-label">
                 Training card
                 <select
@@ -1554,7 +1594,7 @@ export default function SettlementScreen({
               {builtActionIds.has('quietNight') && (
                 <article className="item-card">
                   <h4>Quiet Night</h4>
-                  <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'quietNight')} />
+                  <InnovationClarity innovation={innovationCards.quietNight} />
                   <button
                     type="button"
                     disabled={!selectedActionSurvivor || !selectedActionHasPanic ||
@@ -1573,7 +1613,7 @@ export default function SettlementScreen({
               {builtActionIds.has('taboo') && (
                 <article className="item-card">
                   <h4>Taboo</h4>
-                  <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'taboo')} />
+                  <InnovationClarity innovation={innovationCards.taboo} />
                   <label className="field-label">
                     Curse or Panic
                     <select
@@ -1614,7 +1654,7 @@ export default function SettlementScreen({
               {builtActionIds.has('painLessons') && (
                 <article className="item-card">
                   <h4>Pain Lessons</h4>
-                  <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'painLessons')} />
+                  <InnovationClarity innovation={innovationCards.painLessons} />
                   <label className="field-label">
                     Injury
                     <select
@@ -1649,7 +1689,7 @@ export default function SettlementScreen({
           {activeActionTab === 'legacy' && builtActionIds.has('shrineOfNames') && (
             <article className="item-card">
               <h4>Shrine of Names</h4>
-              <InnovationClarity innovation={memoryInnovationList.find(item => item.id === 'shrineOfNames')} />
+              <InnovationClarity innovation={innovationCards.shrineOfNames} />
               <button
                 type="button"
                 disabled={!selectedActionSurvivor ||
@@ -1885,26 +1925,16 @@ export default function SettlementScreen({
             {!rumouredInnovations.length && <p>No unresolved structure rumours.</p>}
           </section>
           <section className="memory-innovations-section">
-            <h3>Built Memory Innovations</h3>
-            <div className="item-grid">
-              {builtMemoryInnovations.map(item => (
-                <article className="item-card built" key={item.id}>
-                  <p className="eyebrow">{item.category}</p>
-                  <h4>{item.name}</h4>
-                  <InnovationClarity innovation={item} />
-                  <p><strong>Limit:</strong> {item.limit}</p>
-                </article>
-              ))}
-              {!builtMemoryInnovations.length && <p>No Memory innovations have been built.</p>}
-            </div>
             <h3>Innovation Deck</h3>
             <p>
-              Spend 1 Memory and any 3 basic resources to draw up to 3 innovations,
-              then choose one. There is no normal direct-purchase innovation list.
+              Spend 1 Memory, 1 Hide material, 1 Organ material, and 1 Bone material to
+              draw up to 3 innovations, then choose one. There is no normal direct-purchase
+              innovation list.
             </p>
             <p>
               Available pool: {drawableInnovationIds.length} | Memory: {memoryBalance} |
-              Basic resources: {basicResourceCount}
+              Hide {innovationMaterialAvailability.hide} | Organ {innovationMaterialAvailability.organ} |
+              Bone {innovationMaterialAvailability.bone}
             </p>
             <button
               type="button"
@@ -1942,7 +1972,7 @@ export default function SettlementScreen({
                             <h4>{item.name}</h4>
                             <p>{formatValueForDisplay(item.description)}</p>
                             <InnovationClarity innovation={item} />
-                            <p><strong>Attempt cost:</strong> {item.memoryCost ?? 1} Memory plus shared draw resources</p>
+                            <p><strong>Attempt cost:</strong> {formatInnovationCost(item.innovationCost)}</p>
                             {item.lockReason && <p className="missing">{item.lockReason}</p>}
                             <details>
                               <summary>{item.tutorialTitle}</summary>

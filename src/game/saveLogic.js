@@ -4,7 +4,10 @@ import {
   quarries
 } from '../data/quarries.js';
 import { equipment } from '../data/equipment.js';
-import { BASE_INNOVATION_POOL_IDS } from '../data/innovationCards.js';
+import {
+  BASE_INNOVATION_POOL_IDS,
+  MEMORY_ACTION_INNOVATION_IDS
+} from '../data/innovationCards.js';
 import {
   createWeaponProficiency,
   isValidWeaponType,
@@ -374,6 +377,12 @@ export function normalizeSettlement(data = {}) {
     ownedIds: builtInnovationIds,
     defaultPoolIds: BASE_INNOVATION_POOL_IDS
   });
+  const builtMemoryInnovationIds = [...new Set([
+    ...(Array.isArray(data.builtMemoryInnovations) ? data.builtMemoryInnovations : []),
+    ...normalizedInnovationDeckState.builtInnovationIds.filter(id =>
+      MEMORY_ACTION_INNOVATION_IDS.includes(id)
+    )
+  ])];
   const discoveredQuarryIds = [...new Set([
     ...(Array.isArray(data.discoveredQuarries) ? data.discoveredQuarries : []),
     ...(Array.isArray(data.unlockedQuarries) ? data.unlockedQuarries : [])
@@ -471,9 +480,7 @@ export function normalizeSettlement(data = {}) {
     lastInjuryTreatmentLanternYear: Number.isFinite(data.lastInjuryTreatmentLanternYear)
       ? data.lastInjuryTreatmentLanternYear
       : null,
-    builtMemoryInnovations: Array.isArray(data.builtMemoryInnovations)
-      ? [...new Set(data.builtMemoryInnovations)]
-      : [],
+    builtMemoryInnovations: builtMemoryInnovationIds,
     innovationDeckState: normalizedInnovationDeckState,
     pendingInnovationTutorialId: typeof data.pendingInnovationTutorialId === 'string'
       ? data.pendingInnovationTutorialId
