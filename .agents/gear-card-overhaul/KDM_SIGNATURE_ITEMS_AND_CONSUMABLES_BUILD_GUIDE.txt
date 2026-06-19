@@ -1,0 +1,987 @@
+KDM / Lantern Deckbuilder
+SIGNATURE ITEMS + CONSUMABLES BUILD GUIDE
+Recommended repo path: docs/KDM_SIGNATURE_ITEMS_AND_CONSUMABLES_BUILD_GUIDE.txt
+
+Purpose
+-------
+This file is a build guide for Codex, Gemini, Claude Code, or another AI coding agent.
+It supplements the existing gear overhaul repo map.
+
+It defines:
+- the final signature item plan;
+- exact card text for every signature item card;
+- exact passive text for every signature item evolution level;
+- the consumable card catalogue;
+- the Lost pile rule for one-use consumables;
+- implementation rules so the new gear works with the current deckbuilder structure.
+
+Important design rule
+---------------------
+Keep all content original. Do not copy Kingdom Death names, prose, cards, or mechanics.
+The inspiration is only:
+- dark settlement survival;
+- monster/quarry-specific crafting;
+- hunt/showdown flow;
+- resources from defeated quarry creatures;
+- scary readable equipment.
+
+Keep player-facing card text short and clear.
+Dense implementation details can go into code comments, card back/details text, or tactical preview.
+
+Major naming correction
+-----------------------
+The Crystal Forge grand weapon is named:
+Dragon Slayer: Grand Cleaver
+
+Do not use the old working name "Ember-Crown Brand".
+
+
+A. VALID WEAPON TYPES FOR THIS PASS
+===================================
+
+Use these weaponType IDs only for new signature weapons:
+- sword
+- axe
+- dagger
+- spear
+- bow
+- grandWeapon
+- katar
+- fistAndTooth
+- shield
+- whip
+- katana
+
+Do not use these for the new signature weapon pass:
+- club
+- hammer
+- scythe
+- strangeWeapon
+
+Reason:
+club, hammer, and scythe may exist in the repo as supported/legacy types, but they are being removed from the new main gear direction for now.
+strangeWeapon is deliberately unused for this pass.
+
+There are 13 quarry buildings in this pass:
+- 11 receive signature weapons, one for each kept weapon type.
+- Storm Shrine receives a signature lantern tool.
+- Pride Hall receives a signature head armour.
+
+
+B. LOST PILE RULE FOR CONSUMABLES
+=================================
+
+Consumable cards are powerful, craftable, one-use cards.
+
+Card tags:
+- consumable
+- singleUse
+- lost
+
+When a consumable card is played:
+1. Resolve its effect.
+2. Move the card to a combat-only Lost pile instead of discard.
+3. Mark that card instance as consumed for this encounter.
+
+Lost cards can still be recovered during the same fight if a card explicitly says it can recover a card from Lost.
+Example: the Wailing Antelope signature weapon card Second Stomach can return a consumable card from Lost or discard to hand.
+
+Important:
+A card recovered from Lost is still marked as consumed for this encounter.
+At the end of the encounter, every card instance that was marked consumed must be deleted from the run deck and from any owning consumable gear/inventory instance, no matter where it currently is.
+
+This means:
+- a consumable can be used, moved to Lost, recovered, and used again in the same fight by special effects;
+- it still disappears permanently after the encounter;
+- the settlement can craft it again later.
+
+Suggested state:
+- combat.lostPile: card instance IDs currently in Lost;
+- combat.consumedCardInstanceIds: every consumable card instance used this encounter;
+- endEncounterCleanup deletes all consumedCardInstanceIds from deck/hand/discard/exhaust/lost/storage references.
+
+Text convention:
+Every consumable card text must end with:
+Lost.
+
+
+C. SIGNATURE ITEM TABLE
+=======================
+
+Each signature item should be expensive enough to take several hunts.
+Costs use only valid resource IDs from the current resource families.
+Each signature weapon provides exactly 3 cards.
+The Storm Shrine lantern tool and Pride Hall head armour also provide 3 cards.
+
+Implementation object guidance:
+- weapon signature items should use itemType: "weapon", loadoutCategory: "weapon", slot: "weapon", and weaponType.
+- Pride Hall item should use itemType: "armor", loadoutCategory: "armor", slot: "armor", bodySlot: "head".
+- Storm Shrine item should use itemType: "tool", loadoutCategory: "tool", slot: "tool".
+- All signature items should include keywords including "Signature" and their quarry/building themes.
+- Add cardPackage arrays containing the three exact card IDs created for the item.
+
+
+1. Lion Trophy Hall / Pale Hunt Lion
+------------------------------------
+Item name: Palechord Cleaver
+Item type: weapon
+weaponType: axe
+Quarry ID: paleHuntLion
+Building/location ID: lionTrophyHall
+Cost:
+- paleLionClaw x2
+- paleLionSinew x2
+- paleLionMane x2
+- elderPaleFang x1
+- perfectMane x1
+- bone x2
+- scrap x2
+
+Base passive text:
+Passive — Predator’s Rhythm: The first time you apply Bleed each round, draw 1 card, then discard 1 card.
+
+Cards provided:
+Raking Chord
+Deal 3 damage. Apply Bleed 1.
+
+Feedback Guard
+Apply Bleed 1. Gain 3 Block.
+
+Cleaver Solo
+Deal 2 damage. Deal +1 more damage for each Bleed on the quarry, max +5.
+
+Evolution unlocks:
+Level 1 unlock: Win 3 fights where the quarry had Bleed 4+ before it died.
+Level 1 passive text:
+Passive — Blood Chorus: Every third Bleed you apply in a turn applies +1 extra Bleed.
+
+Level 2 unlock: Apply 10 total Bleed in one fight.
+Level 2 passive text:
+Passive — Trophy Anthem: Once per round, after Bleed damages the quarry, your next Axe card costs 1 less and deals +2 damage.
+
+Level 3 unlock: Defeat the Pale Hunt Lion while it has Bleed 6+.
+Level 3 passive text:
+Passive — Blood Anthem: At the start of combat, apply Bleed 2. Once per round, after Bleed damages the quarry, your next Axe attack deals +2 damage and applies Bleed 1.
+
+
+2. Antelope Larder / Wailing Antelope
+-------------------------------------
+Item name: Gorge-Fist Knucklers
+Item type: weapon
+weaponType: fistAndTooth
+Quarry ID: wailingAntelope
+Building/location ID: antelopeLarder
+Cost:
+- wailingHorn x2
+- screamingSinew x2
+- wailingOrgan x2
+- stomachStone x2
+- endlessMarrow x1
+- hide x2
+- organ x2
+
+Base passive text:
+Passive — Chew Through Fear: The first consumable you use each combat gives +1 Survival.
+
+Cards provided:
+Gut Punch
+Deal 3 damage. If you used a consumable this turn, deal +2 damage.
+
+Ration Crush
+You may play 1 consumable from hand. Gain 4 Block.
+
+Second Stomach
+Return 1 consumable card from Lost or discard to hand, or gain 2 Survival.
+
+Evolution unlocks:
+Level 1 unlock: Use 5 consumables during one hunt.
+Level 1 passive text:
+Passive — Five Mouth Hunt: Consumables give +1 to one number they grant.
+
+Level 2 unlock: Use 3 different consumables in one fight.
+Level 2 passive text:
+Passive — Hunger Discipline: Once per round, after you use a consumable, draw 1 card and gain 2 Block.
+
+Level 3 unlock: Defeat the Wailing Antelope after using 8 consumables during that hunt.
+Level 3 passive text:
+Passive — Endless Appetite: Start combat with 2 temporary basic consumables. The first consumable you use each round gives +1 Survival, +2 Block, and +2 damage to your next Fist & Tooth attack.
+
+
+3. Phoenix Pyre / Ash Phoenix
+-----------------------------
+Item name: Ash-Second Spear
+Item type: weapon
+weaponType: spear
+Quarry ID: ashPhoenix
+Building/location ID: phoenixPyre
+Cost:
+- ashFeather x3
+- burntOrgan x2
+- timeBone x2
+- memoryGlass x2
+- unspentFeather x1
+- sinew x2
+- scrap x1
+
+Base passive text:
+Passive — Remembered Strike: Once per combat, when you miss or deal 0 damage, keep that card instead of discarding it.
+
+Cards provided:
+Ash Thrust
+Deal 3 damage. If you have already played Ash Thrust this fight, deal +2 damage.
+
+Second Ember
+Play an attack card from discard. It deals -1 damage.
+
+Burning Recall
+Return 1 attack card from discard to hand. Take 1 damage.
+
+Evolution unlocks:
+Level 1 unlock: Play the same named attack 3 times in one fight.
+Level 1 passive text:
+Passive — Repeated Death: The first repeated attack each fight deals +2 damage.
+
+Level 2 unlock: Win a fight after reshuffling your discard into your draw pile.
+Level 2 passive text:
+Passive — Ash Remembers the Hand: After your first reshuffle each fight, your next attack deals +3 damage.
+
+Level 3 unlock: Defeat the Ash Phoenix after replaying or returning 5 cards that fight.
+Level 3 passive text:
+Passive — Second Death: Once per fight, after you play an attack from discard, repeat half of its damage and status effects, rounded up.
+
+
+4. Storm Shrine / Bloated Godling
+---------------------------------
+Item name: Stormglass Lantern
+Item type: tool
+Slot: tool
+Tags: tool, lantern, charge
+Quarry ID: bloatedGodling
+Building/location ID: stormShrine
+Cost:
+- thunderGland x2
+- denseOrgan x2
+- bloatedHide x1
+- stormBone x2
+- crackedMolar x1
+- livingThunderCore x1
+- organ x2
+- scrap x3
+
+Base passive text:
+Passive — Bottled Weather: At the start of combat, gain Charge 1. The first time you gain Block each round, gain Charge 1.
+
+Cards provided:
+Bottle Lightning
+Gain Charge 2. If you have Charge 3+, apply Shock 1.
+
+Lantern Surge
+Spend up to 3 Charge. Gain 3 Block for each Charge spent.
+
+White Flash
+Spend Charge 3. Apply Shock 2 and Vulnerable 1.
+
+Evolution unlocks:
+Level 1 unlock: Spend 12 total Charge across hunts while this tool is equipped.
+Level 1 passive text:
+Passive — Storm Wick: Your maximum Charge increases by 2. The first time you reach Charge 3 each round, apply Shock 1.
+
+Level 2 unlock: Prevent 20 total damage with Block while this tool is equipped.
+Level 2 passive text:
+Passive — Thunder Shelter: When you spend Charge, gain Block equal to twice the Charge spent.
+
+Level 3 unlock: Defeat the Bloated Godling after applying Shock 5+ in that fight.
+Level 3 passive text:
+Passive — Lantern of the Living Storm: At the start of combat, gain Charge 3. Once per fight, when the quarry attacks, you may spend Charge 3 to reduce the damage by 8 and apply Shock 2.
+
+
+5. Red Tannery / Crimson Crocodile
+----------------------------------
+Item name: Redwater Toothsaw
+Item type: weapon
+weaponType: sword
+Quarry ID: crimsonCrocodile
+Building/location ID: redTannery
+Cost:
+- riverTooth x3
+- crimsonScale x2
+- bloodMudOrgan x2
+- redLeather x2
+- riverKingHeart x1
+- hide x2
+- scrap x2
+
+Base passive text:
+Passive — Drowning Cut: Your attacks deal +1 damage against a Bleeding quarry.
+
+Cards provided:
+River-Tooth Slash
+Deal 3 damage. Apply Bleed 1.
+
+Undertow Hook
+Deal 2 damage. Apply Vulnerable 1.
+
+Death Roll
+Deal 2 damage. If the quarry has Bleed, deal +4 damage.
+
+Evolution unlocks:
+Level 1 unlock: Apply Bleed and Vulnerable to the same quarry in one fight.
+Level 1 passive text:
+Passive — Red Water Trail: The first Bleed you apply each round also applies Vulnerable 1.
+
+Level 2 unlock: End 3 different fights with the quarry at Bleed 4+ before death.
+Level 2 passive text:
+Passive — Dragged Under: Attacks against a Bleeding quarry ignore 1 Block and deal +1 damage.
+
+Level 3 unlock: Defeat the Crimson Crocodile with Death Roll.
+Level 3 passive text:
+Passive — Death Roll Rhythm: Once per round, after you damage a Bleeding quarry, deal bonus damage equal to half its Bleed, rounded up, max 5.
+
+
+6. Wet Yard / Frogdog
+---------------------
+Item name: Croakspike Lash
+Item type: weapon
+weaponType: whip
+Quarry ID: frogdog
+Building/location ID: wetYard
+Cost:
+- frogdogTongue x3
+- rubberyHide x2
+- wetBone x2
+- toxicGland x2
+- bulgingEye x1
+- manyMouthGland x1
+- sinew x2
+
+Base passive text:
+Passive — Wrong Leap: Once per round, after you apply Poison, gain Target Avoidance.
+
+Cards provided:
+Tongue Lash
+Deal 2 damage. Apply Poison 1.
+
+Wet Yank
+Apply Poison 1 and Snared 1. Draw 1 card.
+
+Venom Slap
+Deal 3 damage. If the quarry has Poison, apply Staggered 1.
+
+Evolution unlocks:
+Level 1 unlock: Apply Poison 5 times in one fight.
+Level 1 passive text:
+Passive — Toxin Lesson: Every third Poison you apply also applies Staggered 1.
+
+Level 2 unlock: Win a fight where this survivor is never hit after first applying Poison.
+Level 2 passive text:
+Passive — Laugh Then Choke: A Poisoned quarry is less likely to target this survivor.
+
+Level 3 unlock: Defeat the Frogdog while it has Poison, Staggered, and Vulnerable.
+Level 3 passive text:
+Passive — Paralytic Croak: The first Poison damage each round deals +3. If the quarry has Poison 5+, also apply Staggered 1.
+
+
+7. Silk Loom / Silk Matriarch
+-----------------------------
+Item name: Widowline Needles
+Item type: weapon
+weaponType: dagger
+Quarry ID: silkMatriarch
+Building/location ID: silkLoom
+Cost:
+- chitinThread x3
+- silkGland x2
+- webbedHide x2
+- venomSac x1
+- spiderEye x1
+- broodCrown x1
+- sinew x2
+
+Base passive text:
+Passive — Tension Line: The first time you gain Block each round, apply Snared 1 to the quarry.
+
+Cards provided:
+Needle Flurry
+Deal 1 damage twice.
+
+Binding Stitch
+Apply Snared 1. Gain 4 Block.
+
+Silk Reversal
+Reduce the next damage you take by 3. Apply Snared 1.
+
+Evolution unlocks:
+Level 1 unlock: Apply Snared 3 times in one combat.
+Level 1 passive text:
+Passive — Three Knots: The first attack against a Snared quarry each round deals +2 damage.
+
+Level 2 unlock: End 3 rounds in one fight with every living survivor having Block.
+Level 2 passive text:
+Passive — Webbed Formation: The first Block card you play each round also gives another survivor Block 2.
+
+Level 3 unlock: Defeat the Silk Matriarch with no survivor reduced to 0 HP.
+Level 3 passive text:
+Passive — Web of Cuts: Once per turn, after playing 2 Dagger cards, draw 1 card and apply Snared 1. Attacks against a Snared quarry deal +1 damage.
+
+
+8. Duelist Garden / Bloom Knight
+--------------------------------
+Item name: Thorn-Saint Katana
+Item type: weapon
+weaponType: katana
+Quarry ID: bloomKnight
+Building/location ID: duelistGarden
+Cost:
+- polishedStem x2
+- floralSinew x2
+- bloomPetal x2
+- duelistThorn x2
+- knightSeed x1
+- perfectThornHeart x1
+- scrap x1
+
+Base passive text:
+Passive — Perfect Step: If this survivor plays exactly 1 attack in a turn, that attack deals +1 damage.
+
+Cards provided:
+Petal Draw
+Deal 4 damage. If this is your only attack this turn, apply Vulnerable 1.
+
+Duelist’s Breath
+Gain 4 Block. Your next single attack this turn deals +2 damage.
+
+Thorn Riposte
+If you have Block, deal 3 damage after the quarry attacks you.
+
+Evolution unlocks:
+Level 1 unlock: Deal damage in 3 separate rounds without missing or dealing 0.
+Level 1 passive text:
+Passive — Formal Wound: Your first single attack each round applies Vulnerable 1.
+
+Level 2 unlock: Win a fight where this survivor never plays more than 2 cards in a turn.
+Level 2 passive text:
+Passive — No Wasted Motion: If you end your turn with an unused card, gain Block 2.
+
+Level 3 unlock: Defeat the Bloom Knight with a turn where this survivor played exactly 1 attack.
+Level 3 passive text:
+Passive — Perfect Thorn Moment: Once per fight, after playing exactly 1 attack this turn, double that attack’s bonus damage and apply Vulnerable 3 before damage.
+
+
+9. Smog Kiln / Smog Singers
+---------------------------
+Item name: Blacklung Recurve
+Item type: weapon
+weaponType: bow
+Quarry ID: smogSingers
+Building/location ID: smogKiln
+Cost:
+- smogPipe x2
+- tarFeather x3
+- sootLung x2
+- harmonyBone x2
+- chokingMask x1
+- finalChorusLung x1
+- sinew x2
+
+Base passive text:
+Passive — Smoke Distance: Your first Bow attack each round makes the quarry less likely to target this survivor.
+
+Cards provided:
+Soot Arrow
+Deal 2 damage. Apply Burn 1 or Poison 1.
+
+Choking Shot
+If the quarry has a damage-over-time status, apply a different damage-over-time status at 1.
+
+Smoke Cover
+Gain Target Avoidance. Draw 1 card.
+
+Evolution unlocks:
+Level 1 unlock: Have Bleed, Burn, and Poison active at the same time.
+Level 1 passive text:
+Passive — Three Voices: The first damage-over-time status you apply each round also applies a second different damage-over-time status at 1.
+
+Level 2 unlock: The quarry takes damage-over-time damage in 3 consecutive rounds.
+Level 2 passive text:
+Passive — No Clean Air: The first damage-over-time damage each round deals +2.
+
+Level 3 unlock: Defeat the Smog Singers while all living survivors have Block.
+Level 3 passive text:
+Passive — Choking Horizon: Once per round, your first Bow attack applies Burn 1 or Poison 1. If the quarry has 2+ statuses, draw 1 card after the attack.
+
+
+10. Chitin Foundry / Chitin Crusader
+------------------------------------
+Item name: Carapace Katars
+Item type: weapon
+weaponType: katar
+Quarry ID: chitinCrusader
+Building/location ID: chitinFoundry
+Cost:
+- beetleHorn x3
+- chitinPlate x2
+- resinBlood x2
+- jewelWing x1
+- crusaderHeartplate x1
+- bone x2
+- scrap x2
+
+Base passive text:
+Passive — Twin Pressure: If two Katars are equipped, Katar attacks cost 1 less, minimum 0.
+
+Cards provided:
+Horn Jab
+Deal 2 damage. Draw 1 card if you already played a Katar card this turn.
+
+Resin Catch
+Deal 2 damage. Gain 3 Block.
+
+Twin Plate Cut
+Deal 3 damage. If you already played a Katar card this turn, deal +3 damage.
+
+Evolution unlocks:
+Level 1 unlock: Play 2 Katar cards in one turn 5 times.
+Level 1 passive text:
+Passive — Paired Cuts: The second Katar card you play each turn deals +2 damage.
+
+Level 2 unlock: Play 10+ Katar cards during one fight and win.
+Level 2 passive text:
+Passive — Living Guard: Every second Katar card you play each turn gives Block 2.
+
+Level 3 unlock: Defeat the Chitin Crusader after playing 3 Katar cards in one turn.
+Level 3 passive text:
+Passive — Living Twin-Blades: Once per turn, after playing 2 Katar cards, draw 1 card, gain Block 2, and the next Katar card this turn costs 0.
+
+
+11. Crystal Forge / Drake Emperor
+---------------------------------
+Item name: Dragon Slayer: Grand Cleaver
+Item type: weapon
+weaponType: grandWeapon
+Quarry ID: drakeEmperor
+Building/location ID: crystalForge
+Cost:
+- crystalBone x3
+- drakeScale x2
+- fireGland x2
+- imperialHorn x2
+- moltenEye x1
+- emperorFlameMarrow x1
+- scrap x3
+
+Base passive text:
+Passive — Commanding Heat: The first time you deal damage each combat, all other survivors gain +1 damage on their next attack.
+
+Cards provided:
+Ember Decree
+Deal 6 damage. Apply Burn 1.
+
+Royal Heat
+Another survivor’s next attack deals +3 damage.
+
+Crownfire Cleave
+Deal 5 damage. If another survivor dealt damage this round, deal +3 damage.
+
+Evolution unlocks:
+Level 1 unlock: 3 different survivors deal damage in the same fight.
+Level 1 passive text:
+Passive — First Command: The first ally damage buff you give each round also gives Block 2.
+
+Level 2 unlock: Win a fight where every living survivor dealt damage.
+Level 2 passive text:
+Passive — Fire Has Subjects: When another survivor damages the quarry, your next Grand Weapon attack deals +2 damage.
+
+Level 3 unlock: Defeat the Drake Emperor after every living survivor dealt damage that fight.
+Level 3 passive text:
+Passive — Imperial Command Round: Once per fight, declare a command round. Every survivor’s first attack this round deals +2 damage and applies Burn 1. If all living survivors hit this round, draw 2 cards.
+
+
+12. Shell Sanctum / Sun Sovereign
+---------------------------------
+Item name: Noon-Shell Bulwark
+Item type: weapon
+weaponType: shield
+Quarry ID: sunSovereign
+Building/location ID: shellSanctum
+Cost:
+- sunShell x3
+- blindingScale x2
+- radiantEye x2
+- solarIchor x1
+- warmPearl x1
+- captiveNoon x1
+- hide x2
+
+Base passive text:
+Passive — Covered Radiance: If you have not attacked this round, gain Block 1 when targeted.
+
+Cards provided:
+Noon Bash
+Deal damage equal to half your Block, max 6.
+
+Blinding Guard
+Gain 5 Block and Target Avoidance.
+
+Mirror Return
+Gain 3 Block. If hit this round, reflect 2 damage.
+
+Evolution unlocks:
+Level 1 unlock: Cause the quarry to miss or be redirected away from this survivor 3 times.
+Level 1 passive text:
+Passive — Bright Without Looking: When the quarry misses this survivor, apply Vulnerable 1.
+
+Level 2 unlock: Win with this survivor taking no HP damage.
+Level 2 passive text:
+Passive — Shell of Noon: The first defensive card you play each round reflects 2 damage.
+
+Level 3 unlock: Defeat the Sun Sovereign after reflecting damage twice in that fight.
+Level 3 passive text:
+Passive — Noon Cannot Be Struck: Once per fight, cancel all damage from one quarry attack against this survivor, gain Block 5, and reflect damage equal to half your Block, max 10.
+
+
+13. Pride Hall / Pride King
+---------------------------
+Item name: Judgement Crown Helm
+Item type: armor
+Slot: armor
+bodySlot: head
+Tags: armor, head, judgement
+Quarry ID: prideKing
+Building/location ID: prideHall
+Cost:
+- prideMane x3
+- regalHide x2
+- kingClaw x1
+- goldenFang x2
+- judgmentEye x1
+- crownHeart x1
+- hide x2
+- bone x2
+
+Base passive text:
+Passive — Measured Worth: When this survivor is targeted, gain Block 2. If this survivor made the first attack this round, gain +1 Survival.
+
+Cards provided:
+Stand Before the King
+Gain 5 Block. Until the next quarry action, this survivor is more likely to be targeted.
+
+Judgement Sight
+Apply Vulnerable 1. Draw 1 card if this survivor has been targeted this round.
+
+Crown Still Stands
+Gain 2 Survival. If this survivor has Block, their next attack deals +3 damage.
+
+Evolution unlocks:
+Level 1 unlock: Be targeted 6 times across hunts while wearing this armour and survive each fight.
+Level 1 passive text:
+Passive — First to Be Weighed: When this survivor is targeted, gain Block 3 instead of Block 2.
+
+Level 2 unlock: Win a fight where this survivor is targeted at least 3 times and is never reduced to 0 HP.
+Level 2 passive text:
+Passive — No Kneeling: Once per round, when this survivor is targeted, draw 1 card, then discard 1 card. Their next attack deals +2 damage.
+
+Level 3 unlock: Defeat the Pride King after this survivor made the first attack of the fight and survived being targeted.
+Level 3 passive text:
+Passive — The Crown Refuses: Once per fight, when a quarry attack would reduce this survivor to 0 HP, prevent that damage, set them to 1 HP, gain Block 6, and their next attack deals +4 damage.
+
+
+D. CONSUMABLE CATALOGUE
+=======================
+
+Consumables should be crafted as repeatable items.
+Each crafted consumable item should create one consumable card instance in the run deck/loadout.
+When the card is used, it goes to Lost and is deleted after the encounter, even if recovered and used again during the fight.
+
+Balance:
+- Standard consumables are cheap and made from basic materials.
+- Quarry common consumables use quarry-specific common drops.
+- Quarry rare consumables use rare/strange drops and should feel very strong.
+- Consumables should be powerful enough to save for emergencies, but not so expensive that players never use them.
+
+
+D1. Seven standard cheap consumables
+------------------------------------
+
+Bone Broth Flask
+Cost: bone x1, organ x1
+Card text: Heal 4 HP. Gain 1 Survival. Lost.
+
+Hide Poultice
+Cost: hide x1, organ x1
+Card text: Heal 2 HP. Remove Bleed 2. Lost.
+
+Sinew Stitch Kit
+Cost: sinew x1, bone x1
+Card text: Prevent the next 5 damage this survivor would take. Lost.
+
+Scrap Flashpot
+Cost: scrap x1, organ x1
+Card text: Apply Blind 1 and Vulnerable 1. Lost.
+
+Bone Needle Tonic
+Cost: bone x1, sinew x1
+Card text: Draw 2 cards. Discard 1 card. Lost.
+
+Charred Meat Strip
+Cost: organ x1, scrap x1
+Card text: Gain 2 Survival. Your next attack this round deals +2 damage. Lost.
+
+Hide Smoke Wrap
+Cost: hide x1, scrap x1
+Card text: Gain Target Avoidance and 3 Block. Lost.
+
+
+D2. Quarry common-drop consumables
+----------------------------------
+
+Pale Mane Warpaint
+Building/location ID: lionTrophyHall
+Cost: paleLionMane x1, paleLionHide x1
+Card text: Apply Bleed 2. Your next attack this round deals +2 damage. Lost.
+
+Screaming Jerky
+Building/location ID: antelopeLarder
+Cost: wailingOrgan x1, screamingSinew x1
+Card text: Gain 3 Survival. Draw 1 card. Your next Fist & Tooth attack deals +2 damage. Lost.
+
+Ashwake Powder
+Building/location ID: phoenixPyre
+Cost: ashFeather x1, burntOrgan x1
+Card text: Return 1 attack card from discard to hand. It costs 1 less this turn. Lost.
+
+Thunder-Gland Ampoule
+Building/location ID: stormShrine
+Cost: thunderGland x1, denseOrgan x1
+Card text: Gain Charge 3. Apply Shock 1. Lost.
+
+Blood-Mud Coagulant
+Building/location ID: redTannery
+Cost: bloodMudOrgan x1, crimsonScale x1
+Card text: Apply Bleed 1 and Vulnerable 1. Gain 3 Block. Lost.
+
+Rubbery Antidote
+Building/location ID: wetYard
+Cost: rubberyHide x1, frogdogTongue x1
+Card text: Remove Poison from this survivor. Heal 3 HP. Apply Poison 1 to the quarry. Lost.
+
+Silk Binding Wrap
+Building/location ID: silkLoom
+Cost: silkGland x1, chitinThread x1
+Card text: Apply Snared 2. Gain 4 Block. Lost.
+
+Petal Focus Draught
+Building/location ID: duelistGarden
+Cost: bloomPetal x1, floralSinew x1
+Card text: Your next single attack this turn deals +4 damage. If it hits, apply Vulnerable 1. Lost.
+
+Sootlung Inhaler
+Building/location ID: smogKiln
+Cost: sootLung x1, smogPipe x1
+Card text: Apply Burn 1 and Poison 1. Gain Target Avoidance. Lost.
+
+Resin Hardener
+Building/location ID: chitinFoundry
+Cost: chitinPlate x1, beetleHorn x1
+Card text: Gain 8 Block. Your next attack deals +1 damage if you still have Block. Lost.
+
+Drakefire Oil
+Building/location ID: crystalForge
+Cost: fireGland x1, drakeScale x1
+Card text: Your next attack deals +4 damage and applies Burn 2. Lost.
+
+Sun-Shell Glare Dust
+Building/location ID: shellSanctum
+Cost: sunShell x1, blindingScale x1
+Card text: Apply Blind 2. Gain 4 Block. Lost.
+
+Regal Blood Salve
+Building/location ID: prideHall
+Cost: regalHide x1, prideMane x1
+Card text: Gain 4 Block and 2 Survival. If targeted this round, draw 1 card. Lost.
+
+
+D3. Quarry rare-drop consumables
+--------------------------------
+
+Elder Fang Oil
+Building/location ID: lionTrophyHall
+Cost: elderPaleFang x1, paleLionEye x1
+Card text: Apply Bleed 3. Your next Axe attack deals +5 damage. Lost.
+
+Stomach-Stone Feast
+Building/location ID: antelopeLarder
+Cost: stomachStone x1, wailingOrgan x1
+Card text: Gain 4 Survival. Draw 2 cards. Consumables you use this round give +2 more to one number they grant. Lost.
+
+Memory Glass Shard
+Building/location ID: phoenixPyre
+Cost: memoryGlass x1, phoenixAsh x1
+Card text: Play 1 card from discard for free. Then remove that card from combat until the fight ends. Lost.
+
+Cracked Molar Battery
+Building/location ID: stormShrine
+Cost: crackedMolar x1, stormBone x1
+Card text: Gain Charge 5. Apply Shock 2 and Vulnerable 1. Lost.
+
+Red Leather Tourniquet
+Building/location ID: redTannery
+Cost: redLeather x1, crocodileEye x1
+Card text: Remove all Bleed from one survivor. Apply that much Bleed to the quarry, max 5. Lost.
+
+Bulging Eye Extract
+Building/location ID: wetYard
+Cost: bulgingEye x1, toxicGland x1
+Card text: Apply Poison 3. Apply Vulnerable 1. The quarry is less likely to target this survivor this round. Lost.
+
+Spider-Eye Thread
+Building/location ID: silkLoom
+Cost: spiderEye x1, venomSac x1
+Card text: Apply Snared 3 and Poison 1. Draw 1 card. Lost.
+
+Knight-Seed Elixir
+Building/location ID: duelistGarden
+Cost: knightSeed x1, duelistThorn x1
+Card text: Your next single attack this turn deals +6 damage. If it hits, apply Vulnerable 2. Lost.
+
+Choking Mask Filter
+Building/location ID: smogKiln
+Cost: chokingMask x1, harmonyBone x1
+Card text: Apply Burn 2, Poison 2, and Blind 1. Lost.
+
+Resin-Blood Plate Seal
+Building/location ID: chitinFoundry
+Cost: resinBlood x1, jewelWing x1
+Card text: Gain 12 Block. Until the next quarry action, Block does not decay. Lost.
+
+Molten Eye Spark
+Building/location ID: crystalForge
+Cost: moltenEye x1, imperialHorn x1
+Card text: All survivors’ next attacks this round deal +3 damage. Apply Burn 1 after each hit. Lost.
+
+Warm Pearl Lens
+Building/location ID: shellSanctum
+Cost: warmPearl x1, radiantEye x1
+Card text: Cancel the next hit against this survivor. Reflect 5 damage. Lost.
+
+Judgement Eye Draught
+Building/location ID: prideHall
+Cost: judgmentEye x1, goldenFang x1
+Card text: This survivor is more likely to be targeted. Gain 10 Block. Their next attack deals +5 damage. Lost.
+
+
+E. IMPLEMENTATION GUIDANCE FOR AI CODING AGENT
+==============================================
+
+Do this as small patches, not one huge rewrite.
+
+Suggested implementation order:
+1. Add data-only catalogue for signature items and consumables.
+2. Add consumable card objects with tags: consumable, singleUse, lost.
+3. Add Lost pile support in combat state.
+4. Make consumables move to Lost when played.
+5. Make special cards able to recover from Lost when explicitly stated.
+6. Add end-of-encounter cleanup deleting consumed consumable card instances.
+7. Add signature item evolution progress state.
+8. Add UI display for locked/unlocked passives.
+9. Add crafting visibility at each quarry building.
+10. Add tests or manual validation only after the data and state shape are stable.
+
+Recommended files to create:
+- src/data/gear/signatureItems.js
+- src/data/gear/consumables.js
+- src/data/gear/signatureCards.js
+- src/data/gear/consumableCards.js
+
+Possible files to edit:
+- src/data/equipment.js
+- src/data/cards.js
+- src/data/gearMetadata.js
+- src/game/combatLogic.js or the current card resolution file
+- src/App.jsx if combat piles are coordinated there
+- relevant crafting/settlement screen files
+
+Do not edit:
+- dist/
+- node_modules/
+- package.json unless no other option
+- Vite config
+- main entry files
+- card flip structure unless fixing a pure layout bug
+
+Data object expectations:
+Every signature item should include:
+- id
+- name
+- itemType
+- loadoutCategory
+- slot
+- weaponType if weapon
+- bodySlot if armour
+- quarryId
+- buildingId
+- locationId
+- craftingLocationId
+- cost object using valid resource IDs
+- cardPackage array
+- passiveText
+- evolutionMilestones array
+- keywords
+- implemented: true
+
+Every consumable should include:
+- id
+- name
+- itemType: "consumable"
+- loadoutCategory: "consumable" or "tool" depending on current UI compatibility
+- slot: "consumable" or "tool" depending on current UI compatibility
+- quarryId if quarry-specific
+- buildingId/locationId if crafted at quarry location
+- cost object using valid resource IDs
+- cardPackage containing exactly one card ID
+- keywords: ["Consumable", "Lost"]
+- implemented: true
+
+Card object expectations:
+- front text must match this guide exactly.
+- tags should include source type, item ID, and relevant mechanics.
+- consumable cards must include tags: consumable, singleUse, lost.
+- signature weapon cards should include weaponType.
+- cards must not include huge rules text; keep the front text readable.
+
+Lost pile edge cases:
+- If a consumable is played, it must be marked consumed even if it later leaves Lost.
+- If a Lost card is recovered to hand, it can be played again during that encounter.
+- If the encounter ends and the card was ever marked consumed, delete it from all live piles and future deck/storage references.
+- If an effect says return from discard but not Lost, it cannot return a Lost card.
+- If an effect says return a consumable from Lost or discard, it can return from either.
+
+Validation checklist:
+1. Build passes.
+2. Signature items appear only in their correct quarry buildings.
+3. All crafting costs use valid resource IDs.
+4. No new item uses club, hammer, scythe, or strangeWeapon.
+5. Dragon Slayer: Grand Cleaver uses weaponType grandWeapon.
+6. Each signature weapon adds exactly 3 cards.
+7. Stormglass Lantern adds exactly 3 cards.
+8. Judgement Crown Helm adds exactly 3 cards.
+9. Standard consumables are craftable from generic basic resources.
+10. Quarry common consumables use common quarry drops.
+11. Quarry rare consumables use rare/strange quarry drops.
+12. Consumables move to Lost on use, not discard.
+13. Second Stomach can recover a consumable from Lost or discard.
+14. Recovered Lost consumables can be played again in the same fight.
+15. Consumables used at least once are deleted at the end of encounter.
+16. Non-consumable cards are not accidentally deleted by Lost cleanup.
+17. Card flip/preview still works.
+18. Existing save data does not crash if it lacks Lost pile state.
+
+Validation commands:
+npm run build
+npm run test
+git status
+
+Commit format:
+git add -A
+git commit -m "Add signature items and consumable deck guide"
+git push origin main
+git rev-parse HEAD

@@ -1,22 +1,32 @@
 import { innovations } from '../data/innovations.js';
+import {
+  getHighestDefeatedQuarryLevel,
+  quarries
+} from '../data/quarries.js';
+
+export const STARTER_CRAFTING_LOCATIONS = [
+  'boneSmith',
+  'skinnery',
+  'organGrinder'
+];
 
 const LOCATION_LABELS = {
   lanternHearth: 'Starting / Basic',
   boneSmith: 'Bone Smith',
   skinnery: 'Skinnery',
   organGrinder: 'Organ Grinder',
-  lionTrophyHall: 'Catarium',
-  antelopeLarder: 'Stone Circle',
-  phoenixPyre: 'Plumery',
-  silkLoom: 'Silk Mill',
-  wetYard: 'Gormery',
+  lionTrophyHall: 'Lion Trophy Hall',
+  antelopeLarder: 'Antelope Larder',
+  phoenixPyre: 'Phoenix Pyre',
+  silkLoom: 'Silk Loom',
+  wetYard: 'Wet Yard',
   redTannery: 'Red Tannery',
   stormShrine: 'Storm Shrine',
   duelistGarden: 'Duelist Garden',
   smogKiln: 'Smog Kiln',
   chitinFoundry: 'Chitin Foundry',
-  crystalForge: 'Dragon Armory',
-  shellSanctum: 'Sky Reef Sanctuary',
+  crystalForge: 'Crystal Forge',
+  shellSanctum: 'Shell Sanctum',
   prideHall: 'Pride Hall'
 };
 
@@ -56,6 +66,44 @@ function formatReadableLabel(value) {
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/\b\w/g, letter => letter.toUpperCase())
     .trim();
+}
+
+export function getGearLocationId(item = {}) {
+  return item.buildingId || item.locationId || item.craftingLocationId || null;
+}
+
+export function isConsumableGear(item = {}) {
+  return item.itemType === 'consumable' || item.loadoutCategory === 'consumable';
+}
+
+export function getArmouryDisplayLocationId(item = {}) {
+  if (isConsumableGear(item)) return 'organGrinder';
+  return item.displayLocationId ||
+    item.craftingLocationId ||
+    item.buildingId ||
+    item.locationId ||
+    null;
+}
+
+export function getAllGearLocationIds(items = []) {
+  return [...new Set(items.map(getArmouryDisplayLocationId).filter(Boolean))].sort();
+}
+
+export function getUnlockedGearLocationIds(settlement = {}) {
+  return [...new Set([
+    ...STARTER_CRAFTING_LOCATIONS,
+    ...(settlement.builtInnovations || []),
+    ...(settlement.unlockedLocations || []),
+    ...(settlement.unlockedBuildings || []),
+    ...(settlement.unlockedCraftingLocations || [])
+  ].filter(Boolean))];
+}
+
+export function getVisibleGearLocationIds(items = [], settlement = {}, { includeLocked = true } = {}) {
+  const allGearLocationIds = getAllGearLocationIds(items);
+  if (includeLocked) return allGearLocationIds;
+  const unlocked = new Set(getUnlockedGearLocationIds(settlement));
+  return allGearLocationIds.filter(id => unlocked.has(id));
 }
 
 export function cleanGearDisplayName(name) {
@@ -110,6 +158,10 @@ function mergeGearMetadata(existing, incoming) {
 
 function getGearIdentityKeys(item) {
   const id = item?.id || item?.gearId || item?.cardId || item?.ourGameId;
+  if (item?.currentSource === 'gearOverhaulCatalog' && id) {
+    return [`id:${slugify(id)}`];
+  }
+
   const nameSlug = slugify(getGearDisplayName(item));
   const baseNameSlug = slugify(cleanGearDisplayName(getGearDisplayName(item)));
   return [
@@ -195,13 +247,18 @@ export function dedupeGearList(items = [], { includeHidden = false } = {}) {
 }
 
 export function normaliseCraftingLocation(item = {}) {
+  const displayLocationId = getArmouryDisplayLocationId(item);
+  if (displayLocationId) return formatReadableLabel(displayLocationId);
+
   const rawLocation = item.craftingLocationName ||
     item.ourCraftingLocation ||
     item.kdmSettlementLocationOrSource ||
     item.ourSettlementSource ||
-    item.location ||
+    item.buildingId ||
     item.locationId ||
-    item.buildingId;
+    item.craftingLocationId ||
+    item.location ||
+    item.craftingLocation;
   const unlockMethods = Array.isArray(item.ourUnlockMethod) ? item.ourUnlockMethod : [];
 
   if (!rawLocation || rawLocation === 'Anywhere') {
@@ -214,6 +271,7 @@ export function normaliseCraftingLocation(item = {}) {
 }
 
 export function normaliseCreatureSource(item = {}) {
+  if (item.sourceQuarryId) return item.sourceQuarryId;
   if (item.quarryId) return item.quarryId;
   const rawSource = item.kdmMonsterOrEventSource ||
     item.ourHuntSource ||
@@ -231,7 +289,37 @@ export function normaliseCreatureSource(item = {}) {
   return match?.[1] || formatReadableLabel(rawSource);
 }
 
+export function hasDefeatedQuarry(settlement = {}, quarryId) {
+  return Boolean(quarryId && getHighestDefeatedQuarryLevel(settlement, quarryId) >= 1);
+}
+
 export function getGearUnlockState(item, settlement = {}) {
+  const buildingId = getArmouryDisplayLocationId(item);
+  const unlockedLocationIds = new Set(getUnlockedGearLocationIds(settlement));
+
+  if (isConsumableGear(item)) {
+    if (!unlockedLocationIds.has('organGrinder')) {
+      return {
+        unlocked: false,
+        reason: 'Requires Organ Grinder'
+      };
+    }
+
+    const quarryId = item.sourceQuarryId || item.quarryId;
+    if (quarryId && !hasDefeatedQuarry(settlement, quarryId)) {
+      return {
+        unlocked: false,
+        reason: `Requires defeating ${quarries[quarryId]?.name || formatReadableLabel(quarryId)} once.`
+      };
+    }
+
+    return { unlocked: true, reason: '' };
+  }
+
+  if (buildingId && unlockedLocationIds.has(buildingId)) {
+    return { unlocked: true, reason: '' };
+  }
+
   const builtInnovations = settlement.builtInnovations || [];
   const discoveredQuarries = new Set([
     ...(settlement.discoveredQuarries || []),
@@ -240,7 +328,6 @@ export function getGearUnlockState(item, settlement = {}) {
   ]);
   const location = normaliseCraftingLocation(item);
   const creatureId = normaliseCreatureSource(item);
-  const buildingId = item.buildingId || item.locationId;
 
   if (buildingId && innovations[buildingId]) {
     const unlocked = builtInnovations.includes(buildingId);
@@ -285,8 +372,16 @@ export function groupGearByArmouryTab(
   { includeLocked = true } = {}
 ) {
   const groups = {};
+  const allGearLocationIds = getAllGearLocationIds(items);
+  const visibleLocationIds = new Set(
+    settlementState
+      ? getVisibleGearLocationIds(items, settlementState, { includeLocked })
+      : allGearLocationIds
+  );
 
   dedupeGearList(items).forEach(item => {
+    const locationId = getArmouryDisplayLocationId(item);
+    if (settlementState && locationId && !visibleLocationIds.has(locationId)) return;
     if (
       settlementState &&
       !includeLocked &&
@@ -297,7 +392,9 @@ export function groupGearByArmouryTab(
 
     const location = normaliseCraftingLocation(item);
     const creature = normaliseCreatureSource(item);
-    const source = creature || 'General';
+    const source = isConsumableGear(item)
+      ? (creature ? `${quarries[creature]?.name || formatReadableLabel(creature)} Consumables` : 'Basic Consumables')
+      : creature || 'General';
 
     if (!groups[location]) groups[location] = {};
     if (!groups[location][source]) groups[location][source] = [];

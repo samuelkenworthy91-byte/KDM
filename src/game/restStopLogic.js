@@ -3,7 +3,7 @@ import {
   generalFightingArts
 } from '../data/fightingArts.js';
 import { resources } from '../data/resources.js';
-import { gearRegistry } from '../data/overhaul/gearRegistry.js';
+import { equipment } from '../data/equipment.js';
 import { createSurvivor, createGearInstance } from './saveLogic.js';
 
 const living = survivor => survivor?.alive !== false && Number(survivor?.hp) > 0;
@@ -21,6 +21,47 @@ function updatePartyMember(party, survivorId, updater) {
 function pickRandom(array) {
   if (!array || !array.length) return null;
   return array[Math.floor(Math.random() * array.length)];
+}
+
+function getGearLocationId(item = {}) {
+  return item.buildingId || item.locationId || item.craftingLocationId || null;
+}
+
+function isActiveRestStopGear(item = {}) {
+  return Boolean(
+    item.id &&
+    item.implemented !== false &&
+    !item.deprecated &&
+    !item.hiddenFromCrafting &&
+    item.itemType !== 'consumable' &&
+    item.loadoutCategory !== 'consumable'
+  );
+}
+
+function getUnlockedRestStopGear(settlement = {}) {
+  const unlockedLocations = new Set([
+    ...(settlement.builtInnovations || []),
+    ...(settlement.unlockedLocations || []),
+    ...(settlement.unlockedBuildings || []),
+    ...(settlement.unlockedCraftingLocations || [])
+  ]);
+
+  return equipment.filter(item =>
+    isActiveRestStopGear(item) &&
+    unlockedLocations.has(getGearLocationId(item))
+  );
+}
+
+function isWeaponGear(item = {}) {
+  return Boolean(isActiveRestStopGear(item) && item.weaponType && item.itemType === 'weapon');
+}
+
+function isArmourGear(item = {}) {
+  return Boolean(isActiveRestStopGear(item) && (item.itemType === 'armor' || item.loadoutCategory === 'armor'));
+}
+
+function isToolGear(item = {}) {
+  return Boolean(isActiveRestStopGear(item) && !isWeaponGear(item) && !isArmourGear(item));
 }
 
 function generateRandomSurvivorName() {
@@ -209,49 +250,10 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
       const name = generateRandomSurvivorName();
       let survivor = createSurvivor(name); // This gives hp:30, maxHp:30, etc.
 
-      // Determine unlocked gear based on settlement innovations
-      const builtInnovations = state.settlement?.builtInnovations || [];
-      const unlockedGear = gearRegistry.filter(g => builtInnovations.includes(g.buildingId));
-      const basicGear = gearRegistry.filter(g => g.buildingId === 'lanternHearth');
-
-      // Helper to check if gear is equippable
-      const isEquippable = (g) => g.isEquippable !== false;
-
-      // Strict category helpers (mutually exclusive)
-      const isWeaponGear = (g) => {
-        if (!isEquippable(g)) return false;
-        // Weapon if has weaponType and not armour/tool indicators
-        return !!g.weaponType && !(g.armorType || g.armourType) && !(['head', 'torso', 'arms', 'waist', 'legs', 'feet', 'hands', 'shield'].includes(g.slot || ''));
-      };
-
-      const isArmourGear = (g) => {
-        if (!isEquippable(g)) return false;
-        // Armour if has armour type or slot in body slots, and not weapon
-        return !!(g.armorType || g.armourType) && !g.weaponType && (['head', 'torso', 'arms', 'waist', 'legs', 'feet', 'hands', 'shield'].includes(g.slot || ''));
-      };
-
-      const isToolGear = (g) => {
-        if (!isEquippable(g)) return false;
-        // Tool if equippable, not weapon, not armour
-        return !isWeaponGear(g) && !isArmourGear(g);
-      };
-
-      // Build pools with fallbacks: unlocked -> basic -> full registry
-      const weaponPool = [
-        ...unlockedGear.filter(isWeaponGear),
-        ...basicGear.filter(isWeaponGear),
-        ...gearRegistry.filter(isWeaponGear)
-      ];
-      const armourPool = [
-        ...unlockedGear.filter(isArmourGear),
-        ...basicGear.filter(isArmourGear),
-        ...gearRegistry.filter(isArmourGear)
-      ];
-      const toolPool = [
-        ...unlockedGear.filter(isToolGear),
-        ...basicGear.filter(isToolGear),
-        ...gearRegistry.filter(isToolGear)
-      ];
+      const unlockedGear = getUnlockedRestStopGear(state.settlement);
+      const weaponPool = unlockedGear.filter(isWeaponGear);
+      const armourPool = unlockedGear.filter(isArmourGear);
+      const toolPool = unlockedGear.filter(isToolGear);
 
       // Helper to pick one random item from an array
       const pickOne = (arr) => {
@@ -306,8 +308,7 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
       };
     } else if (roll < 40) {
       // Random gear from unlocked building
-      const builtInnovations = state.settlement?.builtInnovations || [];
-      const availableGear = gearRegistry.filter(g => builtInnovations.includes(g.buildingId));
+      const availableGear = getUnlockedRestStopGear(state.settlement);
       const gear = pickRandom(availableGear);
 
       if (gear) {
@@ -322,12 +323,12 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
           outcomeText: `Found a discarded but functional ${gear.name}. It has been added to the settlement's armory.`
         };
       } else {
-        const runResources = [...(state.runResources || []), 'brokenLantern'];
+        const runResources = [...(state.runResources || []), 'scrap'];
         return {
           ...base,
           runResources,
           applied: true,
-          outcomeText: 'Found some broken lantern parts. No advanced gear was available to scavenge.'
+          outcomeText: 'Found useful scrap in the dark. No unlocked non-consumable gear was available to scavenge.'
         };
       }
     } else {

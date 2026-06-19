@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { equipment } from '../src/data/equipment.js';
 import { createSurvivor, defaultSettlement } from '../src/game/saveLogic.js';
 import {
   getForgettableRestCards,
@@ -51,6 +53,16 @@ function state(party, active = party[0], settlementOverrides = {}) {
     },
     currentHuntId: 'hunt-test'
   };
+}
+
+function withRandom(value, fn) {
+  const original = Math.random;
+  Math.random = () => value;
+  try {
+    return fn();
+  } finally {
+    Math.random = original;
+  }
 }
 
 test('healParty heals all living survivors by 25% max HP', () => {
@@ -117,4 +129,52 @@ test('scoutTheDark provides outcomeText for all paths', () => {
   
   assert.equal(result.applied, true);
   assert.ok(result.outcomeText.length > 0);
+});
+
+test('scoutTheDark random gear uses active equipment from unlocked buildings', () => {
+  const s1 = survivor('S1');
+  const settlement = {
+    ...defaultSettlement,
+    survivors: [s1],
+    builtInnovations: ['boneSmith']
+  };
+
+  const result = withRandom(0.35, () =>
+    resolveRestStopChoice({ ...state([s1]), settlement }, 'scoutTheDark')
+  );
+
+  assert.equal(result.applied, true);
+  assert.equal(result.settlement.armory.length, 1);
+  const gearId = result.settlement.armory[0].equipmentId;
+  const item = equipment.find(candidate => candidate.id === gearId);
+  assert.ok(item, `${gearId} should come from active equipment`);
+  assert.equal(item.buildingId || item.locationId || item.craftingLocationId, 'boneSmith');
+  assert.equal(item.deprecated, false);
+  assert.equal(item.hiddenFromCrafting, false);
+  assert.notEqual(item.itemType, 'consumable');
+  assert.notEqual(item.loadoutCategory, 'consumable');
+});
+
+test('scoutTheDark random gear falls back safely when no unlocked gear exists', () => {
+  const s1 = survivor('S1');
+  const settlement = {
+    ...defaultSettlement,
+    survivors: [s1],
+    builtInnovations: []
+  };
+
+  const result = withRandom(0.35, () =>
+    resolveRestStopChoice({ ...state([s1]), settlement, runResources: [] }, 'scoutTheDark')
+  );
+
+  assert.equal(result.applied, true);
+  assert.deepEqual(result.runResources, ['scrap']);
+  assert.match(result.outcomeText, /No unlocked non-consumable gear/);
+});
+
+test('restStopLogic does not import the deleted old gear registry', () => {
+  const source = readFileSync(new URL('../src/game/restStopLogic.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /overhaul\/gearRegistry/);
+  assert.doesNotMatch(source, /gearRegistry/);
+  assert.match(source, /import \{ equipment \} from '\.\.\/data\/equipment\.js';/);
 });

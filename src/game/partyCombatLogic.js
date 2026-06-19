@@ -3,6 +3,7 @@ import {
   applyMonsterIntent,
   applyEndTurnStatuses,
   createCombatState,
+  cleanupConsumedCards,
   tickAuraDurations,
   getCounterWeakPointPreview,
   getMonsterIntentForResolution,
@@ -147,6 +148,8 @@ export function killSurvivorImmediately(member, source) {
     drawPile: [],
     discardPile: [],
     exhaustPile: [],
+    lostPile: member.lostPile || [],
+    consumedCardInstanceIds: member.consumedCardInstanceIds || [],
     survivor: {
       ...member.survivor,
       hp: 0,

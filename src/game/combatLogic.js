@@ -316,6 +316,55 @@ function getCombatStatus(survivor, monster) {
   return 'playing';
 }
 
+function isConsumableCard(card) {
+  return (card?.tags || []).some(tag => ['consumable', 'singleUse', 'lost'].includes(tag));
+}
+
+function removeCardInstances(pile = [], consumedIds = new Set()) {
+  return (pile || []).filter(card => !consumedIds.has(card.instanceId));
+}
+
+export function cleanupConsumedCards(state = {}) {
+  const consumedIds = new Set(state.consumedCardInstanceIds || []);
+  const consumedGearInstanceIds = new Set(
+    [
+      ...(state.drawPile || []),
+      ...(state.hand || []),
+      ...(state.discardPile || []),
+      ...(state.exhaustPile || []),
+      ...(state.lostPile || []),
+      ...(state.runDeck || [])
+    ]
+      .filter(card => consumedIds.has(card.instanceId) && card.gearInstanceId)
+      .map(card => card.gearInstanceId)
+  );
+  const removeConsumedGear = gear => !consumedGearInstanceIds.has(gear?.instanceId || gear?.equipmentId || gear);
+  if (!consumedIds.size) return {
+    ...state,
+    lostPile: state.lostPile || [],
+    consumedCardInstanceIds: state.consumedCardInstanceIds || [],
+    consumedGearInstanceIds: state.consumedGearInstanceIds || []
+  };
+  return {
+    ...state,
+    drawPile: removeCardInstances(state.drawPile, consumedIds),
+    hand: removeCardInstances(state.hand, consumedIds),
+    discardPile: removeCardInstances(state.discardPile, consumedIds),
+    exhaustPile: removeCardInstances(state.exhaustPile, consumedIds),
+    lostPile: removeCardInstances(state.lostPile, consumedIds),
+    runDeck: removeCardInstances(state.runDeck, consumedIds),
+    boundGear: (state.boundGear || []).filter(removeConsumedGear),
+    equippedGear: (state.equippedGear || []).filter(removeConsumedGear),
+    survivor: state.survivor ? {
+      ...state.survivor,
+      boundGear: (state.survivor.boundGear || state.boundGear || []).filter(removeConsumedGear),
+      equippedGear: (state.survivor.equippedGear || state.equippedGear || []).filter(removeConsumedGear)
+    } : state.survivor,
+    consumedCardInstanceIds: [...consumedIds],
+    consumedGearInstanceIds: [...consumedGearInstanceIds]
+  };
+}
+
 export function createCombatState(monsterOverride = monsters.whiteLion, runBonus = {}) {
   const extraMaxHp = runBonus.extraMaxHp || 0;
   const arts = runBonus.survivor?.fightingArts || [];
@@ -435,6 +484,8 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     hand: initialDraw.hand,
     discardPile: initialDiscard,
     exhaustPile: [],
+    lostPile: [],
+    consumedCardInstanceIds: [],
     runDeck,
     intentIndex: 0,
     fightingArts: arts,
@@ -535,6 +586,8 @@ export function playCard(cardIndex, state) {
   let hand = state.hand;
   let discardPile = state.discardPile;
   let exhaustPile = state.exhaustPile || [];
+  let lostPile = state.lostPile || [];
+  let consumedCardInstanceIds = [...(state.consumedCardInstanceIds || [])];
   let nextAttackBonus = state.nextAttackBonus || 0;
   let nextAttackMarks = state.nextAttackMarks || false;
   let monsterHitsThisTurn = state.monsterHitsThisTurn || 0;
@@ -606,7 +659,11 @@ export function playCard(cardIndex, state) {
   let cardBreakBonus = 0;
   const combatLogEntries = [];
 
-  card.effects.forEach(effect => {
+  card.effects.forEach(rawEffect => {
+    const effect = {
+      ...rawEffect,
+      type: normalizeEffectType(rawEffect.type)
+    };
     if (effect.type === 'breakBonus') cardBreakBonus += effect.amount;
   });
 
@@ -1136,6 +1193,9 @@ export function playCard(cardIndex, state) {
       case 'reduceBleedSelf':
         survivor = { ...survivor, bleed: reduceStatus(survivor.bleed, statusAmount(effect)) };
         break;
+      case 'removePoisonSelf':
+        survivor = { ...survivor, poison: 0 };
+        break;
       case 'targetAvoidance':
         survivor = applyStatusToCombatant(survivor, 'targetAvoidance', statusAmount(effect));
         break;
@@ -1208,6 +1268,51 @@ export function playCard(cardIndex, state) {
       case 'drawFromDiscardOrDeck': {
         if (discardPile.length) hand = [...hand, discardPile.pop()];
         else drawAmount(effect.amount);
+        break;
+      }
+      case 'returnFromDiscard': {
+        const index = discardPile.findIndex(item => !effect.filter || item.type === effect.filter);
+        if (index >= 0) {
+          const recovered = discardPile[index];
+          discardPile = discardPile.filter((_, itemIndex) => itemIndex !== index);
+          hand = [...hand, recovered];
+        }
+        if (effect.takeDamage) {
+          survivor = applyDamageToSurvivor({
+            survivor,
+            amount: effect.takeDamage,
+            ignoreBlock: true
+          }).survivor;
+        }
+        break;
+      }
+      case 'playFromDiscard': {
+        const index = discardPile.findIndex(item => !effect.filter || item.type === effect.filter);
+        if (index >= 0) {
+          const recovered = discardPile[index];
+          discardPile = discardPile.filter((_, itemIndex) => itemIndex !== index);
+          hand = [...hand, { ...recovered, temporaryDamageModifier: effect.damageModifier || 0 }];
+        }
+        break;
+      }
+      case 'secondStomach': {
+        const isConsumable = item => (item?.tags || []).includes('consumable');
+        const lostIndex = lostPile.findIndex(isConsumable);
+        const discardIndex = discardPile.findIndex(isConsumable);
+        if (lostIndex >= 0) {
+          const recovered = lostPile[lostIndex];
+          lostPile = lostPile.filter((_, itemIndex) => itemIndex !== lostIndex);
+          hand = [...hand, recovered];
+        } else if (discardIndex >= 0) {
+          const recovered = discardPile[discardIndex];
+          discardPile = discardPile.filter((_, itemIndex) => itemIndex !== discardIndex);
+          hand = [...hand, recovered];
+        } else {
+          survivor = {
+            ...survivor,
+            survival: Math.min(survivor.maxSurvival, (survivor.survival || 0) + 2)
+          };
+        }
         break;
       }
       case 'discard': {
@@ -1338,6 +1443,9 @@ export function playCard(cardIndex, state) {
         monster = applyStatusToCombatant(monster, statusMap[effect.type], statusAmount(effect));
         break;
       }
+      case 'staggerTargetIfMonsterPoisoned':
+        if (monster.poison > 0) monster = applyStatusToCombatant(monster, 'staggered', statusAmount(effect));
+        break;
       case 'guardSelf':
       case 'preparedSelf':
       case 'salvageSelf':
@@ -1356,6 +1464,22 @@ export function playCard(cardIndex, state) {
       }
       case 'nextAttackBonus':
         nextAttackBonus += effect.amount;
+        break;
+      case 'gainCharge':
+        survivor = { ...survivor, charge: (survivor.charge || 0) + statusAmount(effect) };
+        break;
+      case 'spendCharge': {
+        survivor = { ...survivor, charge: Math.max(0, (survivor.charge || 0) - statusAmount(effect)) };
+        break;
+      }
+      case 'spendChargeForBlock': {
+        const spent = Math.min(effect.maxSpend || 0, survivor.charge || 0);
+        survivor = { ...survivor, charge: Math.max(0, (survivor.charge || 0) - spent), block: survivor.block + spent * (effect.rate || 0) };
+        blockGainedThisTurn += spent * (effect.rate || 0);
+        break;
+      }
+      case 'shockTargetIfCharge3':
+        if ((survivor.charge || 0) >= 3) monster = applyStatusToCombatant(monster, 'shock', statusAmount(effect));
         break;
       case 'nextAttackBonusIfMonsterBane':
         if (state.hasMonsterBane) nextAttackBonus += effect.amount;
@@ -1408,6 +1532,16 @@ export function playCard(cardIndex, state) {
         blockGainedThisTurn += amount;
         break;
       }
+      case 'preventNextDamage':
+        survivor.block += statusAmount(effect);
+        blockGainedThisTurn += statusAmount(effect);
+        break;
+      case 'cancelNextHit':
+        survivor = applyStatusToCombatant(survivor, 'guarded', 1);
+        break;
+      case 'reflectDamage':
+        dealCardDamage({ type: 'damage', amount: statusAmount(effect) });
+        break;
       case 'addTemporaryCard':
         if (cards[effect.cardId]) hand = [...hand, { ...cards[effect.cardId], source: card.source }];
         break;
@@ -1526,7 +1660,12 @@ export function playCard(cardIndex, state) {
   const nextHand = playedCardIndex >= 0
     ? hand.filter((_, index) => index !== playedCardIndex)
     : hand;
-  if (card.exhaust) exhaustPile = [...exhaustPile, card];
+  if (isConsumableCard(card)) {
+    lostPile = [...lostPile, card];
+    if (card.instanceId && !consumedCardInstanceIds.includes(card.instanceId)) {
+      consumedCardInstanceIds = [...consumedCardInstanceIds, card.instanceId];
+    }
+  } else if (card.exhaust) exhaustPile = [...exhaustPile, card];
   else discardPile = [...discardPile, card];
 
   return {
@@ -1537,6 +1676,8 @@ export function playCard(cardIndex, state) {
     hand: nextHand,
     discardPile,
     exhaustPile,
+    lostPile,
+    consumedCardInstanceIds,
     nextAttackBonus,
     nextAttackMarks,
     weakPointFeedback: selectedWeakPoint

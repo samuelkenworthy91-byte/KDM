@@ -4,6 +4,7 @@ import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorPanel from '../components/SurvivorPanel.jsx';
 import {
   createCombatState,
+  cleanupConsumedCards,
   endTurn,
   getPostCombatSalvageRewards,
   formatAuraForDisplay,
@@ -70,8 +71,13 @@ export default function CombatScreen({
             type="button"
             onClick={combat.status === 'won'
               ? () => {
+                const cleanedCombat = cleanupConsumedCards(combat);
                 const healed = resolveAfterCombatHealing({
-                  survivor: combat.survivor,
+                  survivor: {
+                    ...cleanedCombat.survivor,
+                    boundGear: cleanedCombat.boundGear,
+                    equippedGear: cleanedCombat.equippedGear
+                  },
                   afterCombatHealing: combat.afterCombatHealing
                 }, 'victory');
                 const salvage = getPostCombatSalvageRewards(combat);

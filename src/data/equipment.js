@@ -4,7 +4,7 @@ import {
   getGearMetadata,
   weaponStyleDefinitions
 } from './gearMetadata.js';
-import { gearRegistry } from './overhaul/gearRegistry.js';
+import { gearCatalog } from './gear/gearCatalog.js';
 import {
   cleanGearDisplayName,
   dedupeGearList
@@ -25,8 +25,8 @@ function isLegacyCompatibilityGear(item) {
   return legacyCompatibilityEquipmentIds.has(item.id);
 }
 
-const currentEquipment = Object.fromEntries(
-  gearRegistry
+const currentEquipmentById = Object.fromEntries(
+  gearCatalog
     .filter(item => !isLegacyCompatibilityGear(item))
     .map(item => {
       const normalized = {
@@ -35,7 +35,7 @@ const currentEquipment = Object.fromEntries(
         deprecated: false,
         hiddenFromCrafting: false,
         legacySource: null,
-        currentSource: 'v8GearRegistry'
+        currentSource: 'gearOverhaulCatalog'
       };
       const metadata = getGearMetadata(normalized);
       normalized.weaponType = normalized.weaponType || metadata.weaponType;
@@ -62,8 +62,22 @@ const currentEquipment = Object.fromEntries(
     })
 );
 
-export const equipment = currentEquipment;
-export const equipmentList = dedupeGearList(Object.values(equipment));
+export const equipmentList = dedupeGearList(Object.values(currentEquipmentById));
+export const equipment = equipmentList;
+export const equipmentById = Object.fromEntries(equipment.map(item => [item.id, item]));
+
+Object.defineProperties(
+  equipment,
+  Object.fromEntries(
+    Object.entries(equipmentById).map(([id, item]) => [id, {
+      value: item,
+      enumerable: false,
+      configurable: false,
+      writable: false
+    }])
+  )
+);
+
 export const equipmentCatalogList = equipmentList;
 
 export const legacyCompatibilityEquipment = {};
@@ -89,7 +103,7 @@ export function createLegacyEquipmentPlaceholder(id) {
 }
 
 export function getEquipment(id) {
-  return equipment[id] || createLegacyEquipmentPlaceholder(id);
+  return equipmentById[id] || createLegacyEquipmentPlaceholder(id);
 }
 
 export function getEquipmentDisplayName(id) {

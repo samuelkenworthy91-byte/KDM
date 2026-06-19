@@ -13,6 +13,7 @@ import {
   usePartySurvivalAction
 } from '../game/partyCombatLogic.js';
 import {
+  cleanupConsumedCards,
   formatAuraForDisplay,
   getPostCombatSalvageRewards,
   resolveAfterCombatHealing
@@ -166,7 +167,7 @@ export default function PartyCombatScreen({
 
   const finish = () => {
     const healedMembers = combat.members.map(member =>
-      resolveAfterCombatHealing(member, combat.status === 'won' ? 'victory' : 'combat')
+      resolveAfterCombatHealing(cleanupConsumedCards(member), combat.status === 'won' ? 'victory' : 'combat')
     );
     const survivors = healedMembers.map(member => ({
       ...partyBonuses.find(bonus => bonus.survivor.id === member.survivor.id)?.survivor,

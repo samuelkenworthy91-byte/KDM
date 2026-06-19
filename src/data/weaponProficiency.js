@@ -23,21 +23,21 @@ export const proficiencyThresholds = {
 };
 
 const passives = {
-  sword: ['First sword attack each combat deals +1.', 'Sword attacks against Marked monsters deal +1.', 'After two sword cards, draw 1 once per combat.'],
-  axe: ['Axe attacks remove 1 extra monster block.', 'Axe attacks deal +2 while the monster has block.', 'First axe attack each combat applies Marked.'],
-  dagger: ['First dagger attack each turn deals +1. Weak-point counters against heads, eyes, and organs gain +2 break but +1 failed-break risk.', 'After two dagger cards in a turn, gain 1 survival.', 'Dagger multi-hit attacks deal +1 per hit.'],
-  spear: ['First spear attack each combat gives +2 block. Once per combat, a counter against legs or limbs suppresses failed-break risk.', 'Spear attacks deal +2 if no damage was taken last turn.', 'First spear card each combat gives +8 block.'],
-  bow: ['First bow attack each combat applies Marked.', 'Bow attacks against Marked monsters draw 1 once per turn.', 'First bow card each combat grants 1 survival.'],
-  club: ['Club attacks give +2 block.', 'Club attacks reduce the next monster attack by 1 once per turn.', 'First club attack each combat deals +5.'],
-  hammer: ['Hammer attacks remove 2 extra monster block.', 'Hammer attacks deal +2 after striking a guarded monster.', 'First hammer attack each combat applies Marked.'],
-  grandWeapon: ['Heavy attacks deal +2.', 'First 2-cost attack each combat draws 1.', 'First 2-cost weapon card each combat refunds 2 energy.'],
-  katar: ['First katar attack each turn deals +1. Weak-point counters against heads, eyes, and organs gain +2 break but +1 failed-break risk.', 'Katar attacks against Marked monsters deal +1 per hit.', 'After applying Marked, the next katar card draws 1.'],
-  fistAndTooth: ['Fist attacks deal +1. While wounded, Counter deals +2; failed weak-point counters add Panic.', 'Counter deals +1 while fist-and-tooth gear is equipped.', 'After Counter, draw 1 once per combat.'],
-  shield: ['First shield card each combat gives +2 block. Counters against claws and body gain +2 break.', 'If block remains after a monster turn, gain 1 survival once per combat.', 'Once per combat, a shield attack adds up to 20 block as damage.'],
-  whip: ['Whip attacks that deal damage apply Marked. Counters against tails, tongues, and limbs Mark the weak point.', 'Whip attacks against Marked monsters reduce next monster damage by 1.', 'First whip card each combat clarifies the tell.'],
-  scythe: ['Scythe attacks deal +1 to Marked or Bleeding monsters.', 'First scythe attack adds 1 Panic and deals +3.', 'Scythe attacks deal +2 while Panic is in discard.'],
-  katana: ['First katana attack deals +2 if no block card was played this turn. After avoiding damage, a weak-point counter gains +3 break.', 'After a katana card, the next Dodge gives +2 block.', 'After avoiding damage for a turn, the next katana attack deals +6 once per combat.'],
-  strangeWeapon: ['First strange weapon card draws 1 and adds 1 Panic.', 'A strange weapon card removes 1 Panic once per combat.', 'When Panic is drawn, gain 1 survival and draw 1 once per combat.']
+  sword: ['First Sword attack each turn deals +1 damage.', 'After you play a Sword attack, your next Block card this turn gives +1 Block.', 'Once per fight, after a Sword card wounds, draw 1 card.'],
+  axe: ['Axe attacks deal double damage to monster Block.', 'When an Axe removes all monster Block, your next attack deals +2 damage.', 'First Axe attack each fight also applies Vulnerable 1.'],
+  dagger: ['First Dagger card each turn costs 0.', 'Dagger attacks apply +1 extra Bleed/Poison/Burn if they already apply a damage-over-time status.', 'After you play two Dagger cards in one turn, draw 1 card.'],
+  spear: ['First Spear attack each turn also gives +1 Block.', 'If you have Block, Spear attacks deal +1 damage.', 'Once per fight, after a Spear attack, give another survivor 3 Block.'],
+  bow: ['First Bow attack each turn makes the quarry less likely to target this survivor.', 'Bow attacks gain +2 on weak-point and harvest tests.', 'Once per fight, after a Bow attack wounds, clarify the next quarry tell.'],
+  club: ['Legacy Club attacks give +2 Block.', 'Legacy Club attacks reduce the next quarry attack by 1 once per turn.', 'First legacy Club attack each fight deals +5 damage.'],
+  hammer: ['Legacy Hammer attacks remove 2 extra monster Block.', 'Legacy Hammer attacks deal +2 after striking a guarded quarry.', 'First legacy Hammer attack each fight applies Vulnerable 1.'],
+  grandWeapon: ['Grand Weapon attacks deal +2 damage.', 'First Grand Weapon card each fight costs 1 less.', 'Once per fight, after a Grand Weapon attack wounds, gain 4 Block.'],
+  katar: ['If two Katars are equipped, Katar attacks cost 1 less, minimum 0.', 'After a Katar card damages the quarry, your next Katar card this turn deals +1 damage.', 'Once per turn, after playing two Katar cards, draw 1 card.'],
+  fistAndTooth: ['First Fist & Tooth card each turn costs 0.', 'Fist & Tooth Aura cards last 1 extra turn if they target only this survivor.', 'Once per fight, when wounded, draw 1 and gain 3 Block.'],
+  shield: ['First Shield card each turn gives +1 Block.', 'When Block prevents damage, your next Shield attack deals +2 damage.', 'Once per fight, deal damage equal to half your Block, up to 20.'],
+  whip: ['Whip attacks that damage the quarry apply Snare 1.', 'Whip cards make the quarry more likely to target this survivor until next quarry turn.', 'Once per fight, when this survivor is targeted, gain 5 Block before damage.'],
+  scythe: ['Legacy Scythe attacks deal +1 to Bleeding monsters.', 'First legacy Scythe attack adds 1 Panic and deals +3.', 'Legacy Scythe attacks deal +2 while Panic is in discard.'],
+  katana: ['The first Katana setup card each fight costs 0.', 'Katana setup bonuses do not expire until your next Katana attack.', 'Once per fight, double the stored bonus on your next Katana strike.'],
+  strangeWeapon: ['First Strange card each fight may remove 1 Panic or draw 1.', 'When you gain Panic from your own Strange card, gain 1 Survival.', 'Once per fight, convert 1 Panic into +4 damage or +4 Block.']
 };
 
 const labels = {

@@ -116,33 +116,33 @@ test('forgotten cards persist on the survivor and leave the run deck', () => {
 
 test('forgotten gear card is excluded without unequipping item or removing sibling cards', () => {
   const currentSurvivor = survivor({
-    forgottenCardIds: ['amberBowTechnique'],
+    forgottenCardIds: ['signature_raking_chord'],
     gearCardTraining: {
-      'survivor-1:amber-1:amberBowTechnique': 3
+      'survivor-1:cleaver-1:signature_raking_chord': 3
     }
   });
-  const equippedGear = [{ equipmentId: 'amberBow', instanceId: 'amber-1' }];
+  const equippedGear = [{ equipmentId: 'palechord_cleaver', instanceId: 'cleaver-1' }];
   const deck = buildRunDeck({ survivor: currentSurvivor, equippedGear });
 
-  assert.ok(equipment.amberBow.cardPackage.includes('amberBowTechnique'));
-  assert.equal(deck.some(card => card.id === 'amberBowTechnique'), false);
-  assert.equal(deck.some(card => card.id === 'amberBowOpeningStrike'), true);
-  assert.equal(deck.some(card => card.id === 'amberBowPayoff'), true);
+  assert.ok(equipment.palechord_cleaver.cardPackage.includes('signature_raking_chord'));
+  assert.equal(deck.some(card => card.id === 'signature_raking_chord'), false);
+  assert.equal(deck.some(card => card.id === 'signature_feedback_guard'), true);
+  assert.equal(deck.some(card => card.id === 'signature_cleaver_solo'), true);
 });
 
 test('forgotten gear card survives re-equipping and does not affect another survivor', () => {
-  const equippedGear = [{ equipmentId: 'amberBow', instanceId: 'amber-1' }];
-  const forgettingSurvivor = survivor({ forgottenCardIds: ['amberBowTechnique'] });
+  const equippedGear = [{ equipmentId: 'palechord_cleaver', instanceId: 'cleaver-1' }];
+  const forgettingSurvivor = survivor({ forgottenCardIds: ['signature_raking_chord'] });
   const otherSurvivor = survivor({ id: 'survivor-2', name: 'Nia' });
 
   assert.equal(
     buildRunDeck({ survivor: forgettingSurvivor, equippedGear })
-      .some(card => card.id === 'amberBowTechnique'),
+      .some(card => card.id === 'signature_raking_chord'),
     false
   );
   assert.equal(
     buildRunDeck({ survivor: otherSurvivor, equippedGear })
-      .some(card => card.id === 'amberBowTechnique'),
+      .some(card => card.id === 'signature_raking_chord'),
     true
   );
 });

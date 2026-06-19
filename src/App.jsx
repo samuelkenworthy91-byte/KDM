@@ -1148,6 +1148,8 @@ export default function App() {
       ...runSurvivor,
       hp: combatResult?.survivor?.hp ?? runSurvivor.hp,
       survival: combatResult?.survivor?.survival ?? runSurvivor.survival,
+      boundGear: combatResult?.survivor?.boundGear ?? runSurvivor.boundGear,
+      equippedGear: combatResult?.survivor?.equippedGear ?? runSurvivor.equippedGear,
       kills: (runSurvivor.kills || 0) + 1
     };
     const injuryId = rollLowHpCondition(survivorAfterCombat);

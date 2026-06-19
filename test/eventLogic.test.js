@@ -27,8 +27,8 @@ const mockSettlement = (innovationIds = []) => ({
 test('Event Requirement Logic', async (t) => {
   const context = {
     runParty: [
-      mockSurvivor('s1', ['steady'], [{ equipmentId: 'boneBlade' }]),
-      mockSurvivor('s2', ['bold'], [{ equipmentId: 'wailingHornBow' }])
+      mockSurvivor('s1', ['steady'], [{ equipmentId: 'redwater_toothsaw' }]),
+      mockSurvivor('s2', ['bold'], [{ equipmentId: 'blacklung_recurve' }])
     ],
     settlement: mockSettlement(['sharedWarnings']),
     selectedQuarry: { id: 'paleHuntLion' }

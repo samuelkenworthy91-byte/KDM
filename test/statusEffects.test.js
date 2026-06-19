@@ -1,20 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import rawCards from '../all_deck_cards.json' with { type: 'json' };
 import {
   applyDamageToSurvivor,
   applyEndTurnStatuses,
   applyMonsterIntent,
+  cleanupConsumedCards,
   createCombatState,
   endTurn,
   getPostCombatSalvageRewards,
   playCard,
   resolveAfterCombatHealing
 } from '../src/game/combatLogic.js';
-import {
-  getCanonicalStatusEffectType,
-  overhaulCards
-} from '../src/data/overhaul/cardRegistry.js';
 import { cards } from '../src/data/cards.js';
 import { selectRandomLivingSurvivor } from '../src/game/monsterTargeting.js';
 
@@ -337,66 +333,56 @@ test('Dead survivors are not healed unless revive is explicit', () => {
   assert.equal(healed.survivor.hp, 0);
 });
 
-test('Parser maps all v8 statusApplied values to implemented effects', () => {
-  const statuses = new Set();
-  rawCards.forEach(card => {
-    if (!card.statusApplied) return;
-    if (typeof card.statusApplied === 'object') {
-      Object.keys(card.statusApplied).forEach(status => statuses.add(status));
-    } else {
-      String(card.statusApplied).split(/[;,]/).forEach(part => {
-        const match = part.match(/([A-Za-z ]+)/);
-        if (match) statuses.add(match[1].trim());
-      });
-    }
-  });
-  statuses.forEach(status => {
-    assert.ok(getCanonicalStatusEffectType(status), `missing canonical parser mapping for ${status}`);
-  });
-});
-
-test('No implemented status silently does nothing', () => {
+test('active status effect cards use implemented resolver effect types', () => {
   const implemented = [
     'bleedTarget',
     'burnTarget',
     'poisonTarget',
-    'doomTarget',
     'vulnerableTarget',
     'staggerTarget',
-    'guardTarget',
-    'markTarget',
-    'exposeTarget',
     'snareTarget',
     'shockTarget',
     'blindTarget',
-    'preparedSelf',
-    'salvageSelf',
-    'testBonus',
-    'consequenceReduction',
     'reduceBleedSelf',
     'targetAvoidance',
     'healSelf',
-    'healAfterCombat',
-    'partyHealAfterCombat'
+    'removePoisonSelf',
+    'gainCharge',
+    'spendCharge',
+    'spendChargeForBlock',
+    'shockTargetIfCharge3',
+    'returnFromDiscard',
+    'playFromDiscard',
+    'secondStomach'
   ];
-  const seen = new Set(Object.values(overhaulCards).flatMap(card => card.effects.map(effect => effect.type)));
+  const aliases = {
+    bleedMonster: 'bleedTarget',
+    poisonMonster: 'poisonTarget',
+    burnMonster: 'burnTarget',
+    vulnerableMonster: 'vulnerableTarget',
+    staggerMonster: 'staggerTarget',
+    snareMonster: 'snareTarget',
+    shockMonster: 'shockTarget',
+    blindMonster: 'blindTarget'
+  };
+  const seen = new Set(Object.values(cards).flatMap(card =>
+    (card.effects || []).map(effect => aliases[effect.type] || effect.type)
+  ));
   implemented.forEach(type => {
     assert.ok(
-      seen.has(type) || [
-        'vulnerableTarget',
-        'healSelf',
-        'healAfterCombat',
-        'partyHealAfterCombat'
-      ].includes(type),
-      `${type} has no parser or card coverage`
+      seen.has(type),
+      `${type} has no active card coverage`
     );
   });
 });
 
-test('medical and scent effects resolve as real mechanics', () => {
-  const bandages = cards.bandagesResonance;
-  const fecalSalve = cards.fecalSalveResonance;
-  const bandageState = createCombatState(monster(), {
+test('consumable medical effects resolve and clean up after combat', () => {
+  const broth = {
+    ...cards.consumable_bone_broth,
+    instanceId: 'broth-card',
+    gearInstanceId: 'broth-gear'
+  };
+  const brothState = createCombatState(monster(), {
     survivor: {
       id: 'medic',
       name: 'Medic',
@@ -406,32 +392,20 @@ test('medical and scent effects resolve as real mechanics', () => {
       bleed: 3,
       energy: 3
     },
-    runDeck: [bandages]
+    runDeck: [broth]
   });
-  bandageState.survivor.bleed = 3;
-
-  const bleedingBandageResult = playCard(0, { ...bandageState, hand: [bandages] });
-
-  assert.equal(bleedingBandageResult.survivor.bleed, 2);
-  assert.equal(bleedingBandageResult.survivor.hp, 6);
-  assert.equal(bleedingBandageResult.afterCombatHealing, 1);
-
-  const salveState = createCombatState(monster(), {
-    survivor: {
-      id: 'salve',
-      name: 'Salve',
-      hp: 10,
-      maxHp: 10,
-      block: 0,
-      energy: 3
-    },
-    runDeck: [fecalSalve]
+  const result = playCard(0, {
+    ...brothState,
+    hand: [broth],
+    boundGear: [{ instanceId: 'broth-gear', equipmentId: 'bone_broth_flask' }]
   });
-  const salveResult = playCard(0, { ...salveState, hand: [fecalSalve] });
 
-  assert.equal(salveResult.survivor.targetAvoidance, 3);
-  assert.equal(salveResult.survivor.guarded, 1);
-  assert.equal(salveResult.discardPile.some(card => card.id === 'panic'), true);
+  assert.equal(result.survivor.hp, 9);
+  assert.equal(result.survivor.survival, 1);
+  assert.equal(result.lostPile.some(card => card.instanceId === 'broth-card'), true);
+  const cleaned = cleanupConsumedCards(result);
+  assert.equal(cleaned.lostPile.length, 0);
+  assert.equal(cleaned.boundGear.length, 0);
 });
 
 test('target avoidance lowers random targeting weight without making survivor untargetable', () => {

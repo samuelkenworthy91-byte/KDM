@@ -1,5 +1,10 @@
-export const gearCards = {};
-export const gearCardPackages = {};
+import {
+  gearCards as curatedGearCards,
+  gearCardPackages as curatedGearCardPackages
+} from './gear/gearCards.js';
+
+export const gearCards = curatedGearCards;
+export const gearCardPackages = curatedGearCardPackages;
 
 export const legacyCompatibilityGearCards = {};
 export const legacyCompatibilityGearCardPackages = {};

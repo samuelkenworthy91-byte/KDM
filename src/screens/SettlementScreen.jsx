@@ -51,6 +51,8 @@ import {
 import {
   getGearDisplayName,
   getGearUnlockState,
+  getAllGearLocationIds,
+  getUnlockedGearLocationIds,
   groupGearByArmouryTab
 } from '../utils/gearNormalization.js';
 import { calculateIntimacyProjections } from '../game/eventLogic.js';
@@ -871,7 +873,7 @@ export default function SettlementScreen({
     drawableInnovationIds.length > 0;
   const nextTimelineMilestone = getNextTimelineMilestone(settlement.lanternYear);
   const armouryData = useMemo(() => {
-    const currentGear = equipmentList.filter(item => item.currentSource === 'v8GearRegistry');
+    const currentGear = equipmentList;
     return groupGearByArmouryTab(currentGear, settlement, {
       includeLocked: showLockedGear
     });
@@ -892,6 +894,16 @@ export default function SettlementScreen({
     () => ['Stored Gear', 'Bound Gear', ...recipeTabs],
     [recipeTabs]
   );
+
+  useEffect(() => {
+    if (recipeTabs.length > 0 || equipmentList.length === 0) return;
+    console.warn('Armoury warning: gear exists but no building sections matched.', {
+      equipmentCount: equipmentList.length,
+      allGearLocationIds: getAllGearLocationIds(equipmentList),
+      unlockedLocationIds: getUnlockedGearLocationIds(settlement),
+      showLockedGear
+    });
+  }, [recipeTabs.length, settlement, showLockedGear]);
 
   useEffect(() => {
     if (armouryTabs.length > 0 && (!activeArmouryTab || !armouryTabs.includes(activeArmouryTab))) {
@@ -1778,7 +1790,7 @@ export default function SettlementScreen({
               <div className="armoury-tab-content">
               {Object.entries(armouryData[activeArmouryTab]).map(([source, recipes]) => (
                 <section className="recipe-group" key={source}>
-                  <h3>{source === 'General' ? activeArmouryTab : `${quarries[source]?.name || source} craftables`}</h3>
+                  <h3>{source === 'General' ? activeArmouryTab : source.endsWith('Consumables') ? source : `${quarries[source]?.name || source} craftables`}</h3>
                   <div className="item-grid">
                     {recipes.map(recipe => {
                       const unlockState = getGearUnlockState(recipe, settlement);
@@ -1806,13 +1818,13 @@ export default function SettlementScreen({
                           <p>{getCleanGearSummary(recipe)}</p>
                           <GearCardList recipe={recipe} />
                           <CostList cost={recipe.cost} stash={settlement.stash} />
-                          {!isLocked && !recipe.deprecated && !recipe.hiddenFromCrafting && (
+                          {!recipe.deprecated && !recipe.hiddenFromCrafting && (
                             <button
                               type="button"
-                              disabled={!canAffordCost(recipe.cost, settlement.stash)}
+                              disabled={isLocked || !canAffordCost(recipe.cost, settlement.stash)}
                               onClick={() => onCraft(recipe)}
                             >
-                              Craft
+                              {isLocked ? 'Locked' : 'Craft'}
                             </button>
                           )}
                         </article>

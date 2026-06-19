@@ -271,7 +271,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {
@@ -414,7 +414,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "whip"
         },
-        "lockedText": "Requires weaponType: whip.",
+        "lockedText": "Requires a Whip.",
         "outcomeText": "The lash catches motion before motion catches you.",
         "effects": {
           "gainSurvival": 1,
@@ -460,7 +460,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {
@@ -567,7 +567,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "whip"
         },
-        "lockedText": "Requires weaponType: whip.",
+        "lockedText": "Requires a Whip.",
         "outcomeText": "The lash catches motion before motion catches you.",
         "effects": {
           "gainSurvival": 1,
@@ -613,7 +613,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "grandWeapon"
         },
-        "lockedText": "Requires weaponType: grandWeapon.",
+        "lockedText": "Requires a Grand Weapon.",
         "outcomeText": "The huge weapon makes one terrible problem into two useful pieces.",
         "effects": {
           "gainRandomResource": {
@@ -705,7 +705,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "spear"
         },
-        "lockedText": "Requires weaponType: spear.",
+        "lockedText": "Requires a Spear.",
         "outcomeText": "Reach keeps the thing from deciding who it wants first.",
         "effects": {
           "nextCombatStartBlock": 3,
@@ -848,7 +848,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "axe"
         },
-        "lockedText": "Requires weaponType: axe.",
+        "lockedText": "Requires an Axe.",
         "outcomeText": "You cut through the obstacle and learn where the quarry passed.",
         "effects": {
           "gainRandomResource": {
@@ -904,13 +904,13 @@ export const events = [
         }
       },
       {
-        "id": "answerWithStrangeness",
-        "text": "Answer with strange weaponry",
+        "id": "answerWithTool",
+        "text": "Answer with a tool",
         "lockedUnless": {
-          "type": "partyHasWeaponType",
-          "weaponType": "strangeWeapon"
+          "type": "partyHasGearTag",
+          "tag": "tool"
         },
-        "lockedText": "Requires weaponType: strangeWeapon.",
+        "lockedText": "Requires a Tool.",
         "outcomeText": "The weapon behaves as if it remembers this place.",
         "effects": {
           "gainSettlementMemory": 1,
@@ -1099,12 +1099,12 @@ export const events = [
       },
       {
         "id": "crackTheHardPart",
-        "text": "Crack the hard part",
+        "text": "Split the hard part",
         "lockedUnless": {
           "type": "partyHasWeaponType",
-          "weaponType": "hammer"
+          "weaponType": "grandWeapon"
         },
-        "lockedText": "Requires weaponType: hammer.",
+        "lockedText": "Requires a Grand Weapon.",
         "outcomeText": "A heavy strike turns the obstacle into salvage.",
         "effects": {
           "gainResource": {
@@ -1346,7 +1346,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "shield"
         },
-        "lockedText": "Requires weaponType: shield.",
+        "lockedText": "Requires a Shield.",
         "outcomeText": "The blow lands on prepared cover instead of skin.",
         "effects": {
           "nextCombatStartBlock": 5
@@ -1388,7 +1388,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "axe"
         },
-        "lockedText": "Requires weaponType: axe.",
+        "lockedText": "Requires an Axe.",
         "outcomeText": "You cut through the obstacle and learn where the quarry passed.",
         "effects": {
           "gainRandomResource": {
@@ -1499,7 +1499,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "whip"
         },
-        "lockedText": "Requires weaponType: whip.",
+        "lockedText": "Requires a Whip.",
         "outcomeText": "The lash catches motion before motion catches you.",
         "effects": {
           "gainSurvival": 1,
@@ -1544,7 +1544,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {
@@ -1590,7 +1590,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "spear"
         },
-        "lockedText": "Requires weaponType: spear.",
+        "lockedText": "Requires a Spear.",
         "outcomeText": "Reach keeps the thing from deciding who it wants first.",
         "effects": {
           "nextCombatStartBlock": 3,
@@ -1676,7 +1676,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "bow"
         },
-        "lockedText": "Requires weaponType: bow.",
+        "lockedText": "Requires a Bow.",
         "outcomeText": "An arrow makes the hidden danger answer from a safer distance.",
         "effects": {
           "gainSurvival": 1,
@@ -1741,7 +1741,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {
@@ -1784,13 +1784,13 @@ export const events = [
         }
       },
       {
-        "id": "answerWithStrangeness",
-        "text": "Answer with strange weaponry",
+        "id": "answerWithTool",
+        "text": "Answer with a tool",
         "lockedUnless": {
-          "type": "partyHasWeaponType",
-          "weaponType": "strangeWeapon"
+          "type": "partyHasGearTag",
+          "tag": "tool"
         },
-        "lockedText": "Requires weaponType: strangeWeapon.",
+        "lockedText": "Requires a Tool.",
         "outcomeText": "The weapon behaves as if it remembers this place.",
         "effects": {
           "gainSettlementMemory": 1,
@@ -1828,12 +1828,12 @@ export const events = [
       },
       {
         "id": "crackTheHardPart",
-        "text": "Crack the hard part",
+        "text": "Split the hard part",
         "lockedUnless": {
           "type": "partyHasWeaponType",
-          "weaponType": "hammer"
+          "weaponType": "grandWeapon"
         },
-        "lockedText": "Requires weaponType: hammer.",
+        "lockedText": "Requires a Grand Weapon.",
         "outcomeText": "A heavy strike turns the obstacle into salvage.",
         "effects": {
           "gainResource": {
@@ -1942,7 +1942,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {
@@ -2051,7 +2051,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "bow"
         },
-        "lockedText": "Requires weaponType: bow.",
+        "lockedText": "Requires a Bow.",
         "outcomeText": "An arrow makes the hidden danger answer from a safer distance.",
         "effects": {
           "gainSurvival": 1,
@@ -2146,7 +2146,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "axe"
         },
-        "lockedText": "Requires weaponType: axe.",
+        "lockedText": "Requires an Axe.",
         "outcomeText": "You cut through the obstacle and learn where the quarry passed.",
         "effects": {
           "gainRandomResource": {
@@ -2190,13 +2190,13 @@ export const events = [
         }
       },
       {
-        "id": "answerWithStrangeness",
-        "text": "Answer with strange weaponry",
+        "id": "answerWithTool",
+        "text": "Answer with a tool",
         "lockedUnless": {
-          "type": "partyHasWeaponType",
-          "weaponType": "strangeWeapon"
+          "type": "partyHasGearTag",
+          "tag": "tool"
         },
-        "lockedText": "Requires weaponType: strangeWeapon.",
+        "lockedText": "Requires a Tool.",
         "outcomeText": "The weapon behaves as if it remembers this place.",
         "effects": {
           "gainSettlementMemory": 1,
@@ -2348,7 +2348,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "axe"
         },
-        "lockedText": "Requires weaponType: axe.",
+        "lockedText": "Requires an Axe.",
         "outcomeText": "You cut through the obstacle and learn where the quarry passed.",
         "effects": {
           "gainRandomResource": {
@@ -2443,7 +2443,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "whip"
         },
-        "lockedText": "Requires weaponType: whip.",
+        "lockedText": "Requires a Whip.",
         "outcomeText": "The lash catches motion before motion catches you.",
         "effects": {
           "gainSurvival": 1,
@@ -2551,7 +2551,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "spear"
         },
-        "lockedText": "Requires weaponType: spear.",
+        "lockedText": "Requires a Spear.",
         "outcomeText": "Reach keeps the thing from deciding who it wants first.",
         "effects": {
           "nextCombatStartBlock": 3,
@@ -2596,7 +2596,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "bow"
         },
-        "lockedText": "Requires weaponType: bow.",
+        "lockedText": "Requires a Bow.",
         "outcomeText": "An arrow makes the hidden danger answer from a safer distance.",
         "effects": {
           "gainSurvival": 1,
@@ -2642,7 +2642,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "whip"
         },
-        "lockedText": "Requires weaponType: whip.",
+        "lockedText": "Requires a Whip.",
         "outcomeText": "The lash catches motion before motion catches you.",
         "effects": {
           "gainSurvival": 1,
@@ -2688,7 +2688,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "grandWeapon"
         },
-        "lockedText": "Requires weaponType: grandWeapon.",
+        "lockedText": "Requires a Grand Weapon.",
         "outcomeText": "The huge weapon makes one terrible problem into two useful pieces.",
         "effects": {
           "gainRandomResource": {
@@ -2748,12 +2748,12 @@ export const events = [
       },
       {
         "id": "crackTheHardPart",
-        "text": "Crack the hard part",
+        "text": "Split the hard part",
         "lockedUnless": {
           "type": "partyHasWeaponType",
-          "weaponType": "hammer"
+          "weaponType": "grandWeapon"
         },
-        "lockedText": "Requires weaponType: hammer.",
+        "lockedText": "Requires a Grand Weapon.",
         "outcomeText": "A heavy strike turns the obstacle into salvage.",
         "effects": {
           "gainResource": {
@@ -2799,7 +2799,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "bow"
         },
-        "lockedText": "Requires weaponType: bow.",
+        "lockedText": "Requires a Bow.",
         "outcomeText": "An arrow makes the hidden danger answer from a safer distance.",
         "effects": {
           "gainSurvival": 1,
@@ -2887,7 +2887,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "axe"
         },
-        "lockedText": "Requires weaponType: axe.",
+        "lockedText": "Requires an Axe.",
         "outcomeText": "You cut through the obstacle and learn where the quarry passed.",
         "effects": {
           "gainRandomResource": {
@@ -2929,13 +2929,13 @@ export const events = [
         }
       },
       {
-        "id": "answerWithStrangeness",
-        "text": "Answer with strange weaponry",
+        "id": "answerWithTool",
+        "text": "Answer with a tool",
         "lockedUnless": {
-          "type": "partyHasWeaponType",
-          "weaponType": "strangeWeapon"
+          "type": "partyHasGearTag",
+          "tag": "tool"
         },
-        "lockedText": "Requires weaponType: strangeWeapon.",
+        "lockedText": "Requires a Tool.",
         "outcomeText": "The weapon behaves as if it remembers this place.",
         "effects": {
           "gainSettlementMemory": 1,
@@ -2996,7 +2996,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "shield"
         },
-        "lockedText": "Requires weaponType: shield.",
+        "lockedText": "Requires a Shield.",
         "outcomeText": "The blow lands on prepared cover instead of skin.",
         "effects": {
           "nextCombatStartBlock": 5
@@ -3084,7 +3084,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "spear"
         },
-        "lockedText": "Requires weaponType: spear.",
+        "lockedText": "Requires a Spear.",
         "outcomeText": "Reach keeps the thing from deciding who it wants first.",
         "effects": {
           "nextCombatStartBlock": 3,
@@ -3173,7 +3173,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "whip"
         },
-        "lockedText": "Requires weaponType: whip.",
+        "lockedText": "Requires a Whip.",
         "outcomeText": "The lash catches motion before motion catches you.",
         "effects": {
           "gainSurvival": 1,
@@ -3238,7 +3238,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "axe"
         },
-        "lockedText": "Requires weaponType: axe.",
+        "lockedText": "Requires an Axe.",
         "outcomeText": "You cut through the obstacle and learn where the quarry passed.",
         "effects": {
           "gainRandomResource": {
@@ -3284,7 +3284,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "spear"
         },
-        "lockedText": "Requires weaponType: spear.",
+        "lockedText": "Requires a Spear.",
         "outcomeText": "Reach keeps the thing from deciding who it wants first.",
         "effects": {
           "nextCombatStartBlock": 3,
@@ -3423,7 +3423,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {
@@ -3590,7 +3590,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "shield"
         },
-        "lockedText": "Requires weaponType: shield.",
+        "lockedText": "Requires a Shield.",
         "outcomeText": "The blow lands on prepared cover instead of skin.",
         "effects": {
           "nextCombatStartBlock": 5
@@ -3635,7 +3635,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {
@@ -3744,7 +3744,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "shield"
         },
-        "lockedText": "Requires weaponType: shield.",
+        "lockedText": "Requires a Shield.",
         "outcomeText": "The blow lands on prepared cover instead of skin.",
         "effects": {
           "nextCombatStartBlock": 5
@@ -3832,7 +3832,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "axe"
         },
-        "lockedText": "Requires weaponType: axe.",
+        "lockedText": "Requires an Axe.",
         "outcomeText": "You cut through the obstacle and learn where the quarry passed.",
         "effects": {
           "gainRandomResource": {
@@ -3995,7 +3995,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {
@@ -4081,12 +4081,12 @@ export const events = [
       },
       {
         "id": "crackTheHardPart",
-        "text": "Crack the hard part",
+        "text": "Split the hard part",
         "lockedUnless": {
           "type": "partyHasWeaponType",
-          "weaponType": "hammer"
+          "weaponType": "grandWeapon"
         },
-        "lockedText": "Requires weaponType: hammer.",
+        "lockedText": "Requires a Grand Weapon.",
         "outcomeText": "A heavy strike turns the obstacle into salvage.",
         "effects": {
           "gainResource": {
@@ -4178,7 +4178,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {
@@ -4291,7 +4291,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "bow"
         },
-        "lockedText": "Requires weaponType: bow.",
+        "lockedText": "Requires a Bow.",
         "outcomeText": "An arrow makes the hidden danger answer from a safer distance.",
         "effects": {
           "gainSurvival": 1,
@@ -4337,7 +4337,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "grandWeapon"
         },
-        "lockedText": "Requires weaponType: grandWeapon.",
+        "lockedText": "Requires a Grand Weapon.",
         "outcomeText": "The huge weapon makes one terrible problem into two useful pieces.",
         "effects": {
           "gainRandomResource": {
@@ -4539,7 +4539,7 @@ export const events = [
           "type": "partyHasWeaponType",
           "weaponType": "dagger"
         },
-        "lockedText": "Requires weaponType: dagger.",
+        "lockedText": "Requires a Dagger.",
         "outcomeText": "A quick blade finds the seam before the dark closes it.",
         "effects": {
           "gainRandomResource": {

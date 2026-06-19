@@ -1,6 +1,6 @@
 import { equipment } from '../data/equipment.js';
 import { fightingArts } from '../data/fightingArts.js';
-import { explicitWeaponTypes, getGearMetadata } from '../data/gearMetadata.js';
+import { getGearMetadata } from '../data/gearMetadata.js';
 
 /**
  * Checks if a locked requirement is met by the current hunting party and settlement state.
@@ -23,7 +23,8 @@ export function meetsLockedRequirement(lockedUnless, context) {
     case 'partyHasWeaponType':
       return (context.runParty || []).some(survivor => 
         (survivor.boundGear || []).some(gear => {
-          const weaponType = explicitWeaponTypes[gear.equipmentId];
+          const item = equipment[gear.equipmentId];
+          const weaponType = item?.weaponType || getGearMetadata(item || {}).weaponType;
           return weaponType === params.weaponType;
         })
       );
@@ -35,11 +36,14 @@ export function meetsLockedRequirement(lockedUnless, context) {
           const metadata = getGearMetadata(item);
           const allTags = [
             ...(item.tags || []),
+            ...(item.keywords || []),
             item.slot,
+            item.loadoutCategory,
+            item.itemType,
             metadata.slot,
             ...(metadata.keywords || [])
-          ];
-          return allTags.includes(params.tag);
+          ].filter(Boolean).map(tag => String(tag).toLowerCase());
+          return allTags.includes(String(params.tag).toLowerCase());
         })
       );
     case 'partyHasGearId':
