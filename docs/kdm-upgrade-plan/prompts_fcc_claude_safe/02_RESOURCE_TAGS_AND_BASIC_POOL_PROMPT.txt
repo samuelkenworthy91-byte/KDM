@@ -1,0 +1,90 @@
+FCC-CLAUDE SAFE VERSION
+
+Use this prompt only with the weaker fcc-claude runner.
+
+You are patching repo samuelkenworthy91-byte/KDM.
+This is stage 02: 02 RESOURCE TAGS AND BASIC POOL.
+
+ABSOLUTE RULES FOR THIS WEAKER MODEL:
+1. Do not combine stages.
+2. Do not rewrite entire App.jsx, SettlementScreen.jsx, combatLogic.js, resources.js, or innovationCards.js unless this exact prompt says to replace the full file. Prefer small targeted edits.
+3. Do not rename existing exports unless all imports are updated in the same patch.
+4. Do not delete memoryInnovations.js, memoryInnovationLogic.js, legacy resource IDs, old save fields, or old fighting art IDs until a prompt explicitly says migration/deprecation is safe.
+5. Do not invent card text, fighting art text, resource tags or rules. Use the exact wording and tables in docs/kdm-upgrade-plan/reference_docs/.
+6. Before changing code, open these docs:
+   - docs/kdm-upgrade-plan/reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt
+   - docs/kdm-upgrade-plan/reference_docs/02_MASTER_SYSTEM_RULES.txt
+   - any numbered reference doc named in this stage.
+7. Before changing code, inspect the target source file(s) and identify the smallest patch.
+8. After patching, run npm run build, npm run test, git status.
+
+
+STAGE-SPECIFIC EXACT INTENT FOR RESOURCES:
+- Exactly six basic resources: bone, hide, organ, sinew, scrap, loveJuice.
+- Do not keep claw, fur, horn, ichor, monsterTooth or strangeEye in the generic basic pool.
+- Do keep those old IDs safe for legacy saves and material matching.
+- Sinew is basic but pays Organ slot: materialTags ['organ'].
+- Love Juice is basic, rarer in drops, pays Organ slot: materialTags ['organ']; specialUse should describe intimacy protection.
+- genericResourceIds must be explicit, not derived by type filtering.
+- One resource object may have materialTags ['bone','organ'] etc, but one copy may fill only one payment slot.
+- Do not change innovation UI in this stage.
+
+
+Now follow the original stage prompt below, but obey the stricter rules above.
+
+--- ORIGINAL STAGE PROMPT START ---
+
+PROMPT 02 - RESOURCE TAGS AND SIX BASIC RESOURCE POOL
+
+You are patching repo samuelkenworthy91-byte/KDM.
+Work carefully. Prefer focused patches. Do not broad-rewrite unrelated systems.
+Read the uploaded TXT docs in docs/kdm-upgrade-plan/ before changing code.
+
+
+Goal:
+Implement the new resource classification.
+
+Rules:
+There are exactly six basic resources: bone, hide, organ, sinew, scrap, loveJuice.
+Sinew is a basic resource and counts as Organ.
+Love Juice is a basic but slightly rarer resource, counts as Organ, and has a future intimacy protection use.
+Old generic claw/fur/horn/ichor/monsterTooth/strangeEye are no longer basic generic drops, but should remain safe for legacy saves if present.
+
+Implementation guidance:
+1. Update src/data/resources.js resource helper to accept options such as materialTags, basicResource, genericDropWeight, specialUse.
+2. Add loveJuice.
+3. Add materialTags to all current resources using reference_docs/03_RESOURCE_TAGS_AND_BASIC_POOL.txt.
+4. Replace genericResourceIds export with explicit ['bone','hide','organ','sinew','scrap','loveJuice'].
+5. Add helper exports if useful:
+   - BASIC_RESOURCE_IDS
+   - BODY_MATERIAL_TAGS = ['bone','hide','organ']
+   - getResourceMaterialTags(resourceId)
+   - resourceCanPayMaterial(resourceId, material)
+   - getGenericResourceDropWeight(resourceId)
+6. Update src/game/harvestRewardLogic.js so loveJuice drops at a lower weight and old generic resources do not appear as common generic harvest rewards.
+7. Add/update tests for resource classification.
+
+Do not change innovation payment UI yet except enough helpers for later prompts.
+
+
+
+Validation commands to run before committing:
+npm run build
+npm run test
+git status
+
+If validation passes, commit and push with:
+git add -A
+git commit -m "<clear short commit message>"
+git push origin main
+git rev-parse HEAD
+
+--- ORIGINAL STAGE PROMPT END ---
+
+FINAL CHECKLIST BEFORE COMMIT:
+- Build passes.
+- Tests pass or existing failures are clearly reported.
+- No unrelated file rewrites.
+- No broad formatting-only churn.
+- No old save support removed.
+- No vague wording such as 'some resources' where exact Bone/Hide/Organ/Love Juice wording is required.

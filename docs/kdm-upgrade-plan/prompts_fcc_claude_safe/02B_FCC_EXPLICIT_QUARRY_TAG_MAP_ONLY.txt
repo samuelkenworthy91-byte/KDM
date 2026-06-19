@@ -1,0 +1,21 @@
+FCC-CLAUDE MICRO PROMPT 02B - EXPLICIT QUARRY RESOURCE TAGS ONLY
+
+Patch only src/data/resources.js.
+Do not change harvest logic, innovation logic, or UI in this micro-prompt.
+
+Goal:
+Add materialTags for every current quarry/resource ID using docs/kdm-upgrade-plan/reference_docs/03_RESOURCE_TAGS_AND_BASIC_POOL.txt exactly.
+
+Rules:
+- Fangs, teeth, claws, horns, bone, molar, shell, thorn, stem, chitin plate usually count as bone.
+- Hide, mane, leather, fur, feather, scale, wing usually count as hide.
+- Organs, sinew, heart, eye, gland, lung, sac, ichor, blood, tongue, seed, thread usually count as organ.
+- Some resources may have two tags, e.g. bone,organ or bone,hide. Do not give more than two tags.
+- One resource copy can later pay only one slot.
+
+Do not invent resources except loveJuice if it is still missing.
+
+Validation:
+npm run build
+npm run test
+git status

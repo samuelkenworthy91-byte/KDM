@@ -1,0 +1,50 @@
+CODEX VERSION
+
+Use this prompt with Codex. Codex may patch multiple related files in this stage, but it must stay inside the current stage and avoid broad rewrites.
+
+Before editing, inspect the relevant current repo files and compare them with docs/kdm-upgrade-plan/reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+PROMPT 05 - INNOVATION PAYMENT SELECTORS AND DECK UI
+
+You are patching repo samuelkenworthy91-byte/KDM.
+Work carefully. Prefer focused patches. Do not broad-rewrite unrelated systems.
+Read the uploaded TXT docs in docs/kdm-upgrade-plan/ before changing code, especially reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+
+Goal:
+Replace old automatic innovation payment with explicit Memory + Hide + Organ + Bone selection.
+
+Tasks:
+1. Remove hard-coded handleAttemptInnovation resourceAliases/basicIds auto-payment in src/App.jsx.
+2. Add a payment selector before drawing innovations.
+3. The selector must show:
+   - Memory cost 1
+   - Hide slot choices from stash resources with materialTags including hide
+   - Organ slot choices from stash resources with materialTags including organ
+   - Bone slot choices from stash resources with materialTags including bone
+4. Enforce one resource unit per slot. Multi-tag resources can fill one selected slot only.
+5. Warn before spending quarry-specific, rare, strange, level3Rare, legacy, or loveJuice resources.
+6. Record paidResources as a slot mapping, not a plain array.
+7. After payment succeeds, draw innovation candidates and allow choosing one.
+8. Allow multiple innovation attempts in the same settlement phase if costs remain payable.
+9. Add tests for payment availability and no auto-spend.
+
+
+
+Validation commands to run before committing:
+npm run build
+npm run test
+git status
+
+If validation passes, commit and push with:
+git add -A
+git commit -m "<clear short commit message>"
+git push origin main
+git rev-parse HEAD
+
+Extra Codex safety rules:
+- Do not combine this with later prompts.
+- Do not rewrite entire large files unless there is no safer targeted patch.
+- Preserve save compatibility and unknown legacy fallbacks.
+- If a file has old and new systems side by side, migrate safely before deleting.
+- Keep card/intention wording exactly aligned to the docs; do not invent new wording or balance changes.

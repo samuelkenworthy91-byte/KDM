@@ -1,0 +1,28 @@
+FCC-CLAUDE MICRO PROMPT 02A - RESOURCE HELPER ONLY
+
+Patch only src/data/resources.js.
+Do not change App.jsx, innovationCards.js, eventLogic.js, or harvestRewardLogic.js in this micro-prompt.
+
+Goal:
+Change the resource helper to accept options:
+function resource(id, name, type, description, creatureId, options = {})
+It must return id, name, type, description, creatureId if present, materialTags, basicResource, genericDropWeight, specialUse.
+
+Then add loveJuice as:
+- id: loveJuice
+- name: Love Juice
+- type: basic
+- materialTags: ['organ']
+- basicResource: true
+- genericDropWeight lower than bone/hide/organ/sinew/scrap
+- specialUse describes negating negative outcomes from one intimacy attempt.
+
+Also set basicResource true on bone, hide, organ, sinew, scrap.
+Set sinew materialTags ['organ'].
+Set bone ['bone'], hide ['hide'], organ ['organ'], scrap ['scrap'].
+Do not touch the full quarry tag map yet.
+
+Validation:
+npm run build
+npm run test
+git status

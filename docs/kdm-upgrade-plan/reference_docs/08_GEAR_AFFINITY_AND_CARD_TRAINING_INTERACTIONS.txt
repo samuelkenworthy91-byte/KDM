@@ -1,0 +1,30 @@
+GEAR, AFFINITY AND CARD TRAINING INTERACTIONS
+
+Source of truth:
+Use loadout_rules.json v8 for current loadout rules.
+
+Key rules:
+- Max equipment per survivor: 9.
+- Max weapon items: 2.
+- Same-name weapon pairs are allowed if the count is max 2.
+- Armour set bonuses and colour affinity bonuses stack.
+- Colour affinity is equipment-based only: blue, red, green, purple.
+- Thresholds are 2, 4, and 5 matching pieces.
+- At 5 matching pieces, add matching dynamic affinity card to deck.
+- Remove dynamic card immediately if the survivor drops below 5.
+
+Do not let fighting arts add fake affinity counts.
+Fighting arts may reward using a colour or having a threshold active, but should not change equipment counts.
+
+Gear-card training:
+- Each equipped item instance contributes 1 copy of each gear card by default.
+- A survivor can train a specific card from a specific gear instance to 2 or 3 copies.
+- Tracking key: survivorId + gearInstanceId + cardId.
+- Do not duplicate static card rows.
+- Build runtime deck by expanding copies.
+
+Innovation interactions:
+- Bone Apprenticeship can reveal gear-card training UI.
+- Blood Tally can reveal weapon proficiency UI.
+- Red/Blue/Green/Purple Doctrine can reveal threshold benefits.
+- Later innovations can improve threshold 4/5 effects, but should not break the base loadout logic.

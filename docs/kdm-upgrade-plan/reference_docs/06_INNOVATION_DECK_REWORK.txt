@@ -1,0 +1,45 @@
+INNOVATION DECK REWORK
+
+Goal:
+Unify innovation into one system. The player should not see separate normal innovations, memory innovations, and old building innovations competing with each other.
+
+Recommended model:
+- src/data/innovationCards.js becomes the source of truth for innovation deck cards.
+- memoryInnovations.js is merged/deprecated.
+- src/data/innovations.js should be audited. If it is still needed for crafting locations/buildings, rename conceptually in code/docs to settlementLocations or craftingLocations later. Do not let it act as a second innovation deck.
+
+Each innovation card should have:
+- id
+- name
+- category
+- tier
+- description
+- innovationCost or uses default innovationCost
+- prerequisites/unlockRequirement
+- addsToInnovationPool
+- unlocks
+- mechanicalEffects
+- playerSummary
+- howToUse
+- actionLocation
+- whyItMatters
+- tutorialSteps
+- implemented
+
+Base innovation cost:
+Use defaultInnovationCost = { memory: 1, materials: { hide: 1, organ: 1, bone: 1 } }.
+Individual innovations can override only if intentionally designed.
+
+Starting innovation:
+The campaign starts with the foundational innovation/settlement core already owned. It should not require a paid innovation attempt.
+Suggested name can remain Lantern Hearth or become First Words. Pick one source of truth and update UI text.
+
+Consequence deck model:
+When a chosen innovation is applied:
+- add it to builtInnovationIds
+- add listed addsToInnovationPool ids to availableInnovationPoolIds
+- record history
+- apply any direct mechanical effects
+- show tutorial/what changed panel
+
+Do not let old memoryInnovation cost values override the new cost.
