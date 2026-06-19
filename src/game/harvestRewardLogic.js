@@ -1,4 +1,8 @@
-import { resources, genericResourceIds } from '../data/resources.js';
+import {
+  genericResourceIds,
+  getGenericResourceDropWeight,
+  resources
+} from '../data/resources.js';
 import { quarries } from '../data/quarries.js';
 import { getResourceRarityTier } from './resourceRarityLogic.js';
 
@@ -94,7 +98,10 @@ function ensureOffer(offers, candidates, predicate, random) {
 }
 
 function genericCommonPool() {
-  return genericResourceIds.filter(resourceId => getResourceRarityTier(resourceId) === 'common');
+  return genericResourceIds.filter(resourceId =>
+    getResourceRarityTier(resourceId) === 'common' &&
+    getGenericResourceDropWeight(resourceId) > 0
+  );
 }
 
 function quarryPools(quarryId) {
@@ -182,10 +189,11 @@ export function buildHarvestRewardOffers({
   const pools = quarryPools(quarryId);
 
   genericCommonPool().forEach(resourceId => {
+    const genericWeight = getGenericResourceDropWeight(resourceId);
     addCandidate(
       candidates,
       resourceId,
-      HARVEST_BASE_WEIGHTS.commonGeneric,
+      genericWeight,
       'generic',
       'messy',
       'Generic fallback material is common on any hunt.',

@@ -1,5 +1,28 @@
-function resource(id, name, type, description, creatureId) {
-  return { id, name, type, description, ...(creatureId ? { creatureId } : {}) };
+export const BASIC_RESOURCE_IDS = ['bone', 'hide', 'organ', 'sinew', 'scrap', 'loveJuice'];
+export const BODY_MATERIAL_TAGS = ['bone', 'hide', 'organ'];
+export const genericResourceIds = BASIC_RESOURCE_IDS;
+
+const genericDropWeights = {
+  bone: 60,
+  hide: 60,
+  organ: 60,
+  sinew: 60,
+  scrap: 45,
+  loveJuice: 12
+};
+
+function resource(id, name, type, description, creatureId, options = {}) {
+  return {
+    id,
+    name,
+    type,
+    description,
+    ...(creatureId ? { creatureId } : {}),
+    materialTags: options.materialTags || [],
+    basicResource: Boolean(options.basicResource),
+    genericDropWeight: options.genericDropWeight ?? 0,
+    specialUse: options.specialUse || null
+  };
 }
 
 export const resources = {
@@ -10,7 +33,8 @@ export const resources = {
   claw: resource('claw', 'Claw', 'monster', 'A sharp trophy from a slain creature.'),
   strangeEye: resource('strangeEye', 'Strange Eye', 'strange', 'An eye that remembers impossible sights.'),
   scrap: resource('scrap', 'Scrap', 'basic', 'Salvaged metal and useful debris.'),
-  fur: resource('fur', 'Fur', 'basic', 'Warm monster fur.'),
+  loveJuice: resource('loveJuice', 'Love Juice', 'basic', 'A rare life-giving basic resource used for future intimacy protection.'),
+  fur: resource('fur', 'Fur', 'legacy', 'Warm monster fur.'),
   horn: resource('horn', 'Horn', 'monster', 'Dense horn suitable for tools and weapons.'),
   ichor: resource('ichor', 'Ichor', 'rare', 'Potent fluid taken from an advanced quarry.'),
   monsterTooth: resource('monsterTooth', 'Monster Tooth', 'rare', 'A trophy from a dangerous quarry.'),
@@ -173,9 +197,195 @@ additionalFamilies.forEach(([creatureId, ...names]) => {
   });
 });
 
-export const genericResourceIds = Object.values(resources)
-  .filter(item =>
-    !item.creatureId &&
-    !['rare', 'strange', 'nemesis'].includes(item.type)
-  )
-  .map(item => item.id);
+const explicitMaterialTags = {
+  bone: ['bone'],
+  hide: ['hide'],
+  organ: ['organ'],
+  sinew: ['organ'],
+  scrap: ['scrap'],
+  loveJuice: ['organ'],
+  claw: ['bone'],
+  fur: ['hide'],
+  horn: ['bone'],
+  ichor: ['organ'],
+  monsterTooth: ['bone'],
+  strangeEye: ['organ'],
+  captiveShadow: ['organ'],
+  paleLionHide: ['hide'],
+  paleLionClaw: ['bone'],
+  paleLionSinew: ['organ'],
+  paleLionMane: ['hide'],
+  paleLionEye: ['organ'],
+  elderPaleFang: ['bone'],
+  whiteHeart: ['organ'],
+  perfectMane: ['hide'],
+  wailingHorn: ['bone'],
+  wailingOrgan: ['organ'],
+  wailingHide: ['hide'],
+  screamingSinew: ['organ'],
+  stomachStone: ['bone', 'organ'],
+  endlessMarrow: ['bone', 'organ'],
+  ashFeather: ['hide'],
+  phoenixAsh: ['organ', 'scrap'],
+  timeBone: ['bone'],
+  burntOrgan: ['organ'],
+  memoryGlass: ['organ', 'scrap'],
+  unspentFeather: ['hide'],
+  thunderGland: ['organ'],
+  bloatedHide: ['hide'],
+  denseOrgan: ['organ'],
+  stormBone: ['bone'],
+  livingThunderCore: ['bone', 'organ'],
+  crackedMolar: ['bone'],
+  silkGland: ['organ'],
+  chitinThread: ['organ'],
+  venomSac: ['organ'],
+  webbedHide: ['hide'],
+  broodCrown: ['bone'],
+  spiderEye: ['organ'],
+  bloomPetal: ['hide'],
+  duelistThorn: ['bone'],
+  polishedStem: ['bone'],
+  floralSinew: ['organ'],
+  perfectThornHeart: ['bone', 'organ'],
+  knightSeed: ['organ'],
+  chitinPlate: ['bone', 'hide'],
+  dungCore: ['organ', 'scrap'],
+  beetleHorn: ['bone'],
+  resinBlood: ['organ'],
+  crusaderHeartplate: ['bone', 'organ'],
+  jewelWing: ['hide'],
+  drakeScale: ['hide'],
+  crystalBone: ['bone'],
+  fireGland: ['organ'],
+  imperialHorn: ['bone'],
+  emperorFlameMarrow: ['bone', 'organ'],
+  moltenEye: ['organ'],
+  sunShell: ['bone', 'hide'],
+  radiantEye: ['organ'],
+  solarIchor: ['organ'],
+  blindingScale: ['hide'],
+  captiveNoon: ['organ', 'scrap'],
+  warmPearl: ['bone', 'organ'],
+  prideMane: ['hide'],
+  kingClaw: ['bone'],
+  goldenFang: ['bone'],
+  regalHide: ['hide'],
+  judgmentEye: ['organ'],
+  crownHeart: ['organ'],
+  crimsonScale: ['hide'],
+  riverTooth: ['bone'],
+  bloodMudOrgan: ['organ'],
+  crocodileEye: ['organ'],
+  redLeather: ['hide'],
+  riverKingHeart: ['organ'],
+  frogdogTongue: ['organ'],
+  rubberyHide: ['hide'],
+  toxicGland: ['organ'],
+  wetBone: ['bone'],
+  bulgingEye: ['organ'],
+  manyMouthGland: ['organ'],
+  smogPipe: ['organ'],
+  sootLung: ['organ'],
+  harmonyBone: ['bone'],
+  tarFeather: ['hide', 'organ'],
+  chokingMask: ['bone', 'hide'],
+  finalChorusLung: ['organ']
+};
+
+const generatedMaterialTagsByName = {
+  'Crown Fragment': ['bone', 'scrap'],
+  'Command Sinew': ['organ'],
+  'Royal Ichor': ['organ'],
+  'Hook Finger': ['bone'],
+  'Collection Hide': ['hide'],
+  'Catalog Eye': ['organ'],
+  'Road Blade': ['bone', 'scrap'],
+  'Dust Sinew': ['organ'],
+  'Killer Token': ['scrap'],
+  'Verdict Shard': ['bone', 'scrap'],
+  'Mask Leather': ['hide'],
+  'Sentence Eye': ['organ'],
+  'Regal Plate': ['bone', 'hide'],
+  'Courtly Bone': ['bone'],
+  'Banner Sinew': ['organ'],
+  'Shadow Hide': ['hide'],
+  'Night Claw': ['bone'],
+  'Dark Eye': ['organ'],
+  'Mirror Scale': ['hide'],
+  'Reflected Organ': ['organ'],
+  'Silver Bone': ['bone'],
+  'Black Plate': ['bone', 'hide'],
+  'Iron Marrow': ['bone', 'organ'],
+  'Oath Fang': ['bone'],
+  'Red Thread': ['organ'],
+  'Coven Organ': ['organ'],
+  'Hex Eye': ['organ'],
+  'Hunger Tooth': ['bone'],
+  'Cradle Bone': ['bone'],
+  'Dread Organ': ['organ'],
+  'Exile Hide': ['hide'],
+  'Pariah Bone': ['bone'],
+  'Forsaken Eye': ['organ'],
+  'Watcher Plate': ['bone', 'hide'],
+  'Lantern Marrow': ['bone', 'organ'],
+  'Vigil Eye': ['organ'],
+  'Gold Smoke Plate': ['bone', 'hide'],
+  'Gilded Bone': ['bone'],
+  'Smoke Eye': ['organ'],
+  'Chance Bone': ['bone'],
+  'Wager Organ': ['organ'],
+  'Loaded Eye': ['organ'],
+  'Hand Bone': ['bone'],
+  'Divine Sinew': ['organ'],
+  'God Ichor': ['organ'],
+  'Wanderer Token': ['scrap'],
+  'Road Hide': ['hide'],
+  'Far Eye': ['organ'],
+  'Scout Token': ['scrap'],
+  'Trail Sinew': ['organ'],
+  'Horizon Eye': ['organ'],
+  'White Fragment': ['bone', 'scrap'],
+  'Curio Hide': ['hide'],
+  'Box Eye': ['organ'],
+  'Strain Organ': ['organ'],
+  'Twisted Bone': ['bone'],
+  'Mutation Eye': ['organ'],
+  'Thought Bone': ['bone'],
+  'Question Organ': ['organ'],
+  'Idea Eye': ['organ']
+};
+
+function inferMaterialTags(resource = {}) {
+  const text = `${resource.name || ''} ${resource.id || ''}`.toLowerCase();
+  const tags = [];
+  if (/(hide|leather|pelt|mane|fur|feather|scale|wing|cloak)/.test(text)) tags.push('hide');
+  if (/(bone|fang|tooth|claw|horn|shell|shard|plate|crown|thorn|stem|marrow)/.test(text)) tags.push('bone');
+  if (/(organ|heart|eye|gland|lung|sac|ichor|blood|sinew|tongue|thread|seed|core)/.test(text)) tags.push('organ');
+  if (/(token|scrap|fragment|blade|mirror|glass|metal|shard|due|verdict)/.test(text)) tags.push('scrap');
+  return [...new Set(tags)];
+}
+
+Object.values(resources).forEach(item => {
+  const materialTags = explicitMaterialTags[item.id] ||
+    generatedMaterialTagsByName[item.name] ||
+    inferMaterialTags(item);
+  item.materialTags = [...new Set(materialTags)];
+  item.basicResource = BASIC_RESOURCE_IDS.includes(item.id);
+  item.genericDropWeight = genericDropWeights[item.id] ?? 0;
+  item.specialUse = item.id === 'loveJuice'
+    ? 'Future intimacy protection.'
+    : item.specialUse || null;
+});
+
+export function getResourceMaterialTags(resourceId) {
+  return resources[resourceId]?.materialTags || [];
+}
+
+export function resourceCanPayMaterial(resourceId, material) {
+  return getResourceMaterialTags(resourceId).includes(material);
+}
+
+export function getGenericResourceDropWeight(resourceId) {
+  return resources[resourceId]?.genericDropWeight || 0;
+}

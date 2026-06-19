@@ -1,4 +1,4 @@
-import { resources } from '../data/resources.js';
+import { BASIC_RESOURCE_IDS, resources } from '../data/resources.js';
 import {
   generalFightingArts,
   getSurvivorMonsterBaneId
@@ -8,7 +8,7 @@ import { injuries } from '../data/injuries.js';
 import { scars } from '../data/scars.js';
 import { removePanicFromSurvivor } from './deckLogic.js';
 
-const BASIC_IDS = Object.values(resources).filter(item => item.type === 'basic').map(item => item.id);
+const BASIC_IDS = BASIC_RESOURCE_IDS;
 const MONSTER_IDS = Object.values(resources).filter(item => item.type === 'monster' && !item.creatureId).map(item => item.id);
 const RARE_IDS = Object.values(resources).filter(item => ['rare', 'strange'].includes(item.type) && !item.creatureId).map(item => item.id);
 

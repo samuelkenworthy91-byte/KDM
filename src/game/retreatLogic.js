@@ -188,7 +188,7 @@ export function resolveHuntRetreat({
       const removal = removeRandomResources(
         stash,
         3,
-        resourceId => resources[resourceId]?.type === 'basic',
+        resourceId => Boolean(resources[resourceId]?.basicResource),
         random
       );
       stash = removal.stash;

@@ -1,4 +1,4 @@
-const BASIC_RESOURCE_IDS = ['bone', 'hide', 'sinew', 'organ', 'scrap', 'claw'];
+import { BASIC_RESOURCE_IDS } from '../data/resources.js';
 
 function normalizeAmount(amount) {
   return Math.max(0, Math.floor(Number(amount) || 0));
