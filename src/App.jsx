@@ -53,7 +53,6 @@ import {
 } from './data/weaponProficiency.js';
 import {
   genericResourceIds,
-  resourceCanPayMaterial,
   resources as resourceData
 } from './data/resources.js';
 import { getQuarryDiscoveryEvent } from './data/quarryDiscoveryEvents.js';
@@ -96,6 +95,10 @@ import {
   drawInnovationCandidates,
   getDrawableInnovationIdsForSettlement
 } from './game/innovationLogic.js';
+import {
+  applyInnovationPayment,
+  validateInnovationPayment
+} from './game/innovationPayment.js';
 import {
   getSurvivorDisplayName
 } from './game/survivorIdentity.js';
@@ -143,6 +146,7 @@ import EventScreen from './screens/EventScreen.jsx';
 import GraveLegacyScreen from './screens/GraveLegacyScreen.jsx';
 import LootRewardScreen from './screens/LootRewardScreen.jsx';
 import InnovationDrawScreen from './screens/InnovationDrawScreen.jsx';
+import InnovationPaymentScreen from './screens/InnovationPaymentScreen.jsx';
 import LoadoutScreen from './screens/LoadoutScreen.jsx';
 import MonsterDiscoveryScreen from './screens/MonsterDiscoveryScreen.jsx';
 import NemesisLorePopup from './screens/NemesisLorePopup.jsx';
@@ -158,33 +162,6 @@ import RunSummaryScreen from './screens/RunSummaryScreen.jsx';
 import SettlementScreen from './screens/SettlementScreen.jsx';
 import SurvivorProgressScreen from './screens/SurvivorProgressScreen.jsx';
 import TitleScreen from './screens/TitleScreen.jsx';
-
-function chooseInnovationPayment(stash = {}) {
-  const resourceUnits = Object.entries(stash).flatMap(([resourceId, count]) => (
-    Array.from({ length: Math.max(0, Math.floor(Number(count) || 0)) }, () => resourceId)
-  ));
-  const slots = ['hide', 'organ', 'bone'];
-
-  const assignSlot = (remainingSlots, remainingResources, payment = []) => {
-    if (!remainingSlots.length) return payment;
-    const [slot, ...nextSlots] = remainingSlots;
-
-    for (let index = 0; index < remainingResources.length; index += 1) {
-      const resourceId = remainingResources[index];
-      if (!resourceCanPayMaterial(resourceId, slot)) continue;
-      const nextPayment = assignSlot(
-        nextSlots,
-        remainingResources.filter((_, resourceIndex) => resourceIndex !== index),
-        [...payment, resourceId]
-      );
-      if (nextPayment) return nextPayment;
-    }
-
-    return null;
-  };
-
-  return assignSlot(slots, resourceUnits);
-}
 
 function applyChildTrait(survivor, rawTraitId, recordInnate = true) {
   const traitId = normalizeChildTraitId(rawTraitId);
@@ -515,7 +492,7 @@ export default function App() {
   const [bossGenericRewards, setBossGenericRewards] = useState([]);
   const [progressOfferBane, setProgressOfferBane] = useState(false);
   const [innovationDraw, setInnovationDraw] = useState([]);
-  const [innovationPayment, setInnovationPayment] = useState([]);
+  const [innovationPayment, setInnovationPayment] = useState(null);
   const [appliedInnovationId, setAppliedInnovationId] = useState(null);
   const [runEventWarningUsed, setRunEventWarningUsed] = useState(false);
   const [runConditionGains, setRunConditionGains] = useState({
@@ -1832,33 +1809,34 @@ export default function App() {
 
   const handleAttemptInnovation = () => {
     const drawable = getDrawableInnovationIdsForSettlement(settlement);
-    const payment = chooseInnovationPayment(settlement.stash);
     if (
       !canSpendMemories(settlement, 1) ||
-      !payment ||
       !drawable.length
     ) {
       return;
     }
 
+    setInnovationDraw([]);
+    setInnovationPayment(null);
+    setAppliedInnovationId(null);
+    setScreen('innovationPayment');
+  };
+
+  const handleConfirmInnovationPayment = payment => {
+    const drawable = getDrawableInnovationIdsForSettlement(settlement);
+    const validation = validateInnovationPayment(settlement, payment);
+    if (!validation.valid || !drawable.length) return;
+
     const choices = drawInnovationCandidates(settlement, 3);
+    const previewPaymentResult = applyInnovationPayment(settlement, payment);
+    if (!previewPaymentResult) return;
+    const paidResources = previewPaymentResult.paidResources;
     updateSettlement(current => {
-      const stash = { ...current.stash };
-      payment.forEach(resourceId => {
-        stash[resourceId] = Math.max(0, (stash[resourceId] || 0) - 1);
-      });
-      const spent = spendMemories(current, 1, {
-        source: 'innovation',
-        description: 'Attempted an innovation.'
-      });
-      if (!spent) return current;
+      const paymentResult = applyInnovationPayment(current, payment);
+      if (!paymentResult) return current;
+      const { paidResources: _paidResources, timestamp, ...paidSettlement } = paymentResult;
       return {
-        ...spent,
-        stash,
-        temporarySettlementModifiers: {
-          ...(current.temporarySettlementModifiers || {}),
-          delayedWork: false
-        },
+        ...paidSettlement,
         innovationDeckState: {
           ...current.innovationDeckState,
           discoveredInnovationIds: [
@@ -1872,16 +1850,16 @@ export default function App() {
             {
               type: 'attempt',
               lanternYear: current.lanternYear,
-              paidResources: payment,
+              paidResources,
               offeredIds: choices,
-              timestamp: new Date().toISOString()
+              timestamp
             }
           ]
         }
       };
     });
     setInnovationDraw(choices);
-    setInnovationPayment(payment);
+    setInnovationPayment(paidResources);
     setAppliedInnovationId(null);
     setScreen('innovationDraw');
   };
@@ -3515,8 +3493,19 @@ export default function App() {
                 pendingInnovationTutorialId: null
               }));
               setInnovationDraw([]);
-              setInnovationPayment([]);
+              setInnovationPayment(null);
               setAppliedInnovationId(null);
+              setScreen('settlement');
+            }}
+          />
+        );
+      case 'innovationPayment':
+        return (
+          <InnovationPaymentScreen
+            settlement={settlement}
+            onConfirm={handleConfirmInnovationPayment}
+            onCancel={() => {
+              setInnovationPayment(null);
               setScreen('settlement');
             }}
           />

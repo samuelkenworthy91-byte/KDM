@@ -1,5 +1,10 @@
 import React from 'react';
+import { resources } from '../data/resources.js';
 import { formatEffectsForDisplay, formatValueForDisplay } from '../utils/formatters.js';
+
+function formatPaidResource(resourceId) {
+  return resources[resourceId]?.name || resourceId || 'None';
+}
 
 export default function InnovationDrawScreen({
   cards,
@@ -12,10 +17,13 @@ export default function InnovationDrawScreen({
     <section className="survivor-progress-screen">
       <p className="eyebrow">Innovation Attempt</p>
       <h2>The Settlement Attempts To Innovate</h2>
-      <p>
-        Paid: 1 Memory and 3 basic resources
-        {paidResources?.length ? ` (${formatValueForDisplay(paidResources)})` : ''}.
-      </p>
+      <div className="item-card">
+        <h3>Paid Resources</h3>
+        <p>Memory: {paidResources?.memory || 1}</p>
+        <p>Hide: {formatValueForDisplay(formatPaidResource(paidResources?.hide))}</p>
+        <p>Organ: {formatValueForDisplay(formatPaidResource(paidResources?.organ))}</p>
+        <p>Bone: {formatValueForDisplay(formatPaidResource(paidResources?.bone))}</p>
+      </div>
       {appliedCard ? (
         <article className="item-card built">
           <p className="eyebrow">Innovation Acquired | Tier {appliedCard.tier}</p>
