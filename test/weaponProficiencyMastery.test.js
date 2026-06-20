@@ -35,21 +35,16 @@ test('every weapon type has one registered mastery card', () => {
   });
 });
 
-test('crossing from 7 XP to 8 XP awards one mastery card', () => {
+test('crossing from 7 XP to 8 XP unlocks mastery passives without adding a card', () => {
   const survivor = survivorAt('sword', 7);
   const rewarded = applyWeaponProficiencyXp(survivor, ['sword']);
 
   assert.equal(rewarded.weaponProficiency.sword.xp, 8);
   assert.equal(rewarded.weaponProficiency.sword.mastered, true);
-  assert.deepEqual(rewarded.personalDeckAdditions, [{
-    cardId: weaponMasteryCardIds.sword,
-    sourceType: 'weaponMastery',
-    reason: 'Sword Mastery',
-    locked: true
-  }]);
+  assert.deepEqual(rewarded.personalDeckAdditions, []);
 });
 
-test('mastered survivors do not gain duplicate mastery cards', () => {
+test('mastered survivors do not gain mastery cards when synced', () => {
   const mastered = syncWeaponMasteryCards(survivorAt('axe', 8));
   const rewardedAgain = applyWeaponProficiencyXp(mastered, ['axe']);
   const syncedAgain = syncWeaponMasteryCards(rewardedAgain);
@@ -58,10 +53,10 @@ test('mastered survivors do not gain duplicate mastery cards', () => {
   );
 
   assert.equal(rewardedAgain.weaponProficiency.axe.xp, 9);
-  assert.equal(masteryCards.length, 1);
+  assert.equal(masteryCards.length, 0);
 });
 
-test('old mastered saves are backfilled safely during normalization', () => {
+test('old mastered saves normalize without backfilling mastery cards', () => {
   const survivor = survivorAt('bow', 8);
   const normalized = normalizeSettlement({
     ...defaultSettlement,
@@ -72,11 +67,11 @@ test('old mastered saves are backfilled safely during normalization', () => {
 
   assert.equal(
     additions.filter(addition => addition.cardId === weaponMasteryCardIds.bow).length,
-    1
+    0
   );
 });
 
-test('only the active mastery card enters the run deck', () => {
+test('mastery cards do not enter the run deck from proficiency', () => {
   let survivor = survivorAt('sword', 8);
   survivor = syncWeaponMasteryCards(survivor);
   survivor.weaponProficiency = createWeaponProficiency({
@@ -87,7 +82,7 @@ test('only the active mastery card enters the run deck', () => {
   survivor.activeProficiencyType = 'sword';
 
   const deck = buildRunDeck({ survivor });
-  assert.equal(deck.some(card => card.id === weaponMasteryCardIds.sword), true);
+  assert.equal(deck.some(card => card.id === weaponMasteryCardIds.sword), false);
   assert.equal(deck.some(card => card.id === weaponMasteryCardIds.axe), false);
 });
 

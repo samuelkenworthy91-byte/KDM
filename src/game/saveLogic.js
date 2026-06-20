@@ -26,6 +26,7 @@ import {
   emptyPrinciples,
   normalizeCampaignPrincipleState
 } from './campaignPrincipleLogic.js';
+import { migratePassiveCardAdditions } from './deckLogic.js';
 
 const LEGACY_SAVE_KEY = 'settlement';
 const ACTIVE_SLOT_KEY = 'lanternDeckbuilder.activeSlot';
@@ -396,7 +397,10 @@ export function normalizeSettlement(data = {}) {
         activeProficiencyType,
         boundGear
       };
-      return syncFightingArtCards(syncWeaponMasteryCards(normalizedSurvivor));
+      return {
+        ...syncFightingArtCards(syncWeaponMasteryCards(normalizedSurvivor)),
+        personalDeckAdditions: migratePassiveCardAdditions(normalizedSurvivor.personalDeckAdditions)
+      };
     })
     : [];
   const livingSurvivors = survivors.filter(survivor => survivor.alive !== false);

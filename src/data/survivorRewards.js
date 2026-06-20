@@ -119,7 +119,6 @@ export function generateSurvivorRewardChoices({
 
   const artPool = generalFightingArts
     .filter(art => !ownedArts.has(art.id))
-    .filter(art => !(art.grantsCards || []).some(cardId => ownedCards.has(cardId)))
     .map(artReward);
   const relevantWound = Boolean(
     survivor?.injuries?.length ||

@@ -105,57 +105,24 @@ export function addWeaponProficiencyXp(existing, usedTypes = []) {
   return next;
 }
 
-function getPersonalCardId(addition) {
-  return typeof addition === 'string' ? addition : addition?.cardId;
-}
-
-function addMasteryCard(survivor, weaponType) {
-  const cardId = weaponMasteryCardIds[weaponType];
-  if (!cardId) return survivor;
-  const additions = survivor.personalDeckAdditions || [];
-  if (additions.some(addition => getPersonalCardId(addition) === cardId)) return survivor;
+export function applyWeaponProficiencyXp(survivor, usedTypes = []) {
   return {
     ...survivor,
-    personalDeckAdditions: [
-      ...additions,
-      {
-        cardId,
-        sourceType: 'weaponMastery',
-        reason: `${weaponProficiencyDefinitions[weaponType].name} Mastery`,
-        locked: true
-      }
-    ]
+    weaponProficiency: addWeaponProficiencyXp(
+      createWeaponProficiency(survivor.weaponProficiency),
+      usedTypes
+    )
   };
 }
 
-export function applyWeaponProficiencyXp(survivor, usedTypes = []) {
-  const before = createWeaponProficiency(survivor.weaponProficiency);
-  const weaponProficiency = addWeaponProficiencyXp(before, usedTypes);
-  let next = { ...survivor, weaponProficiency };
-
-  [...new Set(usedTypes)].forEach(type => {
-    if (
-      before[type]?.xp < proficiencyThresholds.mastery &&
-      weaponProficiency[type]?.xp >= proficiencyThresholds.mastery
-    ) {
-      next = addMasteryCard(next, type);
-    }
-  });
-
-  return next;
-}
-
 export function syncWeaponMasteryCards(survivor) {
-  const proficiency = createWeaponProficiency(survivor.weaponProficiency);
-  return weaponTypes.reduce((next, type) => (
-    proficiency[type].mastered ? addMasteryCard(next, type) : next
-  ), {
+  return {
     ...survivor,
-    weaponProficiency: proficiency,
     personalDeckAdditions: Array.isArray(survivor.personalDeckAdditions)
       ? survivor.personalDeckAdditions
-      : []
-  });
+      : [],
+    weaponProficiency: createWeaponProficiency(survivor.weaponProficiency)
+  };
 }
 
 export function getWeaponMasteryCardId(type) {
@@ -169,8 +136,8 @@ export function isValidWeaponType(type) {
 export function getActiveProficiencyPassive(proficiency = {}, type = 'fistAndTooth') {
   const definition = weaponProficiencyDefinitions[type] || weaponProficiencyDefinitions.fistAndTooth;
   const progress = proficiency[type] || { level: 0, mastered: false };
-  if (progress.mastered) return `${definition.level2} Mastery: ${definition.mastery}`;
-  if (progress.level >= 2) return definition.level2;
+  if (progress.mastered) return `${definition.level1} ${definition.level2} Mastery: ${definition.mastery}`;
+  if (progress.level >= 2) return `${definition.level1} ${definition.level2}`;
   if (progress.level >= 1) return definition.level1;
   return `Unlocks at 2 XP: ${definition.level1}`;
 }

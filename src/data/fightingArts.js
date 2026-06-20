@@ -281,6 +281,7 @@ const art = (
   passiveEffects,
   hooks: options.hooks || {},
   grantsCards: options.grantsCards || [],
+  activeAbility: options.activeAbility || null,
   tags,
   rarity: options.rarity || 'common',
   source: options.source || 'Survivor reward',
@@ -290,7 +291,17 @@ const art = (
 
 Object.assign(fightingArts, Object.fromEntries([
   art('shoulderBehindShield', 'Shoulder Behind Shield', 'The first time this survivor is targeted each combat, gain +3 block.', ['block', 'defensive', 'party'], [{ type: 'firstTargetedBlock', value: 3 }]),
-  art('braceAndBreathe', 'Brace and Breathe', 'If this survivor ends a turn with 8 or more block, gain 1 survival once per combat.', ['block', 'survival'], [{ type: 'survivalAtTurnEndBlock', threshold: 8, value: 1 }], { grantsCards: ['holdTheLine'] }),
+  art('braceAndBreathe', 'Brace and Breathe', 'If this survivor has 8 or more block, gain 1 survival once per combat.', ['block', 'survival'], [{ type: 'survivalAtTurnEndBlock', threshold: 8, value: 1 }], {
+    grantsCards: ['holdTheLine'],
+    activeAbility: {
+      id: 'braceAndBreathe',
+      name: 'Brace and Breathe',
+      text: 'Gain 1 survival.',
+      usageLimit: 'oncePerFight',
+      condition: { blockAtLeast: 8 },
+      effect: { type: 'gainSurvival', amount: 1 }
+    }
+  }),
   art('lastLanternGuard', 'Last Lantern Guard', 'If another party member is dead or wounded, start combat with +1 survival.', ['party', 'survival', 'trauma'], [{ type: 'survivalIfPartyWounded', value: 1 }]),
   art('bloodInTheHands', 'Blood in the Hands', 'While wounded, this survivor’s first attack each combat deals +3.', ['wound', 'attack'], [{ type: 'firstAttackIfWounded', value: 3 }], { grantsCards: ['boneSetterStance'] }),
   art('secondCutHabit', 'Second Cut Habit', 'The second attack this survivor plays each turn deals +2.', ['attack', 'combo'], [{ type: 'secondAttackBonus', value: 2 }]),

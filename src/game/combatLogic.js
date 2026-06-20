@@ -579,6 +579,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     fightingArtHooks,
     artPassives,
     artTriggers: {},
+    fightingArtActivesUsed: {},
     injuries,
     scars,
     disorders,
@@ -2412,6 +2413,66 @@ export function useSurvivalAction(actionId, state, options = {}) {
     survivalActionsUsed: [...state.survivalActionsUsed, actionId],
     survivalFeedback: feedback,
     status: getCombatStatus(survivor, monster)
+  };
+}
+
+export function getActiveFightingArtActions(state = {}) {
+  return (state.fightingArts || []).flatMap(artId => {
+    const art = fightingArts[artId];
+    const ability = art?.activeAbility;
+    if (!ability) return [];
+    const used = Boolean(state.fightingArtActivesUsed?.[ability.id || artId]);
+    const blockAtLeast = ability.condition?.blockAtLeast;
+    const blockedByBlock = Number.isFinite(blockAtLeast) &&
+      (state.survivor?.block || 0) < blockAtLeast;
+    const survivalFull = ability.effect?.type === 'gainSurvival' &&
+      (state.survivor?.survival || 0) >= (state.survivor?.maxSurvival || 0);
+    const disabled = state.status !== 'playing' || used || blockedByBlock || survivalFull;
+    const reason = used
+      ? 'Already used this fight'
+      : blockedByBlock
+        ? `Requires ${blockAtLeast} block`
+        : survivalFull
+          ? 'Survival is full'
+          : ability.text || art.description || '';
+    return [{
+      id: ability.id || artId,
+      artId,
+      name: ability.name || art.name,
+      text: ability.text || art.description || '',
+      usageLimit: ability.usageLimit || 'oncePerFight',
+      remainingUses: disabled ? 0 : 1,
+      disabled,
+      reason
+    }];
+  });
+}
+
+export function useFightingArtAction(actionId, state = {}) {
+  if (state.status !== 'playing') return state;
+  const action = getActiveFightingArtActions(state).find(entry => entry.id === actionId);
+  if (!action || action.disabled) return state;
+  const art = fightingArts[action.artId];
+  const ability = art?.activeAbility;
+  let survivor = { ...state.survivor };
+  let feedback = '';
+
+  if (ability?.effect?.type === 'gainSurvival') {
+    const amount = Math.max(0, Number(ability.effect.amount) || 0);
+    survivor.survival = Math.min(survivor.maxSurvival, (survivor.survival || 0) + amount);
+    feedback = `${action.name}: gained ${amount} survival`;
+  } else {
+    return state;
+  }
+
+  return {
+    ...state,
+    survivor,
+    fightingArtActivesUsed: {
+      ...(state.fightingArtActivesUsed || {}),
+      [action.id]: true
+    },
+    survivalFeedback: feedback
   };
 }
 

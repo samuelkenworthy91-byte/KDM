@@ -10,11 +10,13 @@ import {
   playPartyCard,
   selectPartyCombatTarget,
   treatPartyWound,
+  usePartyFightingArtAction,
   usePartySurvivalAction
 } from '../game/partyCombatLogic.js';
 import {
   cleanupConsumedCards,
   formatAuraForDisplay,
+  getActiveFightingArtActions,
   getAdjustedCardCost,
   getVisibleNamedMechanicCounters,
   getPostCombatSalvageRewards,
@@ -50,6 +52,7 @@ export default function PartyCombatScreen({
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
   const activeAuras = combat.activeAuras || [];
+  const fightingArtActions = active ? getActiveFightingArtActions(active) : [];
   const livingPartyHasMonsterBane = combat.members.some(member =>
     member.survivor.hp > 0 &&
     member.fightingArts?.includes(`monsterBane_${combat.monster.quarryId}`)
@@ -454,6 +457,21 @@ export default function PartyCombatScreen({
               </small>
             )}
             {active.survivalFeedback && <p role="status">{active.survivalFeedback}</p>}
+            {fightingArtActions.length > 0 && (
+              <div className="survival-action-buttons" aria-label="Active fighting arts">
+                {fightingArtActions.map(action => (
+                  <button
+                    type="button"
+                    key={action.id}
+                    disabled={action.disabled}
+                    title={`${action.reason} Uses left: ${action.remainingUses}`}
+                    onClick={() => setCombat(current => usePartyFightingArtAction(action.id, current))}
+                  >
+                    {action.name} ({action.remainingUses})
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
           <div className="combat-controls">
             <div>

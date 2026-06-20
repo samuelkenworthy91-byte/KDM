@@ -83,10 +83,15 @@ function fightingArtPassives(survivor = {}, currentQuarryId) {
       name: art.name,
       sourceType: 'Fighting Art',
       sourceName: art.name,
-      timing: art.trigger ? 'Conditional' : 'Always',
+      timing: art.activeAbility?.usageLimit === 'oncePerFight'
+        ? 'Active: once per fight'
+        : art.trigger ? 'Conditional' : 'Always',
       text: art.description || art.trigger || '',
       reason: art.trigger || '',
-      tags: art.tags || []
+      tags: [
+        ...(art.tags || []),
+        ...(art.activeAbility ? ['activeAbility'] : [])
+      ]
     });
   });
 }

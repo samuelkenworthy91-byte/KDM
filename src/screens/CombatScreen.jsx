@@ -6,12 +6,14 @@ import {
   createCombatState,
   cleanupConsumedCards,
   endTurn,
+  getActiveFightingArtActions,
   getAdjustedCardCost,
   getVisibleNamedMechanicCounters,
   getPostCombatSalvageRewards,
   formatAuraForDisplay,
   playCard,
   resolveAfterCombatHealing,
+  useFightingArtAction,
   useSurvivalAction
 } from '../game/combatLogic.js';
 import { formatHistoryDetail, formatValueForDisplay } from '../utils/formatters.js';
@@ -35,6 +37,7 @@ export default function CombatScreen({
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
   const activeAuras = combat.activeAuras || [];
+  const fightingArtActions = getActiveFightingArtActions(combat);
 
   const handlePlayCard = cardIndex => {
     setCombat(current => playCard(cardIndex, current, {
@@ -165,6 +168,21 @@ export default function CombatScreen({
           })}
         </div>
         {combat.survivalFeedback && <p role="status">{combat.survivalFeedback}</p>}
+        {fightingArtActions.length > 0 && (
+          <div className="survival-action-buttons" aria-label="Active fighting arts">
+            {fightingArtActions.map(action => (
+              <button
+                type="button"
+                key={action.id}
+                disabled={combatOver || action.disabled}
+                title={`${action.reason} Uses left: ${action.remainingUses}`}
+                onClick={() => setCombat(current => useFightingArtAction(action.id, current))}
+              >
+                {action.name} ({action.remainingUses})
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="combat-controls">

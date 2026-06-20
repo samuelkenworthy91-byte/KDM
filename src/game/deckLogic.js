@@ -1,6 +1,14 @@
 import { cards, starterCardIds } from '../data/cards.js';
 import { equipment, getEquipment } from '../data/equipment.js';
+import { fightingArtCards } from '../data/fightingArtCards.js';
+import { weaponMasteryCardIds } from '../data/weaponProficiency.js';
 import { calculateAffinityTotals, getItemAffinities } from './affinityLogic.js';
+
+const obsoletePassiveCardIds = new Set([
+  ...Object.keys(fightingArtCards),
+  ...Object.values(weaponMasteryCardIds)
+]);
+const obsoletePassiveSourceTypes = new Set(['fightingArt', 'proficiency', 'weaponMastery']);
 
 export function getStarterDeck() {
   return getCardsFromIds(starterCardIds, 'Starter deck', 'starter');
@@ -97,8 +105,24 @@ function filterForgottenAdditions(additions = [], forgotten, options = {}) {
   });
 }
 
+export function isObsoletePassiveCardAddition(addition) {
+  const normalized = normalizePersonalCardAddition(addition);
+  const cardId = normalized?.cardId;
+  if (!cardId) return false;
+  return obsoletePassiveCardIds.has(cardId) ||
+    obsoletePassiveSourceTypes.has(normalized.sourceType) ||
+    obsoletePassiveSourceTypes.has(cards[cardId]?.sourceType);
+}
+
+export function migratePassiveCardAdditions(additions = []) {
+  return (Array.isArray(additions) ? additions : [])
+    .filter(addition => !isObsoletePassiveCardAddition(addition));
+}
+
 export function buildRunDeck({ survivor, equippedGear = [], temporaryCards = [] }) {
-  const personalIds = survivor?.personalDeckAdditions || survivor?.deckAdditions || [];
+  const personalIds = migratePassiveCardAdditions(
+    survivor?.personalDeckAdditions || survivor?.deckAdditions || []
+  );
   const negativeIds = survivor?.permanentNegativeCards || [];
   const forgotten = new Set(survivor?.forgottenCardIds || []);
   const deck = [

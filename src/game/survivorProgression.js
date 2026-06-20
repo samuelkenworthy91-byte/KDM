@@ -1,5 +1,5 @@
 import { cards } from '../data/cards.js';
-import { fightingArts, getFightingArtGrantedCards, isMonsterBaneId } from '../data/fightingArts.js';
+import { fightingArts, isMonsterBaneId } from '../data/fightingArts.js';
 import { getPersonalCardId } from './deckLogic.js';
 
 export function addPersonalCard(survivor, cardId, metadata = {}) {
@@ -36,13 +36,6 @@ export function learnFightingArt(survivor, artId, reason = 'Survivor reward') {
     ...survivor,
     fightingArts: [...new Set([...(survivor.fightingArts || []), artId])]
   };
-  getFightingArtGrantedCards(artId).forEach(cardId => {
-    next = addPersonalCard(next, cardId, {
-      sourceType: 'fightingArt',
-      reason: `${art.name}: ${reason}`,
-      locked: isMonsterBaneId(artId)
-    });
-  });
   if (artId === 'hardened' && !(survivor.fightingArts || []).includes(artId)) {
     next.maxHp = (next.maxHp || 30) + 1;
     next.hp = Math.min(next.maxHp, (next.hp || 0) + 1);
@@ -51,8 +44,5 @@ export function learnFightingArt(survivor, artId, reason = 'Survivor reward') {
 }
 
 export function syncFightingArtCards(survivor) {
-  return (survivor.fightingArts || []).reduce(
-    (next, artId) => learnFightingArt(next, artId, 'Restored from fighting art'),
-    survivor
-  );
+  return survivor;
 }

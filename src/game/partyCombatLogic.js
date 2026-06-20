@@ -8,6 +8,7 @@ import {
   getCounterWeakPointPreview,
   getMonsterIntentForResolution,
   playCard,
+  useFightingArtAction,
   useSurvivalAction
 } from './combatLogic.js';
 import { cards } from '../data/cards.js';
@@ -685,6 +686,25 @@ export function usePartySurvivalAction(actionId, state) {
       active.monster.weakPoints?.some(point => point.id === selectedWeakPointId && !point.broken)
       ? state.selectedCombatTarget
       : { type: 'monster', id: active.monster.id || 'monster' }
+  };
+}
+
+export function usePartyFightingArtAction(actionId, state) {
+  if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
+  if (!livingIndexes(state.members).includes(state.activePartyIndex)) return endPartyTurn(state);
+  const active = useFightingArtAction(actionId, {
+    ...state.members[state.activePartyIndex],
+    monster: state.monster,
+    intentIndex: state.intentIndex
+  });
+  const members = syncMonster(
+    state.members.map((member, index) => index === state.activePartyIndex ? active : member),
+    active.monster || state.monster
+  );
+  return {
+    ...state,
+    members,
+    monster: active.monster || state.monster
   };
 }
 
