@@ -10,6 +10,45 @@ const normalizeTutorialSteps = value => (
     : []
 );
 
+function normalizePaidResources(value) {
+  if (Array.isArray(value)) {
+    const paidResourceIds = value.filter(resourceId => typeof resourceId === 'string' && resourceId);
+    return {
+      memory: 1,
+      hide: paidResourceIds[0] || null,
+      organ: paidResourceIds[1] || null,
+      bone: paidResourceIds[2] || null,
+      legacyResourceIds: paidResourceIds
+    };
+  }
+  if (value && typeof value === 'object') {
+    return {
+      ...value,
+      memory: Number.isFinite(value.memory) ? value.memory : 1
+    };
+  }
+  return null;
+}
+
+function normalizeInnovationHistoryEntry(entry = {}) {
+  if (!entry || typeof entry !== 'object') {
+    return {
+      type: 'legacy',
+      timestamp: null,
+      legacy: true
+    };
+  }
+  const paidResources = normalizePaidResources(entry.paidResources);
+  return {
+    ...entry,
+    type: entry.type || (entry.innovationId ? 'chosen' : 'legacy'),
+    offeredIds: uniqueIds(entry.offeredIds),
+    ...(entry.innovationId ? { innovationId: entry.innovationId } : {}),
+    ...(paidResources ? { paidResources } : {}),
+    legacy: Boolean(entry.legacy || Array.isArray(entry.paidResources))
+  };
+}
+
 export function createLegacyInnovationDefinition(id) {
   return {
     id: id || 'unknown-legacy',
@@ -96,7 +135,7 @@ export function normalizeInnovationDeckState(state = {}, options = {}) {
     ]),
     builtInnovationIds: ownedIds,
     innovationHistory: Array.isArray(state.innovationHistory)
-      ? state.innovationHistory
+      ? state.innovationHistory.map(normalizeInnovationHistoryEntry)
       : []
   };
 }

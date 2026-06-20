@@ -67,6 +67,63 @@ function normalizePersonalAddition(addition, fallbackSourceType = 'personal') {
   };
 }
 
+function normalizeCount(value) {
+  if (Number.isFinite(value)) return Math.max(0, Math.floor(value));
+  if (Array.isArray(value)) return value.length;
+  if (value && typeof value === 'object') {
+    if (
+      (typeof value.id === 'string' || typeof value.resourceId === 'string') &&
+      value.count === undefined &&
+      value.amount === undefined &&
+      value.quantity === undefined &&
+      value.copies === undefined
+    ) {
+      return 1;
+    }
+    return Math.max(0, Math.floor(Number(
+      value.count ?? value.amount ?? value.quantity ?? value.copies ?? 0
+    ) || 0));
+  }
+  return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function normalizeStash(stash) {
+  if (Array.isArray(stash)) {
+    return stash.reduce((next, entry) => {
+      const resourceId = typeof entry === 'string' ? entry : entry?.id || entry?.resourceId;
+      if (typeof resourceId !== 'string' || !resourceId) return next;
+      next[resourceId] = (next[resourceId] || 0) + 1;
+      return next;
+    }, {});
+  }
+  if (!stash || typeof stash !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(stash)
+      .filter(([resourceId]) => typeof resourceId === 'string' && resourceId)
+      .map(([resourceId, value]) => [resourceId, normalizeCount(value)])
+      .filter(([, count]) => count > 0)
+  );
+}
+
+function normalizeGearCardTraining(training) {
+  if (!training || typeof training !== 'object' || Array.isArray(training)) return {};
+  return Object.fromEntries(
+    Object.entries(training).flatMap(([key, value]) => {
+      if (!key) return [];
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const direct = normalizeCount(value);
+        if (direct > 0) return [[key, direct]];
+        return Object.entries(value).flatMap(([cardId, nestedValue]) => {
+          const nested = normalizeCount(nestedValue);
+          return nested > 0 ? [[`${key}:${cardId}`, nested]] : [];
+        });
+      }
+      const count = normalizeCount(value);
+      return count > 0 ? [[key, count]] : [];
+    })
+  );
+}
+
 function isMonsterBaneId(id) {
   return typeof id === 'string' && id.startsWith('monsterBane_');
 }
@@ -319,9 +376,7 @@ export function normalizeSettlement(data = {}) {
         recentRewardOfferIds: Array.isArray(survivor.recentRewardOfferIds)
           ? survivor.recentRewardOfferIds.filter(id => typeof id === 'string').slice(-15)
           : [],
-        gearCardTraining: survivor.gearCardTraining && typeof survivor.gearCardTraining === 'object'
-          ? survivor.gearCardTraining
-          : {},
+        gearCardTraining: normalizeGearCardTraining(survivor.gearCardTraining),
         maxSurvival: Math.max(1, Number(survivor.maxSurvival) || 3),
         survival: Math.min(
           Math.max(0, Number(survivor.survival) || 0),
@@ -441,7 +496,7 @@ export function normalizeSettlement(data = {}) {
           : []
       }))
       : [],
-    stash: data.stash || {},
+    stash: normalizeStash(data.stash),
     builtInnovations: [...new Set([
       'lanternHearth',
       ...(Array.isArray(data.builtInnovations) ? data.builtInnovations : []),

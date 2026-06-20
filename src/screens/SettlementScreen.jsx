@@ -135,6 +135,19 @@ function formatInnovationCost(cost) {
   return parts.length ? parts.join(', ') : 'Free';
 }
 
+function formatInnovationHistoryPayment(paidResources) {
+  if (!paidResources) return '';
+  const legacyIds = Array.isArray(paidResources.legacyResourceIds)
+    ? paidResources.legacyResourceIds
+    : [];
+  const slotIds = ['hide', 'organ', 'bone']
+    .map(slot => paidResources[slot])
+    .filter(Boolean);
+  const resourceIds = legacyIds.length ? legacyIds : slotIds;
+  if (!resourceIds.length) return '';
+  return ` Paid: ${resourceIds.map(resourceId => resources[resourceId]?.name || resourceId).join(', ')}.`;
+}
+
 function getInnovationMaterialAvailability(stash) {
   return ['hide', 'organ', 'bone'].reduce((availability, material) => ({
     ...availability,
@@ -2025,6 +2038,7 @@ export default function SettlementScreen({
                   Year {entry.lanternYear}: {entry.type === 'chosen'
                     ? `Chose ${getInnovationDefinition(innovationCards, entry.innovationId).name}`
                     : `Attempted innovation (${entry.offeredIds?.length || 0} offers)`}
+                  {formatInnovationHistoryPayment(entry.paidResources)}
                 </p>
               ))}
             </details>
