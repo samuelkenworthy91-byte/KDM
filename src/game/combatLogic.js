@@ -1282,6 +1282,17 @@ export function playCard(cardIndex, state, options = {}) {
         for (let hit = 0; hit < effect.hits; hit += 1) dealCardDamage({ ...effect, amount });
         break;
       }
+      case 'damageFromStrengthAndBlock': {
+        const amount = Math.min(
+          effect.maximum || Infinity,
+          (survivor.strength || 0) + (survivor.block || 0)
+        );
+        dealCardDamage({ ...effect, amount });
+        break;
+      }
+      case 'drawIfWounded':
+        if (survivor.hp < survivor.maxHp) drawAmount(effect.amount || 1);
+        break;
       case 'markMonster':
         monster.marked = true;
         if (selectedWeakPoint) {

@@ -20,9 +20,10 @@ export default function NemesisPreparationScreen({
 
   return (
     <section className="settlement-hub">
-      <p className="eyebrow">Nemesis Preparation</p>
-      <h2>Prepare for {encounter.displayName}</h2>
+      <p className="eyebrow">Champion Duel</p>
+      <h2>Choose a Champion for {encounter.displayName}</h2>
       <p>{encounter.preparationText}</p>
+      <p className="run-bonus-note">One champion fights alone. The rest of the party does not join this nemesis duel.</p>
       {!living.length && <p className="missing">No living survivor can defend the settlement.</p>}
       <div className="item-grid">
         {living.map(survivor => (
@@ -57,7 +58,7 @@ export default function NemesisPreparationScreen({
         </div>
       )}
       <button type="button" disabled={!selected} onClick={onContinue}>
-        Choose Gear
+        Choose Champion Gear
       </button>
     </section>
   );

@@ -37,9 +37,53 @@ export const weaponMasteryCards = {
   masteryStrangeWeaponBlackRite: card('masteryStrangeWeaponBlackRite', 'Black Rite', 0, 'Draw 3, add 2 Panic, and gain 1 energy. Exhaust.', [{ type: 'draw', amount: 3 }, { type: 'addPanic', amount: 2 }, { type: 'energy', amount: 1 }], { tags: ['mastery', 'strange', 'panic', 'ritual', 'exhaust'], sourceType: 'weaponMastery', weaponType: 'strangeWeapon', exhaust: true })
 };
 
+export const nemesisChampionCards = {
+  championCruelCollectorDue: card(
+    'championCruelCollectorDue',
+    'Collected Debt',
+    1,
+    'Deal 9 damage. If you have Block, deal +4. Exhaust.',
+    [{ type: 'damage', amount: 9, bonusIfBlock: 4 }],
+    { type: 'attack', tags: ['champion', 'nemesis', 'brutal', 'exhaust'], sourceType: 'nemesisChampion', exhaust: true }
+  ),
+  championMaskedJudgeEdict: card(
+    'championMaskedJudgeEdict',
+    'Unspoken Edict',
+    1,
+    'Remove all monster Block, deal 7 damage, and apply 1 Vulnerable. Exhaust.',
+    [{ type: 'removeAllMonsterBlock' }, { type: 'damage', amount: 7 }, { type: 'vulnerableMonster', amount: 1 }],
+    { type: 'attack', tags: ['champion', 'nemesis', 'vulnerable', 'exhaust'], sourceType: 'nemesisChampion', exhaust: true }
+  ),
+  championWanderingKillerStep: card(
+    'championWanderingKillerStep',
+    'Step Behind the Blade',
+    0,
+    'Deal 5 damage twice. If wounded, draw 1. Exhaust.',
+    [{ type: 'multiHitDamage', amount: 5, hits: 2 }, { type: 'drawIfWounded', amount: 1 }],
+    { type: 'attack', tags: ['champion', 'nemesis', 'quick', 'exhaust'], sourceType: 'nemesisChampion', exhaust: true }
+  ),
+  championShadowStalkerMantle: card(
+    'championShadowStalkerMantle',
+    'Mantle of the Last Shadow',
+    0,
+    'Gain 6 Block, remove 1 Panic, and clarify the monster tell. Exhaust.',
+    [{ type: 'block', amount: 6 }, { type: 'removePanicAny' }, { type: 'revealIntentHint' }],
+    { tags: ['champion', 'nemesis', 'block', 'panic', 'exhaust'], sourceType: 'nemesisChampion', exhaust: true }
+  ),
+  championMirrorTyrantClaim: card(
+    'championMirrorTyrantClaim',
+    'Claim the Reflection',
+    2,
+    'Deal damage equal to your Strength plus your Block, maximum 18. Exhaust.',
+    [{ type: 'damageFromStrengthAndBlock', maximum: 18 }],
+    { type: 'attack', tags: ['champion', 'nemesis', 'mirror', 'exhaust'], sourceType: 'nemesisChampion', exhaust: true }
+  )
+};
+
 export const cards = {
   ...gearCards,
   ...weaponMasteryCards,
+  ...nemesisChampionCards,
   foundingStone: card('foundingStone', 'Founding Stone', 1, 'Deal 6 damage. Exhaust.', [{ type: 'damage', amount: 6 }], { type: 'attack', tags: ['brutal'], exhaust: true }),
   wildSwing: card('wildSwing', 'Wild Swing', 2, 'Deal 10 damage.', [{ type: 'damage', amount: 10 }], { type: 'attack', tags: ['brutal', 'hideBreaker'] }),
   scramble: card('scramble', 'Scramble', 1, 'Gain 5 block.', [{ type: 'block', amount: 5 }]),

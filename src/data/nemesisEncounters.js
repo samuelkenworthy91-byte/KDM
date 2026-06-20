@@ -199,6 +199,26 @@ export const nemesisBehaviours = {
   }
 };
 
+export const nemesisDuelPressure = {
+  cruelCollector: 1,
+  maskedJudge: 2,
+  wanderingKiller: 2,
+  shadowStalker: 1,
+  mirrorTyrant: 2
+};
+
+export function createDeadlyNemesisIntents(nemesisId, intents = []) {
+  const pressure = nemesisDuelPressure[nemesisId] || 1;
+  return intents.map(intent => ({
+    ...intent,
+    effects: intent.effects.map(effect => (
+      ['dealDamage', 'multiHitDamage'].includes(effect.type)
+        ? { ...effect, amount: effect.amount + pressure }
+        : effect
+    ))
+  }));
+}
+
 export function getNemesisForLanternYear(year) {
   return nemesisList.find(nemesis =>
     nemesis.implemented &&

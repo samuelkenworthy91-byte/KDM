@@ -15,6 +15,7 @@ import {
 import { events } from './data/events.js';
 import { disorders } from './data/disorders.js';
 import {
+  createDeadlyNemesisIntents,
   getNemesisBehaviour,
   nemesisEncounters
 } from './data/nemesisEncounters.js';
@@ -91,6 +92,7 @@ import {
 } from './game/cardForgetting.js';
 import { resolveRestStopChoice } from './game/restStopLogic.js';
 import {
+  addNemesisChampionCardToSurvivor,
   createNemesisVictoryReward,
   getNemesisRewardChoice
 } from './game/nemesisRewardLogic.js';
@@ -385,6 +387,7 @@ function createNemesisMonster(nemesisId) {
     mirrorTyrant: 72
   };
   const hp = hpByNemesis[nemesisId] || 50;
+  const deadlyIntents = createDeadlyNemesisIntents(nemesisId, behaviour.intents);
   return {
     id: `nemesis-${nemesisId}`,
     baseId: nemesisId,
@@ -396,7 +399,7 @@ function createNemesisMonster(nemesisId) {
     hp,
     maxHp: hp,
     block: 0,
-    intents: behaviour.intents
+    intents: deadlyIntents
   };
 }
 
@@ -2690,10 +2693,13 @@ export default function App() {
     const pending = settlement.pendingNemesisEncounter;
     const encounter = nemesisEncounters[pending?.nemesisId];
     if (!encounter || !runSurvivor) return;
-    const uniqueReward = createNemesisVictoryReward(encounter, runSurvivor);
-    const details = uniqueReward.uniqueResourceId
-      ? [`+1 ${uniqueReward.uniqueResourceName}`]
-      : ['No unique trophy data was available.'];
+    const uniqueReward = createNemesisVictoryReward(encounter, runSurvivor, { settlement });
+    const details = [
+      ...uniqueReward.resourceNames.map(name => `+1 ${name}`),
+      uniqueReward.championCardOwned
+        ? `${uniqueReward.championCardName} already belongs to ${runSurvivor.name}.`
+        : `${runSurvivor.name} gained champion card: ${uniqueReward.championCardName}.`
+    ];
     const result = {
       nemesisId: encounter.id,
       nemesisName: encounter.displayName,
@@ -2709,18 +2715,20 @@ export default function App() {
       const survivorAfter = combatResult?.survivor || runSurvivor;
       return {
         ...current,
-        stash: uniqueReward.uniqueResourceId
-          ? addResources(current.stash, [uniqueReward.uniqueResourceId])
-          : current.stash,
+        stash: addResources(current.stash, uniqueReward.resourceIds || []),
         survivors: current.survivors.map(survivor => {
           if (survivor.id !== runSurvivor.id) return survivor;
-          return {
+          const champion = addNemesisChampionCardToSurvivor({
             ...survivor,
             hp: survivorAfter.hp,
-            survival: survivorAfter.survival,
+            survival: survivorAfter.survival
+          }, uniqueReward);
+          return {
+            ...champion,
             history: [
-              ...(survivor.history || []),
-              `Defeated ${encounter.displayName} and recovered ${uniqueReward.uniqueResourceName}.`
+              ...(champion.history || []),
+              `Won a Champion Duel against ${encounter.displayName}.`,
+              uniqueReward.learningText
             ]
           };
         }),

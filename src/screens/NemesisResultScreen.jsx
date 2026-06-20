@@ -9,7 +9,7 @@ export default function NemesisResultScreen({ result, onChooseReward, onContinue
 
   return (
     <section className="summary-screen">
-      <p className="eyebrow">Timeline Threat Resolved</p>
+      <p className="eyebrow">Champion Duel Resolved</p>
       <h2>{result.nemesisName}: {result.result === 'victory' ? 'Victory' : 'Defeat'}</h2>
       <p>{formatValueForDisplay(result.text)}</p>
       <p><strong>Survivor:</strong> {formatValueForDisplay(result.survivorName) || 'None'}</p>
@@ -18,9 +18,18 @@ export default function NemesisResultScreen({ result, onChooseReward, onContinue
       </p>
       {result.result === 'victory' && reward && (
         <section className="item-card">
-          <h3>Nemesis Trophy</h3>
-          <p><strong>{reward.uniqueResourceName}</strong> was added to the settlement stash.</p>
-          <h3>Mirror Art Choice</h3>
+          <h3>Champion Spoils</h3>
+          {reward.resourceNames?.length > 0 && (
+            <p><strong>Resources:</strong> {reward.resourceNames.join(', ')}</p>
+          )}
+          {reward.championCardId && (
+            <>
+              <h3>Champion Card</h3>
+              <p><strong>{reward.championCardName}</strong></p>
+              <p>{formatValueForDisplay(reward.championCardDescription)}</p>
+            </>
+          )}
+          {choicePending && <h3>Legacy Mirror Art Choice</h3>}
           {choicePending ? (
             <div className="item-grid">
               {reward.rewardChoices.map(choice => (
@@ -34,7 +43,7 @@ export default function NemesisResultScreen({ result, onChooseReward, onContinue
                 </button>
               ))}
             </div>
-          ) : (
+          ) : !reward.championCardId && (
             <p>
               <strong>Chosen:</strong>{' '}
               {reward.chosenRewardId === 'learnArt'

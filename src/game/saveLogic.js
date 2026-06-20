@@ -695,6 +695,19 @@ export function normalizeSettlement(data = {}) {
           typeof data.lastNemesisResult.uniqueReward === 'object'
           ? {
             rewardEventId: data.lastNemesisResult.uniqueReward.rewardEventId || null,
+            resourceIds: Array.isArray(data.lastNemesisResult.uniqueReward.resourceIds)
+              ? data.lastNemesisResult.uniqueReward.resourceIds
+              : [],
+            resourceNames: Array.isArray(data.lastNemesisResult.uniqueReward.resourceNames)
+              ? data.lastNemesisResult.uniqueReward.resourceNames
+              : [],
+            championCardId: data.lastNemesisResult.uniqueReward.championCardId || null,
+            championCardName:
+              data.lastNemesisResult.uniqueReward.championCardName || 'Unknown / Legacy',
+            championCardDescription:
+              data.lastNemesisResult.uniqueReward.championCardDescription ||
+              'This older reward has no current description.',
+            championCardOwned: Boolean(data.lastNemesisResult.uniqueReward.championCardOwned),
             uniqueResourceId: data.lastNemesisResult.uniqueReward.uniqueResourceId || null,
             uniqueResourceName:
               data.lastNemesisResult.uniqueReward.uniqueResourceName || 'Unknown / Legacy',
