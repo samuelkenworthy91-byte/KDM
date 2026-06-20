@@ -4,6 +4,19 @@ import { findMonsterSurvivorReward } from '../data/monsterSurvivorRewards.js';
 import { fightingArts } from '../data/fightingArts.js';
 import { createWeaponProficiency } from '../data/weaponProficiency.js';
 import { buildRunDeck, drawCards, shuffleCards } from './deckLogic.js';
+import {
+  combatEnd,
+  combatStart,
+  cardPlayed,
+  harvestRolled,
+  initializeFightingArtHooks,
+  panicGained,
+  panicRemoved,
+  runFightingArtHooks,
+  statusApplied,
+  survivorDeath,
+  weakPointBroken
+} from './fightingArtLogic.js';
 import { createHitLocations } from '../data/woundTables.js';
 import {
   getTellBreakModifier,
@@ -478,7 +491,8 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     ? [...initialDraw.discard, cards.panic]
     : initialDraw.discard;
 
-  return {
+  const fightingArtHooks = initializeFightingArtHooks(arts);
+  const baseState = {
     survivor,
     monster,
     drawPile: initialDraw.deck,
@@ -490,6 +504,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     runDeck,
     intentIndex: 0,
     fightingArts: arts,
+    fightingArtHooks,
     artPassives,
     artTriggers: {},
     injuries,
@@ -567,6 +582,10 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     pendingEnergy: 0,
     pendingDraw: 0
   };
+  return runFightingArtHooks(fightingArtHooks, combatStart, {
+    state: baseState,
+    runBonus
+  }).state || baseState;
 }
 
 export function playCard(cardIndex, state) {
@@ -670,6 +689,23 @@ export function playCard(cardIndex, state) {
   let strangeWeakPointPanicAdded = false;
   let cardBreakBonus = 0;
   const combatLogEntries = [];
+  const fightingArtHooks = state.fightingArtHooks || initializeFightingArtHooks(state.fightingArts || []);
+  const emitFightingArtHook = (hookName, payload = {}) => runFightingArtHooks(fightingArtHooks, hookName, {
+    state,
+    survivor,
+    monster,
+    card,
+    ...payload
+  });
+  const emitStatusApplied = (target, type, amount, source = 'card') => {
+    emitFightingArtHook(statusApplied, { target, type, amount, source });
+  };
+  const emitPanicGained = (amount, source = 'card') => {
+    if (amount > 0) emitFightingArtHook(panicGained, { amount, source });
+  };
+  const emitPanicRemoved = (amount, source = 'card') => {
+    if (amount > 0) emitFightingArtHook(panicRemoved, { amount, source });
+  };
 
   card.effects.forEach(rawEffect => {
     const effect = {
@@ -796,42 +832,53 @@ export function playCard(cardIndex, state) {
       const match = lower.match(/apply bleed (\d+)/);
       const amount = match ? parseInt(match[1]) : 1;
       Object.assign(target, applyStatusToCombatant(target, 'bleed', amount));
+      emitStatusApplied(targetType, 'bleed', amount, 'legacyCardText');
     } else if (lower.includes('apply burn')) {
       const match = lower.match(/apply burn (\d+)/);
       const amount = match ? parseInt(match[1]) : 1;
       Object.assign(target, applyStatusToCombatant(target, 'burn', amount));
+      emitStatusApplied(targetType, 'burn', amount, 'legacyCardText');
     } else if (lower.includes('apply poison')) {
       const match = lower.match(/apply poison (\d+)/);
       const amount = match ? parseInt(match[1]) : 1;
       Object.assign(target, applyStatusToCombatant(target, 'poison', amount));
+      emitStatusApplied(targetType, 'poison', amount, 'legacyCardText');
     } else if (lower.includes('apply doom')) {
       const match = lower.match(/apply doom (\d+)/);
       const amount = match ? parseInt(match[1]) : 1;
       Object.assign(target, applyStatusToCombatant(target, 'doom', amount));
+      emitStatusApplied(targetType, 'doom', amount, 'legacyCardText');
     } else if (lower.includes('marked')) {
       Object.assign(target, applyStatusToCombatant(target, 'marked', 1));
+      emitStatusApplied(targetType, 'marked', 1, 'legacyCardText');
     } else if (lower.includes('exposed')) {
       Object.assign(target, applyStatusToCombatant(target, 'exposed', 1));
+      emitStatusApplied(targetType, 'exposed', 1, 'legacyCardText');
     } else if (lower.includes('apply snared')) {
       const match = lower.match(/apply snared (\d+)/);
       const amount = match ? parseInt(match[1]) : 1;
       Object.assign(target, applyStatusToCombatant(target, 'snared', amount));
+      emitStatusApplied(targetType, 'snared', amount, 'legacyCardText');
     } else if (lower.includes('apply shock')) {
       const match = lower.match(/apply shock (\d+)/);
       const amount = match ? parseInt(match[1]) : 1;
       Object.assign(target, applyStatusToCombatant(target, 'shock', amount));
+      emitStatusApplied(targetType, 'shock', amount, 'legacyCardText');
     } else if (lower.includes('apply blind')) {
       const match = lower.match(/apply blind (\d+)/);
       const amount = match ? parseInt(match[1]) : 1;
       Object.assign(target, applyStatusToCombatant(target, 'blind', amount));
+      emitStatusApplied(targetType, 'blind', amount, 'legacyCardText');
     } else if (lower.includes('apply stagger')) {
       const match = lower.match(/apply stagger (\d+)/);
       const amount = match ? parseInt(match[1]) : 1;
       Object.assign(target, applyStatusToCombatant(target, 'staggered', amount));
+      emitStatusApplied(targetType, 'staggered', amount, 'legacyCardText');
     } else if (lower.includes('guarded')) {
       const match = lower.match(/guarded (\d+)/);
       const amount = match ? parseInt(match[1]) : 1;
       Object.assign(target, applyStatusToCombatant(target, 'guarded', amount));
+      emitStatusApplied(targetType, 'guarded', amount, 'legacyCardText');
     }
   };
 
@@ -1006,6 +1053,7 @@ export function playCard(cardIndex, state) {
         if (!strangeWeakPointPanicAdded) {
           discardPile = [...discardPile, cards.panic];
           strangeWeakPointPanicAdded = true;
+          emitPanicGained(1, 'strangeWeaponWeakPoint');
         }
       }
       const breakDamage = Math.max(0, Math.round(
@@ -1379,6 +1427,7 @@ export function playCard(cardIndex, state) {
           : 0;
         const panicAmount = Math.max(0, effect.amount - (panicToBlock ? 1 : 0));
         discardPile = [...discardPile, ...Array(panicAmount).fill(cards.panic)];
+        emitPanicGained(panicAmount, 'cardEffect');
         if (panicToBlock) {
           survivor.block += panicToBlock;
           blockGainedThisTurn += panicToBlock;
@@ -1388,14 +1437,19 @@ export function playCard(cardIndex, state) {
       }
       case 'removePanic': {
         const panicIndex = discardPile.findIndex(item => item.id === 'panic');
-        if (panicIndex >= 0) discardPile = discardPile.filter((_, index) => index !== panicIndex);
+        if (panicIndex >= 0) {
+          discardPile = discardPile.filter((_, index) => index !== panicIndex);
+          emitPanicRemoved(1, 'cardEffect');
+        }
         break;
       }
       case 'removePanicAny':
-        removePanicAny();
+        if (removePanicAny()) emitPanicRemoved(1, 'cardEffect');
         break;
       case 'removePanicAnyOrSurvival':
-        if (!removePanicAny()) {
+        if (removePanicAny()) {
+          emitPanicRemoved(1, 'cardEffect');
+        } else {
           survivor.survival = Math.min(survivor.maxSurvival, survivor.survival + effect.amount);
         }
         break;
@@ -1403,6 +1457,7 @@ export function playCard(cardIndex, state) {
         const panicIndex = discardPile.findIndex(item => item.id === 'panic');
         if (panicIndex >= 0) {
           discardPile.splice(panicIndex, 1);
+          emitPanicRemoved(1, 'cardEffect');
           drawAmount(effect.amount);
         }
         break;
@@ -1484,10 +1539,14 @@ export function playCard(cardIndex, state) {
           blindTarget: 'blind'
         };
         monster = applyStatusToCombatant(monster, statusMap[effect.type], statusAmount(effect));
+        emitStatusApplied('monster', statusMap[effect.type], statusAmount(effect), 'cardEffect');
         break;
       }
       case 'staggerTargetIfMonsterPoisoned':
-        if (monster.poison > 0) monster = applyStatusToCombatant(monster, 'staggered', statusAmount(effect));
+        if (monster.poison > 0) {
+          monster = applyStatusToCombatant(monster, 'staggered', statusAmount(effect));
+          emitStatusApplied('monster', 'staggered', statusAmount(effect), 'cardEffect');
+        }
         break;
       case 'guardSelf':
       case 'preparedSelf':
@@ -1502,6 +1561,7 @@ export function playCard(cardIndex, state) {
           consequenceReduction: 'consequenceReduction'
         };
         survivor = applyStatusToCombatant(survivor, selfMap[effect.type], statusAmount(effect));
+        emitStatusApplied('survivor', selfMap[effect.type], statusAmount(effect), 'cardEffect');
         if (effect.type === 'salvageSelf') salvageTokens += statusAmount(effect);
         break;
       }
@@ -1618,6 +1678,22 @@ export function playCard(cardIndex, state) {
     }
     if (updatedPoint?.broken) {
       const harvestResult = updatedPoint.harvestResult || harvestBreakResult;
+      emitFightingArtHook(weakPointBroken, {
+        weakPoint: updatedPoint,
+        selectedWeakPoint,
+        harvestResult,
+        weaponType,
+        cardTags
+      });
+      if (harvestResult) {
+        emitFightingArtHook(harvestRolled, {
+          weakPoint: updatedPoint,
+          selectedWeakPoint,
+          harvestResult,
+          weaponType,
+          cardTags
+        });
+      }
       combatLogEntries.push(
         `${selectedWeakPoint.name} broke. ${selectedWeakPoint.onBreakEffect} ` +
         `Harvest quality: ${harvestResult?.quality || 'messy'}. ` +
@@ -1630,6 +1706,7 @@ export function playCard(cardIndex, state) {
       const riskAmount = (risk.amount || 1) + (tellState === 'guarded' || tellState === 'dangerous' ? 1 : 0);
       if (risk.type === 'panic' || risk.type === 'panicAndTarget') {
         discardPile = [...discardPile, ...Array(riskAmount).fill(cards.panic)];
+        emitPanicGained(riskAmount, 'weakPointRisk');
         weakPointRiskText = `${survivor.name} gains ${riskAmount} Panic`;
       }
       if (risk.type === 'panicAndTarget') {
@@ -1668,8 +1745,9 @@ export function playCard(cardIndex, state) {
   }
   if (proficiencyAddPanic) {
     discardPile = [...discardPile, ...Array(proficiencyAddPanic).fill(cards.panic)];
+    emitPanicGained(proficiencyAddPanic, 'weaponProficiency');
   }
-  if (proficiencyRemovePanic) removePanicAny();
+  if (proficiencyRemovePanic && removePanicAny()) emitPanicRemoved(1, 'weaponProficiency');
   if (proficiencyDrawAfter) drawAmount(proficiencyDrawAfter);
   if (proficiencyReveal) intentHintLevel = Math.max(intentHintLevel, 1);
   if (weaponType) {
@@ -1711,7 +1789,7 @@ export function playCard(cardIndex, state) {
   } else if (card.exhaust) exhaustPile = [...exhaustPile, card];
   else discardPile = [...discardPile, card];
 
-  return {
+  let nextState = {
     ...state,
     survivor,
     monster,
@@ -1763,6 +1841,27 @@ export function playCard(cardIndex, state) {
       card.effects.some(effect => ['block', 'conditionalBlock'].includes(effect.type)),
     status: getCombatStatus(survivor, monster)
   };
+  nextState = runFightingArtHooks(fightingArtHooks, cardPlayed, {
+    state: nextState,
+    previousState: state,
+    card
+  }).state || nextState;
+  if (state.survivor?.hp > 0 && nextState.survivor?.hp <= 0) {
+    nextState = runFightingArtHooks(fightingArtHooks, survivorDeath, {
+      state: nextState,
+      previousState: state,
+      survivor: nextState.survivor,
+      source: 'cardPlayed'
+    }).state || nextState;
+  }
+  if (state.status === 'playing' && nextState.status !== 'playing') {
+    nextState = runFightingArtHooks(fightingArtHooks, combatEnd, {
+      state: nextState,
+      previousState: state,
+      outcome: nextState.status
+    }).state || nextState;
+  }
+  return nextState;
 }
 
 function getCounterWeapon(state, weakPoint) {
@@ -1848,6 +1947,14 @@ export function getCounterWeakPointPreview(state, weakPointId) {
 function applyCounterWeakPoint(state, survivor, monster, drawPile, hand, discardPile, weakPointId) {
   const preview = getCounterWeakPointPreview({ ...state, survivor, monster }, weakPointId);
   if (!preview?.targetable) return null;
+  const fightingArtHooks = state.fightingArtHooks || initializeFightingArtHooks(state.fightingArts || []);
+  const emitFightingArtHook = (hookName, payload = {}) => runFightingArtHooks(fightingArtHooks, hookName, {
+    state,
+    survivor,
+    monster,
+    source: 'counter',
+    ...payload
+  });
   const point = preview.weakPoint;
   const hpBefore = monster.hp;
   monster = applyDamage(monster, preview.monsterDamage);
@@ -1905,6 +2012,22 @@ function applyCounterWeakPoint(state, survivor, monster, drawPile, hand, discard
   }
 
   if (brokeNow) {
+    emitFightingArtHook(weakPointBroken, {
+      weakPoint: { ...point, currentBreakDamage, broken: true, ...(harvestResult ? { harvestResult } : {}) },
+      selectedWeakPoint: point,
+      harvestResult,
+      weaponType: preview.weaponType,
+      cardTags: ['counter']
+    });
+    if (harvestResult) {
+      emitFightingArtHook(harvestRolled, {
+        weakPoint: { ...point, currentBreakDamage, broken: true, harvestResult },
+        selectedWeakPoint: point,
+        harvestResult,
+        weaponType: preview.weaponType,
+        cardTags: ['counter']
+      });
+    }
     logEntries.push(
       `${point.name} broke during the counter. ${point.onBreakEffect} ` +
       `Harvest quality: ${harvestResult?.quality || 'messy'}.`
@@ -1921,6 +2044,7 @@ function applyCounterWeakPoint(state, survivor, monster, drawPile, hand, discard
     let riskText = '';
     if (risk.type === 'panic' || risk.type === 'panicAndTarget') {
       discardPile = [...discardPile, ...Array(riskAmount).fill(cards.panic)];
+      emitFightingArtHook(panicGained, { amount: riskAmount, source: 'counterRisk' });
       riskText = `${survivor.name} gains ${riskAmount} Panic`;
     }
     if (risk.type === 'panicAndTarget') {
@@ -1947,6 +2071,7 @@ function applyCounterWeakPoint(state, survivor, monster, drawPile, hand, discard
     }
     if (fistRisk) {
       discardPile = [...discardPile, cards.panic];
+      emitFightingArtHook(panicGained, { amount: 1, source: 'counterRisk' });
       riskText += `${riskText ? ' and ' : ''}${survivor.name} gains 1 Panic`;
     }
     logEntries.push(`${point.name} did not break. ${riskText || 'The opening closes'}.`);
@@ -1980,6 +2105,7 @@ export function useSurvivalAction(actionId, state, options = {}) {
   let discardPile = [...state.discardPile];
   let feedback = '';
   const artPassives = state.artPassives || getArtPassiveEffects(state.fightingArts);
+  const fightingArtHooks = state.fightingArtHooks || initializeFightingArtHooks(state.fightingArts || []);
 
   if (actionId === 'dodge') {
     if (survivor.snared > 0) {
@@ -2056,6 +2182,14 @@ export function useSurvivalAction(actionId, state, options = {}) {
     if (target) {
       const index = target[1].findIndex(card => card.id === 'panic');
       target[1].splice(index, 1);
+      runFightingArtHooks(fightingArtHooks, panicRemoved, {
+        state,
+        survivor,
+        monster,
+        actionId,
+        amount: 1,
+        source: 'survivalAction'
+      });
       feedback = 'Endure: Panic removed';
     } else {
       survivor.block += 3;
@@ -2127,6 +2261,20 @@ export function applyMonsterIntent(monster, state) {
                          state.fightingArts?.includes(`monsterBane_${monster.quarryId}`);
   
   let activeAuras = [...(state.activeAuras || [])];
+  const fightingArtHooks = state.fightingArtHooks || initializeFightingArtHooks(state.fightingArts || []);
+  const emitFightingArtHook = (hookName, payload = {}) => runFightingArtHooks(fightingArtHooks, hookName, {
+    state,
+    survivor,
+    monster: nextMonster,
+    intent,
+    ...payload
+  });
+  const emitStatusApplied = (target, type, amount, source = 'monsterIntent') => {
+    emitFightingArtHook(statusApplied, { target, type, amount, source });
+  };
+  const emitPanicGained = (amount, source = 'monsterIntent') => {
+    if (amount > 0) emitFightingArtHook(panicGained, { amount, source });
+  };
   nextMonster = applyEndTurnStatuses(nextMonster, monster.name, state.combatLogEntries, {
     dotDamageMultiplier: activeAuraAmount(activeAuras, 'dotDamageMultiplier')
   });
@@ -2216,6 +2364,7 @@ export function applyMonsterIntent(monster, state) {
         .reduce((total, partEffect) => total + (partEffect.amount || 0), 0);
       const amount = Math.max(0, effect.amount - (ignore ? 1 : 0) - partReduction);
       discardPile = [...discardPile, ...Array(amount).fill(cards.panic)];
+      emitPanicGained(amount);
       if (ignore) lanternPanicIgnored = true;
     } else if (effect.type === 'reducePlayerBlock') {
       survivor.block = Math.max(0, survivor.block - effect.amount);
@@ -2234,6 +2383,7 @@ export function applyMonsterIntent(monster, state) {
         .reduce((total, partEffect) => total + (partEffect.amount || 0), 0);
       survivor.bleed = (survivor.bleed || 0) +
         Math.max(0, effect.amount - reduction - activeAuraAmount(activeAuras, 'bleedReductionAura'));
+      emitStatusApplied('survivor', 'bleed', Math.max(0, effect.amount - reduction - activeAuraAmount(activeAuras, 'bleedReductionAura')));
     } else if (['burnTarget', 'poisonTarget', 'doomTarget', 'vulnerableTarget', 'staggerTarget', 'guardTarget', 'markTarget', 'exposeTarget', 'snareTarget', 'shockTarget', 'blindTarget'].includes(effect.type)) {
       if (shockStatusBlocked) {
         shockStatusBlocked = false;
@@ -2254,8 +2404,10 @@ export function applyMonsterIntent(monster, state) {
         blindTarget: 'blind'
       };
       survivor = applyStatusToCombatant(survivor, statusMap[effect.type], statusAmount(effect));
+      emitStatusApplied('survivor', statusMap[effect.type], statusAmount(effect));
     } else if (effect.type === 'applyMarked') {
       survivor.marked = Math.max(1, (survivor.marked || 0) + (effect.amount || 1));
+      emitStatusApplied('survivor', 'marked', effect.amount || 1);
     } else if (effect.type === 'healMonster') {
       const reduction = brokenEffects
         .filter(partEffect => partEffect.type === 'reduceHealing')
@@ -2305,7 +2457,7 @@ export function applyMonsterIntent(monster, state) {
   });
   const artTriggers = { ...(state.artTriggers || {}) };
 
-  return {
+  let nextState = {
     ...state,
     survivor,
     monster: nextMonster,
@@ -2327,6 +2479,22 @@ export function applyMonsterIntent(monster, state) {
     activeAuras,
     status: getCombatStatus(survivor, nextMonster)
   };
+  if (state.survivor?.hp > 0 && nextState.survivor?.hp <= 0) {
+    nextState = runFightingArtHooks(fightingArtHooks, survivorDeath, {
+      state: nextState,
+      previousState: state,
+      survivor: nextState.survivor,
+      source: 'monsterIntent'
+    }).state || nextState;
+  }
+  if (state.status === 'playing' && nextState.status !== 'playing') {
+    nextState = runFightingArtHooks(fightingArtHooks, combatEnd, {
+      state: nextState,
+      previousState: state,
+      outcome: nextState.status
+    }).state || nextState;
+  }
+  return nextState;
 }
 
 export function endTurn(state) {
