@@ -215,13 +215,16 @@ export function formatCardFrontText(card) {
     vulnerableMonster: amount => `Apply ${amount} Vulnerable.`,
     staggerMonster: amount => `Apply ${amount} Staggered.`,
     removeMonsterBlock: amount => `Remove ${amount} monster block.`,
-    removeAllMonsterBlock: () => 'Remove all monster block.'
+    removeAllMonsterBlock: () => 'Remove all monster block.',
+    gainNamedMechanic: (amount, _hits, effect) => `Gain ${effect.mechanic} ${amount}.`,
+    spendNamedMechanicForDamage: (amount, _hits, effect) => `Spend ${effect.mechanic}; next damage gets +${effect.rate || amount} per spent.`,
+    spendNamedMechanicForBlock: (amount, _hits, effect) => `Spend ${effect.mechanic}; gain ${effect.rate || amount} Block per spent.`
   };
 
   const simpleTexts = effects.map(effect => {
     if (labels[effect.type]) {
       const amount = effect.amount || effect.value || 0;
-      return labels[effect.type](amount, effect.hits);
+      return labels[effect.type](amount, effect.hits, effect);
     }
     return null;
   }).filter(Boolean);

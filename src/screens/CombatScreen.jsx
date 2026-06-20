@@ -6,6 +6,8 @@ import {
   createCombatState,
   cleanupConsumedCards,
   endTurn,
+  getAdjustedCardCost,
+  getVisibleNamedMechanicCounters,
   getPostCombatSalvageRewards,
   formatAuraForDisplay,
   playCard,
@@ -29,12 +31,16 @@ export default function CombatScreen({
     ...runBonus,
     hasMonsterBane
   }));
+  const [namedSpendSelections, setNamedSpendSelections] = useState({});
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
   const activeAuras = combat.activeAuras || [];
 
   const handlePlayCard = cardIndex => {
-    setCombat(current => playCard(cardIndex, current));
+    setCombat(current => playCard(cardIndex, current, {
+      namedMechanicSpend: namedSpendSelections[cardIndex] || {}
+    }));
+    setNamedSpendSelections({});
   };
 
   const survivalActions = [
@@ -122,6 +128,14 @@ export default function CombatScreen({
           ))}
         </section>
       )}
+      {getVisibleNamedMechanicCounters(combat).length > 0 && (
+        <section className="run-bonus-note" aria-label="Named mechanic counters">
+          <strong>Named Mechanics:</strong>{' '}
+          {getVisibleNamedMechanicCounters(combat).map(counter => (
+            <span className="status-tag" key={counter.name}>{counter.name} {counter.amount}</span>
+          ))}
+        </section>
+      )}
 
       <section className="survival-command-bar">
         <div>
@@ -190,8 +204,12 @@ export default function CombatScreen({
 
       <div className="hand" aria-label="Card hand">
         {combat.hand.map((card, index) => {
+          const adjustedCost = getAdjustedCardCost(card, combat);
+          const spendableEffects = (card.effects || []).filter(effect =>
+            ['spendNamedMechanicForDamage', 'spendNamedMechanicForBlock'].includes(effect.type)
+          );
           const disabled =
-            combatOver || card.unplayable || card.cost > combat.survivor.energy;
+            combatOver || card.unplayable || adjustedCost > combat.survivor.energy;
 
           return (
             <Card
@@ -201,11 +219,27 @@ export default function CombatScreen({
                 card,
                 survivor: combat.survivor,
                 combatState: combat,
-                monster: combat.monster
+                monster: combat.monster,
+                playOptions: {
+                  namedMechanicSpend: namedSpendSelections[index] || {}
+                }
               })}
               monster={combat.monster}
               survivor={combat.survivor}
               combatState={combat}
+              adjustedCost={adjustedCost}
+              spendableEffects={spendableEffects}
+              spendSelections={namedSpendSelections[index] || {}}
+              playOptions={{
+                namedMechanicSpend: namedSpendSelections[index] || {}
+              }}
+              onSpendChange={(mechanic, amount) => setNamedSpendSelections(current => ({
+                ...current,
+                [index]: {
+                  ...(current[index] || {}),
+                  [mechanic]: amount
+                }
+              }))}
               disabled={disabled}
               onPlay={() => handlePlayCard(index)}
             />

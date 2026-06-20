@@ -3,8 +3,12 @@ import test from 'node:test';
 
 import {
   createCombatState,
+  getAdjustedCardCost,
+  getVisibleNamedMechanicCounters,
   playCard
 } from '../src/game/combatLogic.js';
+import { getCardPreview } from '../src/utils/cardPreview.js';
+import { getSimpleCardSummary } from '../src/utils/cardSummaries.js';
 import {
   normalQuarryCards,
   normalQuarryMechanicAliases,
@@ -93,6 +97,98 @@ test('normal quarry named mechanics resolve to concrete combat effects', () => {
     );
     assertEffect(result);
   });
+});
+
+test('Patient Edge gains visible Ambush without hiding its existing avoidance effect', () => {
+  const result = playCard(0, stateWithHand([cardByName('Pale Patient Edge')]));
+
+  assert.equal(result.namedMechanicCounters.Ambush, 1);
+  assert.equal(result.survivor.targetAvoidance, 1);
+  assert.deepEqual(
+    getVisibleNamedMechanicCounters(result).filter(counter => counter.name === 'Ambush'),
+    [{ name: 'Ambush', amount: 1 }]
+  );
+});
+
+test('Mane Held Breath Cut without Ambush deals base damage plus normal modifiers only', () => {
+  const card = cardByName('Mane Held Breath Cut');
+  const result = playCard(0, stateWithHand([card], {
+    survivor: { strength: 2 }
+  }));
+
+  assert.equal(result.monster.hp, 33);
+  assert.equal(result.namedMechanicCounters.Ambush, 0);
+});
+
+test('Mane Held Breath Cut spends chosen Ambush and removes only the spent amount', () => {
+  const card = cardByName('Mane Held Breath Cut');
+  const result = playCard(0, stateWithHand([card], {
+    survivor: { strength: 2 },
+    state: { namedMechanicCounters: { Ambush: 3 } }
+  }), {
+    namedMechanicSpend: { Ambush: 2 }
+  });
+
+  assert.equal(result.monster.hp, 29);
+  assert.equal(result.namedMechanicCounters.Ambush, 1);
+});
+
+test('card preview includes named mechanic spend and matches runtime damage', () => {
+  const card = cardByName('Mane Held Breath Cut');
+  const state = stateWithHand([card], {
+    survivor: { strength: 2 },
+    monster: { block: 1 },
+    state: { namedMechanicCounters: { Ambush: 2 } }
+  });
+  const preview = getCardPreview({
+    card,
+    combatState: state,
+    playOptions: { namedMechanicSpend: { Ambush: 2 } }
+  });
+  const result = playCard(0, state, { namedMechanicSpend: { Ambush: 2 } });
+
+  assert.equal(preview.monsterHpDamage, 10);
+  assert.equal(state.monster.hp - result.monster.hp, 10);
+  assert.match(preview.previewText, /4 Ambush spend/);
+  assert.equal(preview.namedMechanicSpend.Ambush, 2);
+});
+
+test('Katar pair discount is visible and equals actual energy spent', () => {
+  const card = cardByName('Pale First Hand');
+  const oneKatar = stateWithHand([card], {
+    survivor: { energy: 3, boundGear: [{ instanceId: 'katar-1', equipmentId: card.sourceGearId }] },
+    state: { boundGear: [{ instanceId: 'katar-1', equipmentId: card.sourceGearId }] }
+  });
+  const twoKatars = stateWithHand([card], {
+    survivor: {
+      energy: 3,
+      boundGear: [
+        { instanceId: 'katar-1', equipmentId: card.sourceGearId },
+        { instanceId: 'katar-2', equipmentId: card.sourceGearId }
+      ]
+    },
+    state: {
+      boundGear: [
+        { instanceId: 'katar-1', equipmentId: card.sourceGearId },
+        { instanceId: 'katar-2', equipmentId: card.sourceGearId }
+      ]
+    }
+  });
+
+  assert.equal(getAdjustedCardCost(card, oneKatar), 1);
+  assert.equal(getAdjustedCardCost(card, twoKatars), 0);
+
+  const preview = getCardPreview({ card, combatState: twoKatars });
+  const result = playCard(0, twoKatars);
+  assert.equal(preview.adjustedCost, 0);
+  assert.match(preview.costSummary, /Katar pair discount/);
+  assert.equal(twoKatars.survivor.energy - result.survivor.energy, preview.adjustedCost);
+});
+
+test('card wording exposes implemented named spend effects', () => {
+  const card = cardByName('Mane Held Breath Cut');
+  assert.ok(card.effects.some(effect => effect.type === 'spendNamedMechanicForDamage'));
+  assert.match(getSimpleCardSummary(card), /spend any Ambush/i);
 });
 
 test('normal quarry armour conditions only reference implemented suite mechanics', () => {

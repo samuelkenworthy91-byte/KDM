@@ -395,7 +395,7 @@ export function createPartyCombatState(monster, partyBonuses, pendingPartyEffect
   return state;
 }
 
-export function playPartyCard(cardIndex, state) {
+export function playPartyCard(cardIndex, state, options = {}) {
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
   if (!livingIndexes(state.members).includes(state.activePartyIndex)) return endPartyTurn(state);
   const partyHasMonsterBane = state.members.some(member =>
@@ -420,7 +420,7 @@ export function playPartyCard(cardIndex, state) {
     selectedWeakPointId,
     hasMonsterBane: partyHasMonsterBane,
     activeAuras: state.activeAuras || []
-  });
+  }, options);
   const emitted = active.emittedPartyEffects || [];
   const cleanedActive = {
     ...active,

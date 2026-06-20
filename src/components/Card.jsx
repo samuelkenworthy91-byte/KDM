@@ -11,7 +11,12 @@ export default function Card({
   monster,
   survivor,
   combatState,
-  party
+  party,
+  adjustedCost,
+  spendableEffects = [],
+  spendSelections = {},
+  onSpendChange,
+  playOptions = {}
 }) {
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -32,17 +37,23 @@ export default function Card({
         combatState,
         monster,
         selectedWeakPoint: wp,
-        party
+        party,
+        playOptions
       })
     }));
-  }, [isFlipped, card, monster, survivor, combatState, weakPoints, party]);
+  }, [isFlipped, card, monster, survivor, combatState, weakPoints, party, playOptions]);
 
   const handleFlip = (e) => {
     e.stopPropagation();
     setIsFlipped(!isFlipped);
   };
+  const handleSpendChange = (mechanic, value) => {
+    if (!onSpendChange) return;
+    onSpendChange(mechanic, Number(value) || 0);
+  };
 
   const frontText = formatCardFrontText(card);
+  const visibleCost = adjustedCost ?? card.cost;
 
   return (
     <div className="card-shell">
@@ -52,12 +63,42 @@ export default function Card({
           className={`card card-face card-front ${disabled ? 'disabled' : ''}`}
           onClick={disabled ? undefined : onPlay}
         >
-          <div className="card-cost">{card.unplayable ? '-' : card.cost}</div>
+          <div className="card-cost">
+            {card.unplayable ? '-' : visibleCost}
+            {adjustedCost != null && adjustedCost !== card.cost && (
+              <small title="Adjusted cost"> was {card.cost}</small>
+            )}
+          </div>
           <h3>{formatValueForDisplay(card.name)}</h3>
           <small className="card-type">{formatValueForDisplay(card.type || 'card')}</small>
           
           <div className="card-body">
             <p className="simple-text">{formatValueForDisplay(frontText)}</p>
+            {preview?.previewText && <p className="simple-text">Preview: {formatValueForDisplay(preview.previewText)}</p>}
+            {!preview?.previewText && preview?.effectSummary && <p className="simple-text">Preview: {formatValueForDisplay(preview.effectSummary)}</p>}
+            {preview?.costSummary && <p className="simple-text">Preview: {formatValueForDisplay(preview.costSummary)}</p>}
+            {spendableEffects.map(effect => {
+              const mechanic = effect.mechanic || effect.namedMechanic;
+              const available = Math.max(0, Number(combatState?.namedMechanicCounters?.[mechanic]) || 0);
+              return (
+                <label
+                  key={`${card.id}-${mechanic}-${effect.type}`}
+                  className="card-spend-control"
+                  onClick={event => event.stopPropagation()}
+                >
+                  Spend {mechanic}:{' '}
+                  <select
+                    value={spendSelections[mechanic] ?? 0}
+                    onChange={event => handleSpendChange(mechanic, event.target.value)}
+                    disabled={disabled || available <= 0}
+                  >
+                    {Array.from({ length: available + 1 }, (_, amount) => (
+                      <option value={amount} key={amount}>{amount}</option>
+                    ))}
+                  </select>
+                </label>
+              );
+            })}
           </div>
 
           <div className="card-footer">

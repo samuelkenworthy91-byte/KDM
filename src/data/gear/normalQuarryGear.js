@@ -266,15 +266,15 @@ function titleCaseSlot(slot) {
 }
 
 function setupEffect(mechanic, amount = 1) {
-  if (mechanic === 'Charge') return { type: 'gainCharge', amount, mechanic };
-  if (mechanic === 'Ambush') return { type: 'targetAvoidance', amount, mechanic };
-  if (mechanic === 'Momentum') return { type: 'nextAttackBonus', amount, mechanic };
+  if (mechanic === 'Charge') return { type: 'gainNamedMechanic', amount, mechanic, alsoGainCharge: true };
+  if (mechanic === 'Ambush') return { type: 'gainNamedMechanic', amount, mechanic, alsoTargetAvoidance: true };
+  if (mechanic === 'Momentum') return { type: 'gainNamedMechanic', amount, mechanic, alsoNextAttackBonus: amount };
   if (mechanic === 'Ash Memory') return { type: 'drawIfPreviousCardAttack', amount, mechanic };
   if (mechanic === 'Blood-Water') return { type: 'markTarget', amount, mechanic };
   if (mechanic === 'Flourish') return { type: 'nextCounterBonus', amount, mechanic };
   if (mechanic === 'Chorus') return { type: 'removePanicAnyOrSurvival', amount, mechanic };
   if (mechanic === 'Resin') return { type: 'guardSelf', amount, mechanic };
-  return { type: 'nextAttackBonus', amount, mechanic };
+  return { type: 'gainNamedMechanic', amount, mechanic, alsoNextAttackBonus: amount };
 }
 
 function mechanicTargetEffect(mechanic, amount = 1) {
@@ -315,7 +315,7 @@ function weaponCardSpecs(suite, weaponType) {
   const specs = {
     katana: [
       [`${primary} Patient Edge`, 0, `Gain ${mechanic} 1. Your next Katana attack this fight deals +2 damage.`, [setupEffect(mechanic), { type: 'nextAttackBonus', amount: 2 }], 'skill'],
-      [`${secondary} Held Breath Cut`, 1, `Deal 5 damage. You may spend any ${mechanic}; deal +2 damage for each spent.`, [{ type: 'damage', amount: 5 }, { type: 'nextAttackBonus', amount: 2 }], 'attack'],
+      [`${secondary} Held Breath Cut`, 1, `Deal 5 damage. You may spend any ${mechanic}; deal +2 damage for each spent.`, [{ type: 'spendNamedMechanicForDamage', mechanic, rate: 2 }, { type: 'damage', amount: 5 }], 'attack'],
       [`${finisherText} One Clean Moment`, 2, `Deal 9 damage. If you built ${mechanic} on a previous turn, ignore 2 Block.`, [{ type: 'removeMonsterBlock', amount: 2 }, { type: 'damage', amount: 9 }], 'attack']
     ],
     sword: [

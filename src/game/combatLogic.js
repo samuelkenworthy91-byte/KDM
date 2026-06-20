@@ -1,5 +1,6 @@
 import { cards } from '../data/cards.js';
 import { monsters } from '../data/monsters.js';
+import { getEquipment } from '../data/equipment.js';
 import { findMonsterSurvivorReward } from '../data/monsterSurvivorRewards.js';
 import { fightingArts } from '../data/fightingArts.js';
 import { createWeaponProficiency } from '../data/weaponProficiency.js';
@@ -28,6 +29,13 @@ import { getIntentTargetRule } from './monsterTargeting.js';
 
 const HAND_SIZE = 5;
 const ENERGY_PER_TURN = 3;
+const DEFAULT_NAMED_MECHANIC_COUNTERS = {
+  Ambush: 0,
+  Pounce: 0,
+  Graze: 0,
+  Momentum: 0,
+  Charge: 0
+};
 
 function getArtPassiveEffects(artIds = []) {
   return artIds.flatMap(id => fightingArts[id]?.passiveEffects || []);
@@ -100,6 +108,53 @@ function statusAmount(effect, fallback = 1) {
 
 function reduceStatus(value, amount = 1) {
   return Math.max(0, (Number(value) || 0) - amount);
+}
+
+function normalizeNamedMechanicCounters(counters = {}) {
+  return {
+    ...DEFAULT_NAMED_MECHANIC_COUNTERS,
+    ...(counters || {})
+  };
+}
+
+export function getVisibleNamedMechanicCounters(state = {}) {
+  return Object.entries(normalizeNamedMechanicCounters(state.namedMechanicCounters))
+    .filter(([, amount]) => Number(amount) > 0)
+    .map(([name, amount]) => ({ name, amount: Number(amount) }));
+}
+
+function gearIdFor(itemOrId) {
+  if (typeof itemOrId === 'string') return itemOrId;
+  return itemOrId?.equipmentId || itemOrId?.id || itemOrId?.sourceGearId || null;
+}
+
+function countEquippedWeaponType(state = {}, weaponType) {
+  const gear = [
+    ...(state.boundGear || []),
+    ...(state.equippedGear || []),
+    ...(state.survivor?.boundGear || []),
+    ...(state.survivor?.equippedGear || [])
+  ];
+  const seen = new Set();
+  return gear.reduce((total, itemOrId) => {
+    const instanceKey = typeof itemOrId === 'string'
+      ? itemOrId
+      : itemOrId?.instanceId || itemOrId?.equipmentId || itemOrId?.id;
+    if (instanceKey && seen.has(instanceKey)) return total;
+    if (instanceKey) seen.add(instanceKey);
+    const item = typeof itemOrId === 'object' && itemOrId?.weaponType
+      ? itemOrId
+      : getEquipment(gearIdFor(itemOrId));
+    return total + (item?.weaponType === weaponType ? 1 : 0);
+  }, 0);
+}
+
+export function getAdjustedCardCost(card, state = {}) {
+  const baseCost = Math.max(0, Number(card?.cost) || 0);
+  if (card?.weaponType === 'katar' && countEquippedWeaponType(state, 'katar') >= 2) {
+    return Math.max(0, baseCost - 1);
+  }
+  return baseCost;
 }
 
 function applyHealingToSurvivor(survivor, amount, { revive = false } = {}) {
@@ -557,6 +612,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     cardsPlayedThisTurn: 0,
     attacksPlayedThisTurn: 0,
     namedMechanicsUsedThisTurn: [],
+    namedMechanicCounters: { ...DEFAULT_NAMED_MECHANIC_COUNTERS },
     firstBlockPlayed: false,
     survivalSpentThisTurn: 0,
     blockGainedThisTurn: 0,
@@ -606,14 +662,15 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
   }).state || baseState;
 }
 
-export function playCard(cardIndex, state) {
+export function playCard(cardIndex, state, options = {}) {
   if (state.status !== 'playing') {
     return state;
   }
 
   const card = state.hand[cardIndex];
   const shockCost = state.survivor?.shock > 0 ? 1 : 0;
-  const totalCardCost = (card?.cost || 0) + shockCost;
+  const adjustedCardCost = getAdjustedCardCost(card, state);
+  const totalCardCost = adjustedCardCost + shockCost;
 
   if (!card || card.unplayable || totalCardCost > state.survivor.energy) {
     return state;
@@ -637,6 +694,7 @@ export function playCard(cardIndex, state) {
   let consumedCardInstanceIds = [...(state.consumedCardInstanceIds || [])];
   let nextAttackBonus = state.nextAttackBonus || 0;
   let nextAttackMarks = state.nextAttackMarks || false;
+  let namedMechanicCounters = normalizeNamedMechanicCounters(state.namedMechanicCounters);
   let monsterHitsThisTurn = state.monsterHitsThisTurn || 0;
   let blockGainedThisTurn = state.blockGainedThisTurn || 0;
   let cardDiscardedThisTurn = state.cardDiscardedThisTurn || false;
@@ -838,6 +896,35 @@ export function playCard(cardIndex, state) {
     else if (target === exhaustPile) exhaustPile = exhaustPile.filter((_, i) => i !== index);
     
     return true;
+  };
+  const addNamedMechanic = (mechanic, amount = 1) => {
+    if (!mechanic) return 0;
+    const gained = Math.max(0, Number(amount) || 0);
+    namedMechanicCounters = {
+      ...namedMechanicCounters,
+      [mechanic]: Math.max(0, Number(namedMechanicCounters[mechanic]) || 0) + gained
+    };
+    return gained;
+  };
+  const spendNamedMechanic = (mechanic, requested, maxSpend = Infinity) => {
+    if (!mechanic) return 0;
+    const available = Math.max(0, Number(namedMechanicCounters[mechanic]) || 0);
+    const chosen = requested == null ? available : Number(requested);
+    const spent = Math.min(
+      available,
+      Number.isFinite(maxSpend) ? Math.max(0, Number(maxSpend) || 0) : available,
+      Math.max(0, Number.isFinite(chosen) ? chosen : 0)
+    );
+    namedMechanicCounters = {
+      ...namedMechanicCounters,
+      [mechanic]: available - spent
+    };
+    return spent;
+  };
+  const selectedNamedMechanicSpend = effect => {
+    const spend = options.namedMechanicSpend || options.spendNamedMechanic || {};
+    const value = spend[effect.mechanic] ?? spend[effect.namedMechanic] ?? options.spendAmount;
+    return value == null ? 0 : value;
   };
 
   const parseAndApplyStatus = (statusStr, targetType) => {
@@ -1343,6 +1430,19 @@ export function playCard(cardIndex, state) {
       case 'targetAvoidance':
         survivor = applyStatusToCombatant(survivor, 'targetAvoidance', statusAmount(effect));
         break;
+      case 'gainNamedMechanic': {
+        const gained = addNamedMechanic(effect.mechanic, statusAmount(effect));
+        if (effect.alsoTargetAvoidance) {
+          survivor = applyStatusToCombatant(survivor, 'targetAvoidance', gained);
+        }
+        if (effect.alsoGainCharge) {
+          survivor = { ...survivor, charge: (survivor.charge || 0) + gained };
+        }
+        if (effect.alsoNextAttackBonus) {
+          nextAttackBonus += Number(effect.alsoNextAttackBonus) || 0;
+        }
+        break;
+      }
       case 'loseHp':
         survivor = applyDamageToSurvivor({
           survivor,
@@ -1623,15 +1723,38 @@ export function playCard(cardIndex, state) {
         break;
       case 'gainCharge':
         survivor = { ...survivor, charge: (survivor.charge || 0) + statusAmount(effect) };
+        addNamedMechanic(effect.mechanic || 'Charge', statusAmount(effect));
         break;
       case 'spendCharge': {
         survivor = { ...survivor, charge: Math.max(0, (survivor.charge || 0) - statusAmount(effect)) };
+        spendNamedMechanic(effect.mechanic || 'Charge', statusAmount(effect), statusAmount(effect));
         break;
       }
       case 'spendChargeForBlock': {
         const spent = Math.min(effect.maxSpend || 0, survivor.charge || 0);
         survivor = { ...survivor, charge: Math.max(0, (survivor.charge || 0) - spent), block: survivor.block + spent * (effect.rate || 0) };
+        spendNamedMechanic(effect.mechanic || 'Charge', spent, spent);
         blockGainedThisTurn += spent * (effect.rate || 0);
+        break;
+      }
+      case 'spendNamedMechanicForDamage': {
+        const spent = spendNamedMechanic(
+          effect.mechanic,
+          selectedNamedMechanicSpend(effect),
+          effect.maxSpend ?? Infinity
+        );
+        nextAttackBonus += spent * (effect.rate || effect.amount || 0);
+        break;
+      }
+      case 'spendNamedMechanicForBlock': {
+        const spent = spendNamedMechanic(
+          effect.mechanic,
+          selectedNamedMechanicSpend(effect),
+          effect.maxSpend ?? Infinity
+        );
+        const gained = spent * (effect.rate || effect.amount || 0);
+        survivor = { ...survivor, block: survivor.block + gained };
+        blockGainedThisTurn += gained;
         break;
       }
       case 'shockTargetIfCharge3':
@@ -1880,6 +2003,7 @@ export function playCard(cardIndex, state) {
         ...collectCardMechanics(card)
       ])
     ],
+    namedMechanicCounters,
     blockGainedThisTurn,
     affinityTriggers,
     cardDiscardedThisTurn,

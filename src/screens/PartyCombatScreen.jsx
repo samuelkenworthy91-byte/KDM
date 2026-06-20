@@ -15,6 +15,8 @@ import {
 import {
   cleanupConsumedCards,
   formatAuraForDisplay,
+  getAdjustedCardCost,
+  getVisibleNamedMechanicCounters,
   getPostCombatSalvageRewards,
   resolveAfterCombatHealing
 } from '../game/combatLogic.js';
@@ -43,6 +45,7 @@ export default function PartyCombatScreen({
   const [combat, setCombat] = useState(() =>
     createPartyCombatState(monster, partyBonuses, pendingPartyEffects)
   );
+  const [namedSpendSelections, setNamedSpendSelections] = useState({});
   const active = combat.members[combat.activePartyIndex] || combat.members[0];
   const currentIntent = combat.monster.intents[combat.intentIndex];
   const combatOver = combat.status !== 'playing';
@@ -65,7 +68,7 @@ export default function PartyCombatScreen({
     : null;
   const previewAttack = selectedWeakPointId
     ? active?.hand.find(card =>
-      card.type === 'attack' && !card.unplayable && card.cost <= active.survivor.energy
+      card.type === 'attack' && !card.unplayable && getAdjustedCardCost(card, active) <= active.survivor.energy
     )
     : null;
   const baneRevealsWeakPoints = livingPartyHasMonsterBane || (
@@ -458,6 +461,14 @@ export default function PartyCombatScreen({
             </div>
             <button type="button" onClick={() => setCombat(endPartyTurn)}>End Turn</button>
           </div>
+          {getVisibleNamedMechanicCounters(active).length > 0 && (
+            <section className="run-bonus-note" aria-label="Named mechanic counters">
+              <strong>Named Mechanics:</strong>{' '}
+              {getVisibleNamedMechanicCounters(active).map(counter => (
+                <span className="status-tag" key={counter.name}>{counter.name} {counter.amount}</span>
+              ))}
+            </section>
+          )}
           <details className="combat-deck-list">
             <summary>{active.survivor.name} Deck ({active.runDeck.length} cards)</summary>
             <ul>
@@ -467,39 +478,58 @@ export default function PartyCombatScreen({
             </ul>
           </details>
           <div className="hand" aria-label={`${active.survivor.name} card hand`}>
-            {active.hand.map((card, index) => (
-              <Card
-                key={`${card.id}-${index}`}
-                card={card}
-                preview={getCardPreview({
-                  card,
-                  survivor: active.survivor,
-                  combatState: {
-                    ...active,
+            {active.hand.map((card, index) => {
+              const previewState = {
+                ...active,
+                monster: combat.monster,
+                intentIndex: combat.intentIndex,
+                selectedWeakPointId,
+                hasMonsterBane: baneRevealsWeakPoints
+              };
+              const adjustedCost = getAdjustedCardCost(card, previewState);
+              const spendableEffects = (card.effects || []).filter(effect =>
+                ['spendNamedMechanicForDamage', 'spendNamedMechanicForBlock'].includes(effect.type)
+              );
+              const playOptions = {
+                namedMechanicSpend: namedSpendSelections[index] || {}
+              };
+              return (
+                <Card
+                  key={`${card.id}-${index}`}
+                  card={card}
+                  preview={getCardPreview({
+                    card,
+                    survivor: active.survivor,
+                    combatState: previewState,
                     monster: combat.monster,
-                    intentIndex: combat.intentIndex,
-                    selectedWeakPointId,
-                    hasMonsterBane: baneRevealsWeakPoints
-                  },
-                  monster: combat.monster,
-                  selectedTarget: combat.selectedCombatTarget,
-                  selectedWeakPoint,
-                  party: combat.members
-                })}
-                monster={combat.monster}
-                survivor={active.survivor}
-                combatState={{
-                  ...active,
-                  monster: combat.monster,
-                  intentIndex: combat.intentIndex,
-                  selectedWeakPointId,
-                  hasMonsterBane: baneRevealsWeakPoints
-                }}
-                party={combat.members}
-                disabled={card.unplayable || card.cost > active.survivor.energy}
-                onPlay={() => setCombat(current => playPartyCard(index, current))}
-              />
-            ))}
+                    selectedTarget: combat.selectedCombatTarget,
+                    selectedWeakPoint,
+                    party: combat.members,
+                    playOptions
+                  })}
+                  monster={combat.monster}
+                  survivor={active.survivor}
+                  combatState={previewState}
+                  party={combat.members}
+                  adjustedCost={adjustedCost}
+                  spendableEffects={spendableEffects}
+                  spendSelections={namedSpendSelections[index] || {}}
+                  playOptions={playOptions}
+                  onSpendChange={(mechanic, amount) => setNamedSpendSelections(current => ({
+                    ...current,
+                    [index]: {
+                      ...(current[index] || {}),
+                      [mechanic]: amount
+                    }
+                  }))}
+                  disabled={card.unplayable || adjustedCost > active.survivor.energy}
+                  onPlay={() => {
+                    setCombat(current => playPartyCard(index, current, playOptions));
+                    setNamedSpendSelections({});
+                  }}
+                />
+              );
+            })}
           </div>
         </>
       )}

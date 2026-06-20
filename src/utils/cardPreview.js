@@ -1,4 +1,4 @@
-import { playCard } from '../game/combatLogic.js';
+import { getAdjustedCardCost, playCard } from '../game/combatLogic.js';
 import {
   getWeakPointHarvestPreview,
   getWeakPointTellState,
@@ -200,7 +200,8 @@ export function getCardPreview({
   selectedTarget,
   selectedWeakPoint,
   party,
-  currentTurnState
+  currentTurnState,
+  playOptions = {}
 } = {}) {
   try {
     if (!card) return { ...EMPTY_PREVIEW, warnings: ['No card selected'] };
@@ -224,7 +225,7 @@ export function getCardPreview({
     }
 
     const before = clone(state);
-    const after = playCard(cardIndex, state);
+    const after = playCard(cardIndex, state, playOptions);
     const weakPointId = state.selectedWeakPointId;
     const beforePoint = before.monster?.weakPoints?.find(point => point.id === weakPointId);
     const afterPoint = after.monster?.weakPoints?.find(point => point.id === weakPointId);
@@ -258,9 +259,52 @@ export function getCardPreview({
       modifierBreakdown.push(`${unexplained > 0 ? '+' : ''}${unexplained} other combat modifiers`);
     }
     if (blockDamage) modifierBreakdown.push(`-${blockDamage} Monster block`);
+    const adjustedCost = getAdjustedCardCost(card, before);
+    if (adjustedCost !== (card.cost || 0)) {
+      modifierBreakdown.push(`Katar pair discount: -${(card.cost || 0) - adjustedCost} cost`);
+    }
+    const spentNamedMechanics = Object.entries(before.namedMechanicCounters || {})
+      .map(([name, amount]) => [name, Math.max(0, (Number(amount) || 0) - (Number(after.namedMechanicCounters?.[name]) || 0))])
+      .filter(([, spent]) => spent > 0);
+    spentNamedMechanics.forEach(([name, spent]) => {
+      const spendEffect = (card.effects || []).find(effect =>
+        ['spendNamedMechanicForDamage', 'spendNamedMechanicForBlock'].includes(effect.type) &&
+        effect.mechanic === name
+      );
+      const rate = spendEffect?.rate || spendEffect?.amount || 0;
+      modifierBreakdown.push(`+${spent * rate} ${name} spend (${spent} x ${rate})`);
+    });
     if (monsterHpDamage || card.type === 'attack') {
       modifierBreakdown.push(`Final HP damage: ${monsterHpDamage}`);
     }
+
+    const shape = damageShape(card, finalDamage);
+    const strengthTotal = card.type === 'attack'
+      ? (before.survivor?.strength || 0) * Math.max(1, shape.hits || 1)
+      : 0;
+    const namedSpendTotal = spentNamedMechanics.reduce((total, [name, spent]) => {
+      const spendEffect = (card.effects || []).find(effect =>
+        ['spendNamedMechanicForDamage', 'spendNamedMechanicForBlock'].includes(effect.type) &&
+        effect.mechanic === name
+      );
+      return total + spent * (spendEffect?.rate || spendEffect?.amount || 0);
+    }, 0);
+    const damageFormulaParts = [
+      baseDamage ? `${baseDamage} base` : '',
+      strengthTotal ? `+ ${strengthTotal} Strength` : '',
+      ...spentNamedMechanics.map(([name, spent]) => {
+        const spendEffect = (card.effects || []).find(effect =>
+          ['spendNamedMechanicForDamage', 'spendNamedMechanicForBlock'].includes(effect.type) &&
+          effect.mechanic === name
+        );
+        const value = spent * (spendEffect?.rate || spendEffect?.amount || 0);
+        return value ? `+ ${value} ${name} spend` : '';
+      }),
+      blockDamage ? `- ${blockDamage} Monster Block` : ''
+    ].filter(Boolean);
+    const previewText = damageFormulaParts.length && (monsterHpDamage || card.type === 'attack')
+      ? `${damageFormulaParts.join(' ')} = ${monsterHpDamage} HP damage`
+      : '';
 
     const preview = {
       ...EMPTY_PREVIEW,
@@ -278,7 +322,15 @@ export function getCardPreview({
         survivor?.name || source.survivor?.name || '',
       warnings: [],
       modifierBreakdown,
-      ...damageShape(card, finalDamage)
+      adjustedCost,
+      originalCost: card.cost || 0,
+      costSummary: adjustedCost !== (card.cost || 0)
+        ? `Katar pair discount: -${(card.cost || 0) - adjustedCost} cost`
+        : '',
+      namedMechanicSpend: Object.fromEntries(spentNamedMechanics),
+      namedMechanicSpendDamage: namedSpendTotal,
+      previewText,
+      ...shape
     };
     if (beforePoint && afterPoint) {
       const cardTags = [...(card.tags || []), ...(card.keywords || [])];
