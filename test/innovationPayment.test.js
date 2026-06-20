@@ -107,6 +107,9 @@ test('innovation payment records a slot mapping and deducts one resource unit pe
 
   assert.deepEqual(paid.paidResources, {
     memory: 1,
+    originalMemoryCost: 1,
+    workTogetherDiscount: 0,
+    finalMemoryCost: 1,
     hide: 'hide',
     organ: 'sinew',
     bone: 'bone'
@@ -116,4 +119,22 @@ test('innovation payment records a slot mapping and deducts one resource unit pe
   assert.equal(paid.stash.hide, 0);
   assert.equal(paid.stash.sinew, 0);
   assert.equal(paid.stash.bone, 0);
+});
+
+test('innovation payment records Work Together original, discount, and final memory cost', () => {
+  const paid = applyInnovationPayment(settlement({
+    memories: 0,
+    settlementMemory: 0,
+    lanternYear: 3,
+    principles: { death: null, newLife: null, society: 'workTogether' }
+  }), {
+    hide: 'hide',
+    organ: 'sinew',
+    bone: 'bone'
+  });
+
+  assert.equal(paid.paidResources.originalMemoryCost, 1);
+  assert.equal(paid.paidResources.workTogetherDiscount, 1);
+  assert.equal(paid.paidResources.finalMemoryCost, 0);
+  assert.equal(paid.settlementMemory, 0);
 });

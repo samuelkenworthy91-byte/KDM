@@ -42,6 +42,11 @@ const card = (
       ...unlocksRecipes,
       ...(options.actionUnlocks || [])
     ],
+    presentationType: options.presentationType || null,
+    effectSummary: options.effectSummary || options.playerSummary || options.settlementBoostSummary || safeEffects[0] || description,
+    flavorText: options.flavorText || description,
+    actionMemoryCost: Number.isFinite(options.actionMemoryCost) ? options.actionMemoryCost : null,
+    permanent: options.permanent !== false,
     settlementBoostSummary: options.settlementBoostSummary || safeEffects[0] || description,
     playerSummary: options.playerSummary || options.settlementBoostSummary || safeEffects[0] || description,
     howToUse: options.howToUse || `Use this from ${uiDestination}.`,
@@ -221,9 +226,10 @@ export const innovationCards = {
       tags: ['party', 'culture']
     }
   ),
-  riteOfForgetting: card('riteOfForgetting', 'Rite of Forgetting', 'ritual', 'A lesson can be named and released into smoke.', ['Preserves Guided Reflection: forget one eligible personal or basic card per survivor each year for 1 Memory.'], {
+  riteOfForgetting: card('riteOfForgetting', 'Rite of Forgetting', 'ritual', 'A lesson can be named and released into smoke.', ['Forget one eligible personal or basic card per survivor each year for 1 Memory.'], {
     tags: ['memory'],
     actionUnlocks: ['forgetCard'],
+    actionMemoryCost: 1,
     uiDestination: 'Settlement > Actions > Recovery',
     playerSummary: 'Spend Memory to remove one unwanted eligible card from a survivor.',
     howToUse: 'Choose a survivor and eligible personal or basic card in the Recovery tab.',
@@ -250,6 +256,7 @@ export const innovationCards = {
   painLessons: card('painLessons', 'Pain Lessons', 'training', 'Wounds are studied until they become instruction.', ['Unlocks injury-to-scar treatment.'], {
     tags: ['treatment'],
     actionUnlocks: ['painLessons'],
+    actionMemoryCost: 0,
     limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Turn one survivor injury into a permanent scar once per year.',
     howToUse: 'Choose an injured survivor and the injury to transform in the Recovery tab.',
@@ -261,6 +268,7 @@ export const innovationCards = {
   quietNight: card('quietNight', 'Quiet Night', 'recovery', 'One night is kept free of work and retelling.', ['Remove one Panic per Lantern Year and double healing from Memory-based rest.'], {
     tags: ['recovery'],
     actionUnlocks: ['quietNight'],
+    actionMemoryCost: 1,
     limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 1 Memory to remove Panic from one survivor once per year.',
     howToUse: 'Choose a survivor carrying Panic in the Recovery tab.',
@@ -277,6 +285,7 @@ export const innovationCards = {
   weaponDrills: card('weaponDrills', 'Weapon Drills', 'training', 'Repeated forms become dependable techniques.', ['Add one basic training card to a survivor each Lantern Year for 1 Memory.'], {
     tags: ['training'],
     actionUnlocks: ['weaponDrills'],
+    actionMemoryCost: 1,
     limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 1 Memory to teach a survivor one basic training card.',
     howToUse: 'Choose a survivor and training card in the Training tab.',
@@ -292,6 +301,7 @@ export const innovationCards = {
   taboo: card('taboo', 'Taboo', 'law', 'One poisonous story is forbidden.', ['Remove one curse per Lantern Year.'], {
     tags: ['law'],
     actionUnlocks: ['taboo'],
+    actionMemoryCost: 2,
     limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 2 Memory to permanently remove one curse or Panic once per year.',
     howToUse: 'Choose an affected survivor in the Recovery tab.',
@@ -302,6 +312,7 @@ export const innovationCards = {
   shrineOfNames: card('shrineOfNames', 'Shrine of Names', 'legacy', 'The living carry strength beneath recorded names.', ['Grant a survivor +1 max HP.'], {
     tags: ['legacy'],
     actionUnlocks: ['shrineOfNames'],
+    actionMemoryCost: 2,
     limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 2 Memory to give one living survivor +1 maximum HP.',
     howToUse: 'Choose the survivor to honor in the Legacy tab.',
@@ -368,6 +379,7 @@ export const innovationCards = {
   nightDrills: card('nightDrills', 'Night Drills', 'training', 'Intense nocturnal practice hones survivor readiness.', ['Unlocks Memory Training action.'], {
     tags: ['training'],
     actionUnlocks: ['memoryTraining'],
+    actionMemoryCost: 1,
     limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 1 Memory to conduct Memory Training with one survivor.',
     howToUse: 'Choose a survivor in the Training tab.',
@@ -384,6 +396,7 @@ export const innovationCards = {
   memoryPit: card('memoryPit', 'Memory Pit', 'training', 'A dark pit forces survivors to confront their fears.', ['Unlocks Memory Training action with greater risk and reward.'], {
     tags: ['training'],
     actionUnlocks: ['memoryTraining'],
+    actionMemoryCost: 1,
     limit: 'Once per Lantern Year across the settlement.',
     playerSummary: 'Spend 1 Memory to conduct high-risk Memory Training with one survivor.',
     howToUse: 'Choose a survivor in the Training tab.',

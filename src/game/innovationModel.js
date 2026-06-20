@@ -58,6 +58,11 @@ export function createLegacyInnovationDefinition(id) {
     prerequisites: [],
     deckWeight: 0,
     settlementBoostSummary: 'This saved innovation is not present in the current data catalog.',
+    effectSummary: 'This saved innovation is not present in the current data catalog.',
+    playerSummary: 'This saved innovation is not present in the current data catalog.',
+    howToUse: 'Legacy details are unavailable.',
+    actionLocation: 'Settlement > Innovations',
+    whyItMatters: 'The save can still load, but this old innovation has no current rules.',
     mechanicalEffects: {},
     unlocks: [],
     innovationCost: null,
@@ -99,6 +104,26 @@ export function normalizeInnovationDefinition(id, definition) {
       effects[0] ||
       definition.description ||
       'Effect not described.',
+    effectSummary:
+      definition.effectSummary ||
+      definition.playerSummary ||
+      definition.settlementBoostSummary ||
+      effects[0] ||
+      definition.description ||
+      'Effect not described.',
+    playerSummary:
+      definition.playerSummary ||
+      definition.settlementBoostSummary ||
+      effects[0] ||
+      definition.description ||
+      'Effect not described.',
+    howToUse: definition.howToUse || `Use this from ${definition.uiDestination || 'Settlement > Innovations'}.`,
+    actionLocation: definition.actionLocation || definition.uiDestination || 'Settlement > Innovations',
+    whyItMatters: definition.whyItMatters || definition.description || 'This changes the settlement rules.',
+    presentationType: definition.presentationType || null,
+    flavorText: definition.flavorText || definition.description || '',
+    actionMemoryCost: Number.isFinite(definition.actionMemoryCost) ? definition.actionMemoryCost : null,
+    permanent: definition.permanent !== false,
     mechanicalEffects: definition.mechanicalEffects || {},
     unlocks,
     innovationCost: definition.innovationCost || defaultInnovationCost,

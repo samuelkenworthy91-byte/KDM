@@ -106,17 +106,21 @@ export function applyInnovationPayment(settlement, payment, timestamp = new Date
   const validation = validateInnovationPayment(settlement, payment);
   if (!validation.valid) return null;
 
-  const paidResources = {
-    memory: INNOVATION_PAYMENT_MEMORY_COST,
-    hide: payment.hide,
-    organ: payment.organ,
-    bone: payment.bone
-  };
   const spent = spendMemories(settlement, INNOVATION_PAYMENT_MEMORY_COST, {
     source: 'innovation',
     description: 'Attempted an innovation.'
   });
   if (!spent) return null;
+  const memoryPayment = spent.memoryHistory?.[0] || {};
+  const paidResources = {
+    memory: INNOVATION_PAYMENT_MEMORY_COST,
+    originalMemoryCost: memoryPayment.originalCost ?? INNOVATION_PAYMENT_MEMORY_COST,
+    workTogetherDiscount: memoryPayment.workTogetherDiscount ?? 0,
+    finalMemoryCost: memoryPayment.finalCost ?? INNOVATION_PAYMENT_MEMORY_COST,
+    hide: payment.hide,
+    organ: payment.organ,
+    bone: payment.bone
+  };
 
   const stash = { ...spent.stash };
   INNOVATION_PAYMENT_SLOTS.forEach(slot => {

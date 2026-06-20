@@ -95,17 +95,25 @@ import {
   getCampaignPrinciple,
   getCampaignPrincipleOptions
 } from '../data/campaignPrinciples.js';
-import { getWorkTogetherMemoryCost } from '../game/campaignPrincipleLogic.js';
+import {
+  getInnovationPlayerFields,
+  getPrinciplePlayerFields,
+  getWorkTogetherDisplay
+} from '../game/innovationPresentation.js';
 
 const baseTabs = ['overview', 'survivors', 'armory', 'innovations', 'principles', 'population', 'graveyard', 'quarries'];
 
-function InnovationClarity({ innovation }) {
+function InnovationClarity({ innovation, settlement }) {
+  const fields = getInnovationPlayerFields(innovation, settlement);
   return (
     <div className="innovation-clarity">
-      <p><strong>What it does:</strong> {innovation.playerSummary}</p>
-      <p><strong>How to use it:</strong> {innovation.howToUse}</p>
-      <p><strong>Use at:</strong> {innovation.actionLocation}</p>
-      <p><strong>Why it matters:</strong> {innovation.whyItMatters}</p>
+      <p><strong>Type:</strong> {fields.type}</p>
+      <p><strong>Effect:</strong> {fields.effect}</p>
+      <p><strong>Where to use:</strong> {fields.where}</p>
+      <p><strong>Cost/limit:</strong> {fields.costLimit}</p>
+      <p><strong>Permanent:</strong> {fields.permanent}</p>
+      <p><strong>Work Together eligible:</strong> {fields.workTogetherEligible}</p>
+      {fields.workTogether.eligible && <p className="muted-text">{fields.workTogether.label}</p>}
     </div>
   );
 }
@@ -1570,7 +1578,7 @@ export default function SettlementScreen({
               {builtActionIds.has('weaponDrills') && (
                 <>
                   <h4>Weapon Drills</h4>
-                  <InnovationClarity innovation={innovationCards.weaponDrills} />
+                  <InnovationClarity innovation={innovationCards.weaponDrills} settlement={settlement} />
                   <label className="field-label">
                     Training card
                     <select
@@ -1601,7 +1609,7 @@ export default function SettlementScreen({
               {builtActionIds.has('memoryTraining') && (
                 <>
                   <h4>Memory Training</h4>
-                  <InnovationClarity innovation={innovationCards.nightDrills} />
+                  <InnovationClarity innovation={innovationCards.nightDrills} settlement={settlement} />
                   <button
                     type="button"
                     disabled={!selectedActionSurvivor ||
@@ -1666,7 +1674,7 @@ export default function SettlementScreen({
               {builtActionIds.has('quietNight') && (
                 <article className="item-card">
                   <h4>Quiet Night</h4>
-                  <InnovationClarity innovation={innovationCards.quietNight} />
+                  <InnovationClarity innovation={innovationCards.quietNight} settlement={settlement} />
                   <button
                     type="button"
                     disabled={!selectedActionSurvivor || !selectedActionHasPanic ||
@@ -1685,7 +1693,7 @@ export default function SettlementScreen({
               {builtActionIds.has('taboo') && (
                 <article className="item-card">
                   <h4>Taboo</h4>
-                  <InnovationClarity innovation={innovationCards.taboo} />
+                  <InnovationClarity innovation={innovationCards.taboo} settlement={settlement} />
                   <label className="field-label">
                     Curse or Panic
                     <select
@@ -1726,7 +1734,7 @@ export default function SettlementScreen({
               {builtActionIds.has('painLessons') && (
                 <article className="item-card">
                   <h4>Pain Lessons</h4>
-                  <InnovationClarity innovation={innovationCards.painLessons} />
+                  <InnovationClarity innovation={innovationCards.painLessons} settlement={settlement} />
                   <label className="field-label">
                     Injury
                     <select
@@ -1761,7 +1769,7 @@ export default function SettlementScreen({
           {activeActionTab === 'legacy' && builtActionIds.has('shrineOfNames') && (
             <article className="item-card">
               <h4>Shrine of Names</h4>
-              <InnovationClarity innovation={innovationCards.shrineOfNames} />
+              <InnovationClarity innovation={innovationCards.shrineOfNames} settlement={settlement} />
               <button
                 type="button"
                 disabled={!selectedActionSurvivor ||
@@ -1782,7 +1790,7 @@ export default function SettlementScreen({
               {ownedInnovationEntries.filter(item => item.unlockedTab === 'survival').map(item => (
                 <article className="item-card built" key={item.id}>
                   <h4>{item.name}</h4>
-                  <InnovationClarity innovation={item} />
+                  <InnovationClarity innovation={item} settlement={settlement} />
                 </article>
               ))}
             </div>
@@ -2003,6 +2011,7 @@ export default function SettlementScreen({
               draw up to 3 innovations, then choose one. There is no normal direct-purchase
               innovation list.
             </p>
+            <p className="muted-text">{getWorkTogetherDisplay(settlement, 1).label}</p>
             <p>
               Available pool: {drawableInnovationIds.length} | Memory: {memoryBalance} |
               Hide {innovationMaterialAvailability.hide} | Organ {innovationMaterialAvailability.organ} |
@@ -2043,7 +2052,7 @@ export default function SettlementScreen({
                             <p className="eyebrow">Tier {item.tier} | {item.category}</p>
                             <h4>{item.name}</h4>
                             <p>{formatValueForDisplay(item.description)}</p>
-                            <InnovationClarity innovation={item} />
+                            <InnovationClarity innovation={item} settlement={settlement} />
                             <p><strong>Attempt cost:</strong> {formatInnovationCost(item.innovationCost)}</p>
                             {item.lockReason && <p className="missing">{item.lockReason}</p>}
                             <details>
@@ -2074,7 +2083,7 @@ export default function SettlementScreen({
                     <p className="eyebrow">Tier {item.tier} | {item.category}</p>
                     <h4>{item.name}</h4>
                     <p>{formatValueForDisplay(item.description)}</p>
-                    <InnovationClarity innovation={item} />
+                    <InnovationClarity innovation={item} settlement={settlement} />
                     <details>
                       <summary>{item.tutorialTitle}</summary>
                       {item.tutorialSteps.length ? (
@@ -2118,6 +2127,7 @@ export default function SettlementScreen({
           <div className="item-grid">
             {Object.entries(campaignPrincipleGroups).map(([group, definition]) => {
               const option = getCampaignPrinciple(settlement.principles?.[group]);
+              const fields = getPrinciplePlayerFields(option, settlement);
               return (
                 <article className="item-card" key={group}>
                   <p className="eyebrow">{definition.triggerLabel}</p>
@@ -2125,17 +2135,12 @@ export default function SettlementScreen({
                   {option ? (
                     <>
                       <p><strong>{option.name}</strong></p>
-                      <p>{option.playerSummary}</p>
-                      <p><strong>Effect:</strong> {option.mechanicalSummary}</p>
-                      {option.id === 'workTogether' && (() => {
-                        const cost = getWorkTogetherMemoryCost(settlement, 1);
-                        return (
-                          <p className="muted-text">
-                            1-Memory action preview: original {cost.originalCost}, Work Together discount -{cost.discount}, final {cost.finalCost}.{' '}
-                            {cost.usedThisYear ? 'Already used this Lantern Year.' : 'Available this Lantern Year.'}
-                          </p>
-                        );
-                      })()}
+                      <p><strong>Type:</strong> {fields.type}</p>
+                      <p><strong>Effect:</strong> {fields.effect}</p>
+                      <p><strong>Where it matters:</strong> {fields.where}</p>
+                      <p><strong>Permanent:</strong> {fields.permanent}</p>
+                      <p><strong>Work Together eligible:</strong> {fields.workTogetherEligible}</p>
+                      {fields.workTogether && <p className="muted-text">{fields.workTogether.label}</p>}
                     </>
                   ) : (
                     <>

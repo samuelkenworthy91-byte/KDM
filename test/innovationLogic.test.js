@@ -11,9 +11,16 @@ import {
 import {
   applyInnovationChoice,
   drawInnovationCandidates,
+  getDrawableInnovationIdsForSettlement,
   getInnovationDeckEntries
 } from '../src/game/innovationLogic.js';
+import {
+  getInnovationPlayerFields,
+  getPrinciplePlayerFields,
+  getWorkTogetherDisplay
+} from '../src/game/innovationPresentation.js';
 import { normalizeSettlement } from '../src/game/saveLogic.js';
+import { campaignPrinciples } from '../src/data/campaignPrinciples.js';
 
 function settlement(overrides = {}) {
   return {
@@ -45,7 +52,21 @@ test('every innovation card has a summary, destination, and tutorial', () => {
     assert.ok(card.howToUse, `${card.id} needs usage instructions`);
     assert.ok(card.actionLocation, `${card.id} needs an action location`);
     assert.ok(card.whyItMatters, `${card.id} needs a reason to care`);
+    const fields = getInnovationPlayerFields(card);
+    assert.ok(fields.type, `${card.id} needs a display type`);
+    assert.ok(fields.effect, `${card.id} needs a display effect`);
+    assert.ok(fields.where, `${card.id} needs a display location`);
+    assert.ok(fields.costLimit, `${card.id} needs cost/limit display`);
   });
+});
+
+test('innovation player summary helper is safe for partial legacy cards', () => {
+  const fields = getInnovationPlayerFields({ id: 'legacyPartial', name: 'Legacy Partial' });
+
+  assert.equal(fields.type, 'Passive');
+  assert.equal(fields.effect, 'This innovation has no current rules summary.');
+  assert.equal(fields.where, 'Settlement > Innovations');
+  assert.equal(fields.workTogetherEligible, 'No');
 });
 
 test('innovation cards use the unified exact innovation cost', () => {
@@ -82,6 +103,48 @@ test('memory action innovations are unified cards with plain-language action loc
       tab
     );
   });
+
+  assert.equal(getInnovationPlayerFields(innovationCards.weaponDrills).type, 'Settlement Action');
+  assert.equal(getInnovationPlayerFields(innovationCards.weaponDrills).workTogetherEligible, 'Yes');
+  assert.equal(getInnovationPlayerFields(innovationCards.quietNight).workTogetherEligible, 'Yes');
+  assert.equal(getInnovationPlayerFields(innovationCards.painLessons).workTogetherEligible, 'Innovation attempt only');
+  assert.equal(getInnovationPlayerFields(innovationCards.taboo).workTogetherEligible, 'Innovation attempt only');
+});
+
+test('campaign principles display as principles, not normal innovations', () => {
+  const current = settlement({
+    innovationDeckState: {
+      discoveredInnovationIds: [],
+      availableInnovationPoolIds: ['graves', 'cannibalism', 'language'],
+      builtInnovationIds: [],
+      innovationHistory: []
+    }
+  });
+
+  assert.equal(innovationCards.graves.implemented, false);
+  assert.equal(innovationCards.cannibalism, undefined);
+  assert.deepEqual(getDrawableInnovationIdsForSettlement(current), ['language']);
+
+  const graves = getPrinciplePlayerFields(campaignPrinciples.graves);
+  assert.equal(graves.type, 'Campaign Principle - Death');
+  assert.equal(graves.effect, 'Each survivor death gives +1 Memory.');
+  assert.equal(graves.where, 'Automatically after survivor deaths.');
+});
+
+test('Work Together display is consistent for exact 1-Memory costs', () => {
+  const current = {
+    ...settlement({ lanternYear: 5 }),
+    principles: { death: null, newLife: null, society: 'workTogether' }
+  };
+  const preview = getWorkTogetherDisplay(current, 1);
+
+  assert.equal(preview.originalCost, 1);
+  assert.equal(preview.discount, 1);
+  assert.equal(preview.finalCost, 0);
+  assert.match(preview.label, /Original cost: 1 Memory/);
+  assert.match(preview.label, /Work Together discount: -1/);
+  assert.match(preview.label, /Final cost: 0 Memory/);
+  assert.equal(getWorkTogetherDisplay(current, 2).eligible, false);
 });
 
 test('all quarry innovation-pool ids resolve to real cards', () => {
