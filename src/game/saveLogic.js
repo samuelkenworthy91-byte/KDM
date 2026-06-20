@@ -4,6 +4,7 @@ import {
   quarries
 } from '../data/quarries.js';
 import { equipment } from '../data/equipment.js';
+import { signatureItems } from '../data/gear/signatureItems.js';
 import {
   BASE_INNOVATION_POOL_IDS,
   MEMORY_ACTION_INNOVATION_IDS
@@ -288,7 +289,8 @@ export const defaultSettlement = {
   principles: { ...emptyPrinciples },
   pendingPrincipleChoice: null,
   principleHistory: [],
-  principleUses: {}
+  principleUses: {},
+  signatureProgress: {}
 };
 
 export function getSaveSlotKey(slotId) {
@@ -505,6 +507,19 @@ export function normalizeSettlement(data = {}) {
     discoveredQuarries: discoveredQuarryIds,
     unlockedQuarries: discoveredQuarryIds
   };
+
+  const incomingProgress = data.signatureProgress || {};
+  const signatureProgress = {};
+  signatureItems.forEach(item => {
+    const existing = incomingProgress[item.id] || {};
+    const isAlreadyCrafted = allGearIds.includes(item.id);
+    signatureProgress[item.id] = {
+      unlocked: Boolean(existing.unlocked ?? isAlreadyCrafted ?? false),
+      level: Number.isFinite(existing.level) ? existing.level : 0,
+      counters: existing.counters && typeof existing.counters === 'object' ? { ...existing.counters } : {},
+      milestoneHistory: Array.isArray(existing.milestoneHistory) ? [...existing.milestoneHistory] : []
+    };
+  });
 
   return {
     ...defaultSettlement,
@@ -735,7 +750,8 @@ export function normalizeSettlement(data = {}) {
     ])],
     rumourTexts: Array.isArray(data.rumourTexts) ? [...new Set(data.rumourTexts)] : [],
     discoveredQuarries: [...new Set(['paleHuntLion', ...discoveredQuarryIds])],
-    unlockedQuarries: [...new Set(['paleHuntLion', ...discoveredQuarryIds])]
+    unlockedQuarries: [...new Set(['paleHuntLion', ...discoveredQuarryIds])],
+    signatureProgress
   };
 }
 

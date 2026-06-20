@@ -236,3 +236,103 @@ test('Bone Smith exposes starter weapons', () => {
   assert.ok(weapons.length >= 1);
   assert.ok(weapons.some(item => item.name === 'Basic Sword'));
 });
+
+// Signature weapon tests
+import { getMilestoneProgressText } from '../src/utils/signatureProgressHelper.js';
+import { normalizeSettlement } from '../src/game/saveLogic.js';
+import { signatureItems } from '../src/data/gear/signatureItems.js';
+import { canCraft } from '../src/game/craftingLogic.js';
+
+test('signature item visible as locked target and building unlock alone does not make signature craftable', () => {
+  const cleaver = equipment.find(item => item.id === 'palechord_cleaver');
+  assert.ok(cleaver);
+
+  const settlement = {
+    builtInnovations: ['lionTrophyHall'],
+    signatureProgress: {
+      palechord_cleaver: { unlocked: false, level: 0, counters: {}, milestoneHistory: [] }
+    }
+  };
+
+  const unlockState = getGearUnlockState(cleaver, settlement);
+  assert.equal(unlockState.unlocked, false);
+  assert.ok(unlockState.reason.startsWith('Signature Locked:'));
+});
+
+test('signature unlock condition makes item craftable if cost is affordable', () => {
+  const cleaver = equipment.find(item => item.id === 'palechord_cleaver');
+  assert.ok(cleaver);
+
+  const settlement = {
+    builtInnovations: ['lionTrophyHall'],
+    signatureProgress: {
+      palechord_cleaver: { unlocked: true, level: 1, counters: {}, milestoneHistory: [] }
+    },
+    stash: {
+      paleLionClaw: 2,
+      paleLionSinew: 2,
+      paleLionMane: 2,
+      elderPaleFang: 1,
+      perfectMane: 1,
+      bone: 2,
+      scrap: 2
+    }
+  };
+
+  const unlockState = getGearUnlockState(cleaver, settlement);
+  assert.equal(unlockState.unlocked, true);
+  assert.equal(canCraft(cleaver, settlement.stash), true);
+});
+
+test('existing normal gear remains craftable from buildings', () => {
+  const basicSword = equipment.find(item => item.id === 'starter_sword');
+  assert.ok(basicSword);
+
+  const settlement = {
+    builtInnovations: ['boneSmith']
+  };
+
+  const unlockState = getGearUnlockState(basicSword, settlement);
+  assert.equal(unlockState.unlocked, true);
+});
+
+test('progress state migrates old saves', () => {
+  const oldSave = {
+    craftedGear: ['palechord_cleaver']
+  };
+
+  const normalized = normalizeSettlement(oldSave);
+  assert.ok(normalized.signatureProgress);
+  assert.ok(normalized.signatureProgress.palechord_cleaver);
+  assert.equal(normalized.signatureProgress.palechord_cleaver.unlocked, true);
+  assert.equal(normalized.signatureProgress.gorge_fist_knucklers.unlocked, false);
+});
+
+test('milestone progress helper returns readable progress', () => {
+  const cleaver = signatureItems.find(item => item.id === 'palechord_cleaver');
+  assert.ok(cleaver);
+
+  const progress1 = { unlocked: false, level: 0, counters: { bleed_4_fights_won: 2 } };
+  const res1 = getMilestoneProgressText(cleaver, progress1);
+  assert.equal(res1.nextMilestone, 'Unlock (Level 1)');
+  assert.equal(res1.progressText, '2/3');
+  assert.equal(res1.requirement, 'Win 3 fights where the quarry had Bleed 4+ before it died.');
+
+  const progress2 = { unlocked: true, level: 1, counters: { max_bleed_in_one_fight: 8 } };
+  const res2 = getMilestoneProgressText(cleaver, progress2);
+  assert.equal(res2.nextMilestone, 'Level 2');
+  assert.equal(res2.progressText, '8/10');
+  assert.equal(res2.requirement, 'Apply 10 total Bleed in one fight.');
+
+  const progress3 = { unlocked: true, level: 2, counters: {} };
+  const res3 = getMilestoneProgressText(cleaver, progress3);
+  assert.equal(res3.nextMilestone, 'Level 3');
+  assert.equal(res3.progressText, 'not yet tracked');
+  assert.equal(res3.requirement, 'Defeat the Pale Hunt Lion while it has Bleed 6+.');
+
+  const progress4 = { unlocked: true, level: 3, counters: {} };
+  const res4 = getMilestoneProgressText(cleaver, progress4);
+  assert.equal(res4.nextMilestone, 'None');
+  assert.equal(res4.progressText, 'Max Level');
+  assert.equal(res4.requirement, 'Fully evolved!');
+});

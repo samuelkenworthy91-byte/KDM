@@ -58,6 +58,7 @@ import {
   getUnlockedGearLocationIds,
   groupGearByArmouryTab
 } from '../utils/gearNormalization.js';
+import { getMilestoneProgressText } from '../utils/signatureProgressHelper.js';
 import { calculateIntimacyProjections } from '../game/eventLogic.js';
 import { getPersonalCardId } from '../game/deckLogic.js';
 import { getBirthTraitCost } from '../game/newbornLogic.js';
@@ -1915,6 +1916,9 @@ export default function SettlementScreen({
                     {recipes.map(recipe => {
                       const unlockState = getGearUnlockState(recipe, settlement);
                       const isLocked = !unlockState.unlocked;
+                      const isSignature = recipe.keywords?.includes('Signature') || false;
+                      const sigProgress = settlement.signatureProgress?.[recipe.id];
+                      const progressInfo = isSignature ? getMilestoneProgressText(recipe, sigProgress) : null;
                       return (
                         <article className={`item-card ${isLocked ? 'locked' : ''}`} key={recipe.stableId || recipe.id}>
                           <p className="eyebrow">{recipe.slot}</p>
@@ -1936,6 +1940,24 @@ export default function SettlementScreen({
                           <p><strong>Source:</strong> {recipe.quarryName || recipe.source || 'Settlement'}</p>
                           <p><strong>Keywords:</strong> {recipe.keywords?.join(', ') || 'Survival'}</p>
                           <p>{getCleanGearSummary(recipe)}</p>
+                          {isSignature && progressInfo && (
+                            <div className="signature-progress-card-info" style={{
+                              marginTop: '8px',
+                              marginBottom: '8px',
+                              padding: '8px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                              borderRadius: '4px',
+                              fontSize: '0.85rem',
+                              borderLeft: '3px solid #ffaa00'
+                            }}>
+                              <div style={{ fontWeight: 'bold', color: '#ffaa00', marginBottom: '4px' }}>
+                                Signature Weapon Progress
+                              </div>
+                              <div><strong>Next Milestone:</strong> {progressInfo.nextMilestone}</div>
+                              <div style={{ wordBreak: 'break-word' }}><strong>Unlock Condition:</strong> {progressInfo.requirement}</div>
+                              <div><strong>Progress:</strong> {progressInfo.progressText}</div>
+                            </div>
+                          )}
                           <GearCardList recipe={recipe} />
                           <CostList cost={recipe.cost} stash={settlement.stash} />
                           {!recipe.deprecated && !recipe.hiddenFromCrafting && (

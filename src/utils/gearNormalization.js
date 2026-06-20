@@ -316,6 +316,27 @@ export function getGearUnlockState(item, settlement = {}) {
     return { unlocked: true, reason: '' };
   }
 
+  const isSignature = item.keywords?.includes('Signature') || false;
+  if (isSignature) {
+    const buildingUnlocked = buildingId && unlockedLocationIds.has(buildingId);
+    if (!buildingUnlocked) {
+      return {
+        unlocked: false,
+        reason: buildingId && innovations[buildingId]
+          ? `Requires ${innovations[buildingId].name}`
+          : `Requires ${formatReadableLabel(buildingId)}`
+      };
+    }
+    const signatureProgress = settlement.signatureProgress?.[item.id];
+    if (!signatureProgress?.unlocked) {
+      return {
+        unlocked: false,
+        reason: `Signature Locked: ${item.evolutionMilestones?.[0]?.unlock || 'Complete milestone to unlock'}`
+      };
+    }
+    return { unlocked: true, reason: '' };
+  }
+
   if (buildingId && unlockedLocationIds.has(buildingId)) {
     return { unlocked: true, reason: '' };
   }
