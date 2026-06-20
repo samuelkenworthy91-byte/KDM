@@ -5,6 +5,7 @@ import {
 import { resources } from '../data/resources.js';
 import { equipment } from '../data/equipment.js';
 import { createSurvivor, createGearInstance } from './saveLogic.js';
+import { adjustRestOutcomeOddsForPrinciples } from './principleEffects.js';
 
 const living = survivor => survivor?.alive !== false && Number(survivor?.hp) > 0;
 
@@ -21,6 +22,10 @@ function updatePartyMember(party, survivorId, updater) {
 function pickRandom(array) {
   if (!array || !array.length) return null;
   return array[Math.floor(Math.random() * array.length)];
+}
+
+export function getRestOutcomeOdds(settlement = {}, baseOdds = { negative: 30, neutral: 40, positive: 30 }) {
+  return adjustRestOutcomeOddsForPrinciples(settlement, baseOdds);
 }
 
 function getGearLocationId(item = {}) {

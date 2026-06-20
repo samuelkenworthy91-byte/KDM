@@ -10,6 +10,7 @@ export const emptyPrinciples = {
   newLife: null,
   society: null
 };
+const WORK_TOGETHER_KEY = 'workTogether';
 
 function unique(values = []) {
   return [...new Set(values.filter(Boolean))];
@@ -172,5 +173,34 @@ export function getNextMissingPrincipleChoice(settlement = {}) {
     group,
     trigger: campaignPrincipleGroups[group]?.triggerLabel || group,
     options: getCampaignPrincipleOptions(group)
+  };
+}
+
+export function getWorkTogetherMemoryCost(settlement = {}, originalCost = 0) {
+  const cost = Math.max(0, Math.floor(Number(originalCost) || 0));
+  const usedYear = settlement.principleUses?.[WORK_TOGETHER_KEY]?.lanternYear;
+  const available = hasCampaignPrinciple(settlement, 'society', WORK_TOGETHER_KEY) &&
+    cost === 1 &&
+    usedYear !== settlement.lanternYear;
+  return {
+    originalCost: cost,
+    discount: available ? 1 : 0,
+    finalCost: available ? 0 : cost,
+    usedThisYear: usedYear === settlement.lanternYear,
+    applied: available
+  };
+}
+
+export function markWorkTogetherUsed(settlement = {}, details = {}) {
+  return {
+    ...settlement,
+    principleUses: {
+      ...normalizePrincipleUses(settlement.principleUses),
+      [WORK_TOGETHER_KEY]: {
+        lanternYear: settlement.lanternYear,
+        source: details.source || 'memory-action',
+        timestamp: details.timestamp || new Date().toISOString()
+      }
+    }
   };
 }

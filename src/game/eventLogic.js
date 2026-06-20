@@ -7,6 +7,7 @@ import { disorders } from '../data/disorders.js';
 import { injuries } from '../data/injuries.js';
 import { scars } from '../data/scars.js';
 import { removePanicFromSurvivor } from './deckLogic.js';
+import { getNewLifeIntimacyModifiers } from './principleEffects.js';
 
 const BASIC_IDS = BASIC_RESOURCE_IDS;
 const MONSTER_IDS = Object.values(resources).filter(item => item.type === 'monster' && !item.creatureId).map(item => item.id);
@@ -545,6 +546,22 @@ export function calculateIntimacyProjections(settlement = {}, innovationCards = 
     modifiers.push(row);
     modifierRows.push(row);
   });
+
+  const newLife = getNewLifeIntimacyModifiers(settlement);
+  if (newLife.successDelta) {
+    const row = percentRow(newLife.label, newLife.successDelta, 'principle', 'campaignPrinciple', {
+      type: 'success'
+    });
+    modifiers.push(row);
+    modifierRows.push(row);
+  }
+  if (newLife.tragedyDelta) {
+    const row = percentRow(newLife.label, newLife.tragedyDelta, 'principle', 'campaignPrinciple', {
+      type: 'tragedy'
+    });
+    modifiers.push(row);
+    modifierRows.push(row);
+  }
 
   if (memoryMitigationSelected) {
     const row = percentRow('Memory mitigation', -0.1, 'risk', 'memory', {

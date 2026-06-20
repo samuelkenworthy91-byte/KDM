@@ -22,6 +22,7 @@ import {
 import { getMemoryBalance } from './memoryEconomy.js';
 import { normalizeInnovationDeckState } from './innovationModel.js';
 import {
+  createPendingPrincipleChoice,
   emptyPrinciples,
   normalizeCampaignPrincipleState
 } from './campaignPrincipleLogic.js';
@@ -436,11 +437,48 @@ export function normalizeSettlement(data = {}) {
       ? innovationDeckState.builtInnovationIds
       : [])
   ])];
-  const principleState = normalizeCampaignPrincipleState({
+  let principleState = normalizeCampaignPrincipleState({
     ...data,
     builtInnovations: legacyBuiltInnovationIds,
     lanternYear: Number.isFinite(data.lanternYear) ? data.lanternYear : null
   });
+  const pendingDeathResolutionIds = Array.isArray(data.pendingDeathResolutions)
+    ? data.pendingDeathResolutions
+        .filter(entry => entry?.status === 'pending')
+        .map(entry => entry.id)
+        .filter(Boolean)
+    : [];
+  if (!principleState.principles.death && !principleState.pendingPrincipleChoice && pendingDeathResolutionIds.length) {
+    principleState = {
+      ...principleState,
+      pendingPrincipleChoice: createPendingPrincipleChoice({
+        ...data,
+        principles: principleState.principles
+      }, 'death', 'First survivor death', pendingDeathResolutionIds).pendingPrincipleChoice
+    };
+  }
+  if (!principleState.principles.newLife && !principleState.pendingPrincipleChoice && data.pendingNewborn?.id) {
+    principleState = {
+      ...principleState,
+      pendingPrincipleChoice: createPendingPrincipleChoice({
+        ...data,
+        principles: principleState.principles
+      }, 'newLife', 'First newborn', [data.pendingNewborn.id]).pendingPrincipleChoice
+    };
+  }
+  if (
+    !principleState.principles.society &&
+    !principleState.pendingPrincipleChoice &&
+    (Number(data.lanternYear) || 0) >= 5
+  ) {
+    principleState = {
+      ...principleState,
+      pendingPrincipleChoice: createPendingPrincipleChoice({
+        ...data,
+        principles: principleState.principles
+      }, 'society', 'Lantern Year 5', []).pendingPrincipleChoice
+    };
+  }
   const normalizedInnovationDeckState = normalizeInnovationDeckState(innovationDeckState, {
     ownedIds: builtInnovationIds,
     defaultPoolIds: BASE_INNOVATION_POOL_IDS,

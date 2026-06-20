@@ -20,7 +20,10 @@ function settlement(memories = 0) {
     memoryHistory: [],
     pendingDeathResolutions: [],
     stash: {},
-    lanternYear: 3
+    lanternYear: 3,
+    principles: { death: null, newLife: null, society: null },
+    principleUses: {},
+    principleHistory: []
   };
 }
 
@@ -68,32 +71,68 @@ test('full party death awards no memories', () => {
   assert.equal(awarded.memoryHistory.length, 0);
 });
 
-test('burial and resource recovery grant no memory by default', () => {
+test('death principle choices replace repeated burial/resource choices', () => {
   const resolution = createDeathResolution(
     { id: 'dead-1', name: 'Mara' },
     { id: 'resolution-1', timestamp: '2026-01-01T00:00:00.000Z' }
   );
   const queued = queueDeathResolutions(settlement(), [resolution]);
-  const buried = resolveDeathMemoryChoice(queued, resolution.id, 'bury');
-  const recovered = resolveDeathMemoryChoice(
-    queueDeathResolutions(settlement(), [resolution]),
-    resolution.id,
-    'recover-resource',
-    'hide'
-  );
+  const graves = resolveDeathMemoryChoice({
+    ...queued,
+    principles: { ...queued.principles, death: 'graves' }
+  }, resolution.id, 'bury');
+  const cannibalism = resolveDeathMemoryChoice({
+    ...queueDeathResolutions(settlement(), [resolution]),
+    principles: { death: 'cannibalism', newLife: null, society: null }
+  }, resolution.id, 'recover-resource', 'hide');
 
-  assert.equal(buried.memories, 0);
-  assert.equal(buried.memoryHistory.length, 0);
-  assert.equal(buried.pendingDeathResolutions[0].status, 'resolved');
-  assert.equal(buried.pendingDeathResolutions[0].choice, 'bury');
-  assert.equal(recovered.memories, 0);
-  assert.equal(recovered.stash.hide, 1);
+  assert.equal(queued.pendingPrincipleChoice.group, 'death');
+  assert.equal(graves.memories, 1);
+  assert.equal(graves.memoryHistory[0].source, 'death-principle-graves');
+  assert.equal(graves.pendingDeathResolutions[0].status, 'resolved');
+  assert.equal(graves.pendingDeathResolutions[0].choice, 'graves');
+  assert.equal(cannibalism.memories, 0);
+  assert.equal(cannibalism.stash.hide, 1);
+  assert.equal(cannibalism.pendingDeathResolutions[0].choice, 'cannibalism');
+});
+
+test('same death principle reward cannot be claimed twice', () => {
+  const resolution = createDeathResolution(
+    { id: 'dead-1', name: 'Mara' },
+    { id: 'resolution-1', timestamp: '2026-01-01T00:00:00.000Z' }
+  );
+  const queued = {
+    ...queueDeathResolutions(settlement(), [resolution]),
+    principles: { death: 'graves', newLife: null, society: null }
+  };
+  const once = resolveDeathMemoryChoice(queued, resolution.id);
+  const twice = resolveDeathMemoryChoice(once, resolution.id);
+
+  assert.equal(once.memories, 1);
+  assert.equal(twice.memories, 1);
+  assert.equal(twice.memoryHistory.length, 1);
 });
 
 test('spending cannot make memory negative', () => {
   assert.equal(canSpendMemories(settlement(1), 2), false);
   assert.equal(spendMemories(settlement(1), 2), null);
   assert.equal(spendMemories(settlement(2), 2).memories, 0);
+});
+
+test('Work Together discounts exactly one 1-Memory cost per Lantern Year', () => {
+  const current = {
+    ...settlement(0),
+    principles: { death: null, newLife: null, society: 'workTogether' }
+  };
+  assert.equal(canSpendMemories(current, 1), true);
+  const first = spendMemories(current, 1, { source: 'test-action' });
+
+  assert.equal(first.memories, 0);
+  assert.equal(first.memoryHistory[0].workTogetherDiscount, 1);
+  assert.equal(first.principleUses.workTogether.lanternYear, 3);
+  assert.equal(canSpendMemories(first, 1), false);
+  assert.equal(spendMemories(first, 1), null);
+  assert.equal(canSpendMemories({ ...current, memories: 1, settlementMemory: 1 }, 2), false);
 });
 
 test('legacy settlement memory migrates into the authoritative balance', () => {

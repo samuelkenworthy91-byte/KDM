@@ -25,7 +25,7 @@ export const campaignPrinciples = {
     name: 'Graves',
     triggerLabel: campaignPrincipleGroups.death.triggerLabel,
     playerSummary: 'The settlement gives the dead a place to remain.',
-    mechanicalSummary: 'Future survivor deaths will be resolved by the Graves principle. Reward wiring is handled by the death-principle reward patch.',
+    mechanicalSummary: 'Every survivor death grants +1 Memory, including the death that triggered this choice.',
     permanent: true,
     effectTags: ['death', 'memory', 'principle']
   },
@@ -35,7 +35,7 @@ export const campaignPrinciples = {
     name: 'Cannibalism',
     triggerLabel: campaignPrincipleGroups.death.triggerLabel,
     playerSummary: 'The settlement decides that the dead must feed the living.',
-    mechanicalSummary: 'Future survivor deaths will be resolved by the Cannibalism principle. Reward wiring is handled by the death-principle reward patch.',
+    mechanicalSummary: 'Every survivor death grants +1 random basic resource, including the death that triggered this choice.',
     permanent: true,
     effectTags: ['death', 'resource', 'principle']
   },
@@ -45,7 +45,7 @@ export const campaignPrinciples = {
     name: 'Protect the Young',
     triggerLabel: campaignPrincipleGroups.newLife.triggerLabel,
     playerSummary: 'Children are sheltered as the settlement learns to endure.',
-    mechanicalSummary: '+10 percentage points intimacy success, -10 tragedy, and newborn HP effects will be wired by the New Life effects patch.',
+    mechanicalSummary: '+10 percentage points intimacy success, -10 tragedy, and every newborn gains +5 max HP.',
     permanent: true,
     effectTags: ['newLife', 'intimacy', 'newborn', 'principle']
   },
@@ -55,7 +55,7 @@ export const campaignPrinciples = {
     name: 'Survival of the Fittest',
     triggerLabel: campaignPrincipleGroups.newLife.triggerLabel,
     playerSummary: 'The settlement lets only the strongest lessons survive.',
-    mechanicalSummary: '+20 percentage points intimacy tragedy and newborn survival/damage effects will be wired by the New Life effects patch.',
+    mechanicalSummary: '+20 percentage points intimacy tragedy; every newborn gains +2 personal damage and +1 max Survival.',
     permanent: true,
     effectTags: ['newLife', 'intimacy', 'newborn', 'principle']
   },
@@ -65,7 +65,7 @@ export const campaignPrinciples = {
     name: 'Work Together',
     triggerLabel: campaignPrincipleGroups.society.triggerLabel,
     playerSummary: 'The settlement learns to share memory and labor.',
-    mechanicalSummary: 'Once per Lantern Year, one exact 1-Memory action can be discounted to 0. Discount wiring is handled by the Society effects patch.',
+    mechanicalSummary: 'Once per Lantern Year, one exact 1-Memory action costs 0 instead.',
     permanent: true,
     effectTags: ['society', 'memory', 'discount', 'principle']
   },
@@ -75,7 +75,7 @@ export const campaignPrinciples = {
     name: 'Embrace the Dark',
     triggerLabel: campaignPrincipleGroups.society.triggerLabel,
     playerSummary: 'The settlement stops fighting the dark and learns its rhythm.',
-    mechanicalSummary: 'Rest-stop odds adjustment will be wired by the Society effects patch.',
+    mechanicalSummary: 'Rest stops shift -10 negative, -10 neutral, and +20 positive while keeping total odds at 100%.',
     permanent: true,
     effectTags: ['society', 'rest', 'principle']
   }

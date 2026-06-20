@@ -95,6 +95,7 @@ import {
   getCampaignPrinciple,
   getCampaignPrincipleOptions
 } from '../data/campaignPrinciples.js';
+import { getWorkTogetherMemoryCost } from '../game/campaignPrincipleLogic.js';
 
 const baseTabs = ['overview', 'survivors', 'armory', 'innovations', 'principles', 'population', 'graveyard', 'quarries'];
 
@@ -576,13 +577,13 @@ function SurvivorCard({
                       disabled={
                         !memoryBuilt('quietNight') ||
                         isMemoryActionUsed(settlement, 'quietNight') ||
-                        settlement.settlementMemory < 1
+                        !canSpendMemories(settlement, 1)
                       }
                       title={!memoryBuilt('quietNight')
                         ? 'Requires Quiet Night'
                         : isMemoryActionUsed(settlement, 'quietNight')
                           ? 'Already used this Lantern Year'
-                          : settlement.settlementMemory < 1
+                          : !canSpendMemories(settlement, 1)
                             ? 'Not enough Memory'
                             : ''}
                       onClick={() => confirmForget(
@@ -766,7 +767,7 @@ function SurvivorCard({
       {onStartHunt && <button type="button" onClick={() => onStartHunt(survivor.id)}>Start Hunt</button>}
       <button
         type="button"
-        disabled={survivor.hp >= survivor.maxHp || settlement.settlementMemory < 1}
+        disabled={survivor.hp >= survivor.maxHp || !canSpendMemories(settlement, 1)}
         onClick={() => onRestSurvivor(survivor.id)}
       >
         Rest This Survivor (1 Memory)
@@ -817,11 +818,11 @@ function SurvivorCard({
               key={cardId}
               disabled={
                 isMemoryActionUsed(settlement, 'weaponDrills') ||
-                settlement.settlementMemory < 1
+                !canSpendMemories(settlement, 1)
               }
               title={isMemoryActionUsed(settlement, 'weaponDrills')
                 ? 'Already used this Lantern Year'
-                : settlement.settlementMemory < 1
+                : !canSpendMemories(settlement, 1)
                   ? 'Not enough Memory'
                   : ''}
               onClick={() => onWeaponDrill(survivor.id, cardId)}
@@ -837,11 +838,11 @@ function SurvivorCard({
             type="button"
             disabled={
               isMemoryActionUsed(settlement, 'memoryTraining') ||
-              settlement.settlementMemory < 1
+              !canSpendMemories(settlement, 1)
             }
             title={isMemoryActionUsed(settlement, 'memoryTraining')
               ? 'Already used this Lantern Year'
-              : settlement.settlementMemory < 1
+              : !canSpendMemories(settlement, 1)
                 ? 'Not enough Memory'
                 : ''}
             onClick={() => onMemoryTraining(survivor.id)}
@@ -949,7 +950,7 @@ export default function SettlementScreen({
   const innovationMaterialAvailability = getInnovationMaterialAvailability(settlement.stash);
   const hasInnovationMaterials = canCoverInnovationMaterials(settlement.stash);
   const canAttemptInnovation =
-    settlement.settlementMemory >= 1 &&
+    canSpendMemories(settlement, 1) &&
     hasInnovationMaterials &&
     drawableInnovationIds.length > 0;
   const nextTimelineMilestone = getNextTimelineMilestone(settlement.lanternYear);
@@ -1191,7 +1192,7 @@ export default function SettlementScreen({
       if (livingSurvivors.every(survivor => survivor.lastForgetLanternYear === settlement.lanternYear)) {
         return 'Already used for every survivor this Lantern Year';
       }
-      if (settlement.settlementMemory < EARLY_FORGETTING_COST) return 'Not enough Memory';
+      if (!canSpendMemories(settlement, EARLY_FORGETTING_COST)) return 'Not enough Memory';
       return 'Available in Actions';
     }
     if (actionId === 'quietNight' && !hasPanic) return 'No eligible Panic cards';
@@ -1205,7 +1206,7 @@ export default function SettlementScreen({
       taboo: 2,
       shrineOfNames: 2
     }[actionId] || 0;
-    if (settlement.settlementMemory < memoryCost) return 'Not enough Memory';
+    if (!canSpendMemories(settlement, memoryCost)) return 'Not enough Memory';
     return 'Available in Actions';
   };
 
@@ -2126,6 +2127,15 @@ export default function SettlementScreen({
                       <p><strong>{option.name}</strong></p>
                       <p>{option.playerSummary}</p>
                       <p><strong>Effect:</strong> {option.mechanicalSummary}</p>
+                      {option.id === 'workTogether' && (() => {
+                        const cost = getWorkTogetherMemoryCost(settlement, 1);
+                        return (
+                          <p className="muted-text">
+                            1-Memory action preview: original {cost.originalCost}, Work Together discount -{cost.discount}, final {cost.finalCost}.{' '}
+                            {cost.usedThisYear ? 'Already used this Lantern Year.' : 'Available this Lantern Year.'}
+                          </p>
+                        );
+                      })()}
                     </>
                   ) : (
                     <>
@@ -2270,7 +2280,7 @@ export default function SettlementScreen({
                   );
                 })}
               </div>
-              {newbornTraitCost > memoryBalance && (
+              {!canSpendMemories(settlement, newbornTraitCost) && (
                 <p className="missing">Not enough Memory for the selected birth traits.</p>
               )}
               {!newbornFirstName.trim() && <p className="missing">A first name is required.</p>}
@@ -2281,7 +2291,7 @@ export default function SettlementScreen({
                 disabled={
                   !newbornFirstName.trim() ||
                   !newbornFamilyName.trim() ||
-                  newbornTraitCost > memoryBalance
+                  !canSpendMemories(settlement, newbornTraitCost)
                 }
                 onClick={() => onConfirmNewborn({
                   firstName: newbornFirstName,
@@ -2449,23 +2459,24 @@ export default function SettlementScreen({
                 .map(entry => (
                   <article className="item-card" key={entry.id}>
                     <h4>{entry.survivorName}</h4>
-                    <p>{entry.cause}</p>
-                    <p className="muted-text">
-                      Lay them to rest, or recover one basic resource.
-                    </p>
-                    <div className="button-row">
-                      <button type="button" onClick={() => onResolveDeath(entry.id, 'bury')}>
-                        Lay to Rest
+                  <p>{entry.cause}</p>
+                  <p className="muted-text">
+                      {settlement.principles?.death
+                        ? `Death Principle locked: ${getCampaignPrinciple(settlement.principles.death)?.name}.`
+                        : 'Choose a permanent Death Principle before resolving death rewards.'}
+                  </p>
+                  <div className="button-row">
+                    {settlement.principles?.death ? (
+                      <button type="button" onClick={() => onResolveDeath(entry.id)}>
+                        Apply Death Principle
                       </button>
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={() => onResolveDeath(entry.id, 'recover-resource', 'bone')}
-                      >
-                        Recover 1 Bone
+                    ) : (
+                      <button type="button" onClick={onOpenPrincipleChoice}>
+                        Choose Death Principle
                       </button>
-                    </div>
-                  </article>
+                    )}
+                  </div>
+                </article>
                 ))}
             </section>
           )}

@@ -1079,6 +1079,7 @@ export function playCard(cardIndex, state, options = {}) {
       (isAttack && !state.firstAttackPlayed && !affinityTriggers.redFightAttackUsed && affinityBonus.redLevel >= 1 ? 1 : 0) +
       (isAttack && (state.attacksPlayedThisTurn || 0) === 0 && affinityBonus.redLevel >= 2 ? 1 : 0) +
       (state.fightingArts?.includes('bloodMemory') && state.woundHistory?.length ? 1 : 0) +
+      (survivor.permanentModifiers?.personalDamageBonus || 0) +
       (state.fightingArts?.includes('boneSetWrong') &&
         ['hammer', 'club', 'axe', 'grandWeapon', 'scythe'].includes(weaponType) ? 1 : 0) +
       (effect.type === 'multiHitDamage' ? proficiencyPerHitBonus : 0)

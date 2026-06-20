@@ -25,7 +25,6 @@ import {
   getSurvivorMonsterBaneId,
   isMonsterBaneId
 } from './data/fightingArts.js';
-import { graveLegacies } from './data/graveLegacies.js';
 import { getIntentTargetRule } from './game/monsterTargeting.js';
 import {
   innovationCards,
@@ -149,7 +148,6 @@ import CombatScreen from './screens/CombatScreen.jsx';
 import PartyCombatScreen from './screens/PartyCombatScreen.jsx';
 import CreateSettlementScreen from './screens/CreateSettlementScreen.jsx';
 import EventScreen from './screens/EventScreen.jsx';
-import GraveLegacyScreen from './screens/GraveLegacyScreen.jsx';
 import LootRewardScreen from './screens/LootRewardScreen.jsx';
 import InnovationDrawScreen from './screens/InnovationDrawScreen.jsx';
 import InnovationPaymentScreen from './screens/InnovationPaymentScreen.jsx';
@@ -169,7 +167,10 @@ import SettlementScreen from './screens/SettlementScreen.jsx';
 import SurvivorProgressScreen from './screens/SurvivorProgressScreen.jsx';
 import TitleScreen from './screens/TitleScreen.jsx';
 import PrincipleChoiceScreen from './screens/PrincipleChoiceScreen.jsx';
-import { chooseCampaignPrinciple } from './game/campaignPrincipleLogic.js';
+import {
+  applyNewLifePrincipleToNewborn,
+  chooseCampaignPrincipleWithEffects
+} from './game/principleEffects.js';
 
 function applyChildTrait(survivor, rawTraitId, recordInnate = true) {
   const traitId = normalizeChildTraitId(rawTraitId);
@@ -1740,49 +1741,10 @@ export default function App() {
   const returnToSettlement = () => returnToSettlementSafely();
 
   const continueFromSummary = () => {
-    if (runSummary?.outcome === 'death') setScreen('graveLegacy');
+    if (runSummary?.outcome === 'death') {
+      setScreen(settlement?.pendingPrincipleChoice?.group === 'death' ? 'principleChoice' : 'settlement');
+    }
     else returnToSettlement();
-  };
-
-  const chooseGraveLegacy = legacy => {
-    if (!legacy || !runSummary) return;
-    const killedById = runSummary.killedById || 'unknownMonster';
-    const graveEntry = {
-      survivorName: runSummary.survivorName,
-      killedBy: runSummary.killedBy || 'unknownMonster',
-      nodesCompleted: runSummary.nodesCompleted,
-      rowReached: runSummary.rowReached,
-      chosenLegacyId: legacy.id,
-      completedRuns: runSummary.survivorCompletedRuns || 0,
-      traits: runSummary.survivorTraits || [],
-      fightingArts: runSummary.survivorFightingArts || [],
-      weaponProficiency: runSummary.survivorWeaponProficiency || {},
-      proficientWeaponTypes: runSummary.proficientWeaponTypes || [],
-      masteredWeaponTypes: (runSummary.proficientWeaponTypes || []).filter(item => item.mastered),
-      injuries: runSummary.survivorInjuries || [],
-      scars: runSummary.survivorScars || [],
-      disorders: runSummary.survivorDisorders || [],
-      gearLostCount: runSummary.gearLostCount || 0,
-      gearLostNames: runSummary.gearLostNames || [],
-      timestamp: new Date().toISOString()
-    };
-
-    updateSettlement(current => {
-      const nextRunBonus = { ...(current.nextRunBonus || {}) };
-      const monsterKnowledge = { ...(current.monsterKnowledge || {}) };
-      if (legacy.id === graveLegacies.buryGear.id) nextRunBonus.randomMonsterPart = true;
-      else if (legacy.id === graveLegacies.studyDeath.id) monsterKnowledge[killedById] = (monsterKnowledge[killedById] || 0) + 1;
-      else if (legacy.id === graveLegacies.inheritScar.id) nextRunBonus.extraMaxHp = (nextRunBonus.extraMaxHp || 0) + 1;
-      else if (legacy.id === graveLegacies.oathOfVengeance.id) nextRunBonus.firstCombatStrength = (nextRunBonus.firstCombatStrength || 0) + 1;
-
-      return {
-        ...current,
-        monsterKnowledge,
-        nextRunBonus,
-        graveHistory: [graveEntry, ...(current.graveHistory || [])]
-      };
-    });
-    returnToSettlement();
   };
 
   const handleBuild = item => {
@@ -1886,7 +1848,7 @@ export default function App() {
   };
 
   const handleChooseCampaignPrinciple = (group, optionId) => {
-    updateSettlement(current => chooseCampaignPrinciple(current, group, optionId));
+    updateSettlement(current => chooseCampaignPrincipleWithEffects(current, group, optionId));
     setScreen('settlement');
   };
 
@@ -3299,6 +3261,7 @@ export default function App() {
         }
       }
       newborn = applyNewSurvivorSettlementBonuses(newborn, current);
+      newborn = applyNewLifePrincipleToNewborn(newborn, current);
 
       const remainingBirths = pending.remainingBirths - 1;
       let nextPending = null;
@@ -3510,7 +3473,9 @@ export default function App() {
             result={nemesisResult}
             onChooseReward={handleNemesisRewardChoice}
             onContinue={() => {
-              if (nemesisResult.deathSummary) setScreen('graveLegacy');
+              if (nemesisResult.deathSummary) {
+                setScreen(settlement?.pendingPrincipleChoice?.group === 'death' ? 'principleChoice' : 'settlement');
+              }
               else {
                 setNemesisResult(null);
                 setScreen('settlement');
@@ -3723,13 +3688,9 @@ export default function App() {
         return <RunSummaryScreen summary={runSummary} onContinue={continueFromSummary} />;
       case 'graveLegacy':
         return (
-          <GraveLegacyScreen
-            summary={runSummary}
-            showAllChoices={settlement.builtMemoryInnovations.includes('deathArchive')}
-            onChooseLegacy={legacy => {
-              chooseGraveLegacy(legacy);
-              setNemesisResult(null);
-            }}
+          <InvalidPhaseScreen
+            reason="grave legacy choices have been replaced by campaign Death Principles"
+            onRecover={() => setScreen(settlement?.pendingPrincipleChoice?.group === 'death' ? 'principleChoice' : 'settlement')}
           />
         );
       default:
