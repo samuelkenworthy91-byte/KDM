@@ -1,0 +1,76 @@
+Add signature weapon progress visibility and locking.
+
+Goal:
+Make signature weapons visible as long-term progression targets, with clear unlock/milestone progress, instead of treating them as ordinary recipes once a building unlocks.
+
+Current problem:
+signatureItems have evolutionMilestones data, but milestone/progress is not visibly tracked.
+gearCatalog includes signatureItems directly.
+getGearUnlockState can unlock non-consumable gear when building/location is unlocked, which makes signatures too close to normal gear.
+
+Required behaviour:
+
+1. Signature visibility:
+- Signature items are visible in Armoury as locked targets.
+- They show:
+  - item name
+  - source quarry/building
+  - unlock requirement
+  - current progress
+  - next milestone
+  - cost if known
+  - why locked
+
+2. Signature craftability:
+- Normal gear unlocks from quarry buildings.
+- Signature weapons require their own signature unlock/progress condition.
+- Building unlock alone is not enough.
+- Once unlocked, they become craftable if resources are available.
+
+3. Progress state:
+Add settlement state, for example:
+settlement.signatureProgress = {
+  [signatureItemId]: {
+    unlocked: false,
+    level: 0,
+    counters: {},
+    milestoneHistory: []
+  }
+}
+
+4. Progress updates:
+Track at least representative milestone progress from existing combat/hunt data:
+- bleed applied
+- consumables used
+- charge spent
+- weak point broken
+- quarry defeated under condition
+- card returned/replayed
+Exact full milestone implementation can be incremental, but UI must not lie.
+If a milestone is not trackable yet, mark it "not yet tracked" rather than pretending.
+
+5. Armoury UI:
+- Locked signature items should not be craftable.
+- Locked signatures should explain how to unlock.
+- Progress should be readable on phone.
+
+6. Tests:
+- signature item visible as locked target.
+- building unlock alone does not make signature craftable.
+- signature unlock condition makes item craftable if cost is affordable.
+- progress state migrates old saves.
+- milestone progress helper returns readable progress.
+- existing normal gear remains craftable from buildings.
+- equipment cleanup tests no longer assume signature item is ordinary unlocked recipe.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Show signature weapon progress"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

@@ -1,0 +1,91 @@
+Add a survivor passive registry foundation.
+
+Goal:
+Create one source of truth for all active passives affecting a survivor, so future UI/previews can explain why numbers change.
+
+Current problem:
+Rules are spread across fighting arts, weapon proficiency, traits, scars, disorders, principles, gear passives, temporary hunt modifiers, and combat state. The player cannot easily see what is currently affecting a hunter.
+
+Strict rules:
+- Do not convert fighting arts/proficiency yet.
+- Do not overhaul UI yet.
+- Create foundation helpers and tests first.
+- Do not broadly rewrite App.jsx or combatLogic.js.
+
+Required behaviour:
+
+1. Add a helper module, for example:
+src/game/passiveRegistry.js
+
+2. Export a helper like:
+getActiveSurvivorPassives({
+  survivor,
+  settlement,
+  combatState,
+  huntState,
+  equippedGear,
+  currentQuarryId
+})
+
+3. Return normalized passive objects:
+{
+  id,
+  name,
+  sourceType,
+  sourceName,
+  timing,
+  text,
+  active,
+  reason,
+  tags
+}
+
+sourceType examples:
+- Fighting Art
+- Weapon Proficiency
+- Trait
+- Scar
+- Disorder
+- Campaign Principle
+- Gear
+- Temporary Modifier
+- Monster Bane
+
+timing examples:
+- Always
+- Conditional
+- Once per fight
+- Once per year
+- Exhaust
+- Inactive
+
+4. Do not invent new gameplay effects in this patch.
+This patch gathers and describes current effects.
+
+5. Include inactive/conditional passives only when useful.
+For UI, it is okay to show:
+active: false
+reason: "Requires marked quarry"
+
+6. Make unknown/legacy IDs safe.
+Unknown fighting arts, gear, or traits should not crash.
+
+Tests:
+- Survivor with a fighting art returns a fighting art passive.
+- Survivor with weapon proficiency returns proficiency passive summaries up to current level.
+- Survivor with Monster Bane returns a Monster Bane passive.
+- Equipped gear with passiveText returns a gear passive.
+- Temporary combat/hunt modifiers appear.
+- Unknown IDs do not crash.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Add survivor passive registry"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

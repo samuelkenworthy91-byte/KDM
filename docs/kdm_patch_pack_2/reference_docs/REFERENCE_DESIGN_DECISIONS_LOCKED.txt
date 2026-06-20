@@ -1,0 +1,88 @@
+LOCKED DESIGN DECISIONS
+
+1. Campaign principles are not normal innovations.
+They are permanent settlement-wide choices triggered by story moments.
+
+Principle triggers:
+- First survivor death -> Death Principle
+- First newborn / first child -> New Life Principle
+- Lantern Year 5 -> Society Principle
+
+2. Death Principle:
+Graves:
+- Every survivor death gives +1 Memory.
+- Applies to the first death that triggered the choice.
+- Applies automatically to all future deaths.
+
+Cannibalism:
+- Every survivor death gives +1 random basic resource.
+- Applies to the first death that triggered the choice.
+- Applies automatically to all future deaths.
+
+3. New Life Principle:
+Protect the Young:
+- +10 percentage points intimacy success chance.
+- -10 percentage points intimacy tragedy chance.
+- All newborns gain +5 max HP.
+- Applies to the newborn that triggered the choice.
+
+Survival of the Fittest:
+- +20 percentage points intimacy tragedy chance.
+- All newborns gain a permanent personal +2 damage effect.
+- All newborns gain +1 max Survival.
+- Applies to the newborn that triggered the choice.
+
+4. Society Principle:
+Work Together:
+- Once per Lantern Year, any one thing that costs exactly 1 Memory costs 0 instead.
+- It can apply to innovation attempts, Rite of Forgetting, Memory Training, Weapon Drills, Quiet Night, or any future 1-Memory action.
+- UI must show original cost, Work Together discount, final cost, and whether it is already used this Lantern Year.
+
+Embrace the Dark:
+- Affects rest stops only.
+- Negative rest outcomes -10 percentage points.
+- Neutral rest outcomes -10 percentage points.
+- Positive rest outcomes +20 percentage points.
+- Rest stop odds must still total 100%.
+
+5. Hunt events:
+- Most hunt events automatically choose the event survivor.
+- Some special events may let the player choose a survivor.
+- Events are roll-driven, modified by survivor/party/passives, not mostly choice-driven.
+
+6. Nemesis encounters:
+- One champion fights one-on-one.
+- Nemesis fights should be far more deadly.
+- Victory gives:
+  - a few basic resources
+  - possibly rare resources from a random unlocked monster/quarry
+  - one very powerful nemesis champion card for the survivor who personally won
+- Champion cards go into that survivor's deck.
+- Champion cards should usually be Exhaust or otherwise limited because they are extremely powerful.
+
+7. Fighting arts and proficiency:
+- Fighting arts no longer add normal cards to the deck.
+- Weapon proficiency no longer adds normal cards to the deck.
+- They become passives.
+- Some fighting arts may become active buttons on/near the survival action bar.
+- Weapon proficiency uses all passives up to the current level.
+
+8. Hunter panel flip:
+- Each hunter panel should be flippable.
+- Front shows current combat stats.
+- Back shows active passives affecting that hunter:
+  - fighting arts
+  - active fighting art buttons
+  - weapon proficiency
+  - traits
+  - scars
+  - disorders
+  - principles
+  - gear passives
+  - temporary hunt/combat modifiers
+
+9. Signature weapons:
+- Signature weapons should be visible as locked long-term targets.
+- Their progress to unlock/milestones should be obvious.
+- Normal gear unlocks from buildings.
+- Signature weapons need signature unlock/progress, not just building unlock.

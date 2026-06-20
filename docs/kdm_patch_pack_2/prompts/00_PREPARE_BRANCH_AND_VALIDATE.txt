@@ -1,0 +1,22 @@
+Prepare the repo for KDM Patch Pack 2.
+
+Goal:
+Create a safe feature branch and confirm the current repo is clean before running the patch pack.
+
+Commands:
+git status
+git checkout main
+git pull origin main
+git checkout -b upgrade/patch-pack-2-principles-passives
+
+Validate baseline:
+npm run build
+npm run test
+git status
+
+If the branch already exists:
+git checkout upgrade/patch-pack-2-principles-passives
+git pull origin upgrade/patch-pack-2-principles-passives
+
+Do not change files in this step.
+Stop if build or tests fail before any patch work begins.

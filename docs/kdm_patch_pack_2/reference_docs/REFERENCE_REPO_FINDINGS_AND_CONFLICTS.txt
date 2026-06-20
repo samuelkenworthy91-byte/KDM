@@ -1,0 +1,65 @@
+REFERENCE REPO FINDINGS AND CONFLICTS TO FIX
+
+This pack was based on repo inspection around commit:
+e22f8dffcbe8d64e1320cb739a40718273ccb197
+
+Known conflicting files/systems:
+
+1. src/data/graveLegacies.js
+Current old grave choices:
+- rememberTechnique
+- buryGear
+- studyDeath
+- inheritScar
+- oathOfVengeance
+
+These do not match the new campaign principle model. They should be deleted/replaced or turned into legacy/internal records only.
+
+2. src/screens/GraveLegacyScreen.jsx
+Current UI shows repeated grave legacy choices after death. This needs to become:
+- first death: Death Principle choice screen
+- later deaths: automatic result summary based on locked Death Principle
+
+3. src/game/memoryEconomy.js
+Current resolveDeathMemoryChoice understands:
+- bury
+- recover-resource
+
+This should be replaced with a campaign principle resolver, such as:
+- resolveDeathPrincipleChoice
+- applyDeathPrincipleReward
+- resolvePendingDeathRewards
+
+4. test/memoryEconomy.test.js
+Current test says "burial and resource recovery grant no memory by default".
+This conflicts with:
+- Graves = +1 Memory per death
+- Cannibalism = +1 random basic resource per death
+Rewrite it.
+
+5. src/App.jsx
+Death handling currently writes graveHistory in multiple places, then chooseGraveLegacy writes another grave entry.
+Patch should prevent duplicate rewards and duplicate grave records.
+
+6. src/data/innovationCards.js
+Graves currently exists as a normal/base innovation.
+That conflicts with Graves being a permanent Death Principle.
+Remove Graves from normal innovation drawing/building and migrate it into principle data.
+
+7. New data required
+Add a new data module for principles, e.g.:
+src/data/campaignPrinciples.js
+
+8. Signature weapon progress
+src/data/gear/signatureItems.js contains evolutionMilestones.
+Search showed milestone data exists, but no real progress tracking/UI.
+Do not delete signatureItems. Add progress and visibility.
+
+9. Gear unlock issue
+gearCatalog includes signatureItems directly.
+getGearUnlockState unlocks non-consumable gear if building/location is unlocked.
+This makes signature weapons too close to normal gear.
+Rewrite so signature items can be visible but locked until their signature conditions/progress are met.
+
+10. Fighting art/proficiency deck bloat
+Fighting arts/proficiency currently can add cards. Future patches should convert to passives and remove those added-card assumptions safely.

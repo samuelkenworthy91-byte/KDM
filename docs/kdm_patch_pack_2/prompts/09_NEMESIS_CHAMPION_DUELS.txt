@@ -1,0 +1,69 @@
+Rework nemesis encounters into deadly champion duels with champion reward cards.
+
+Goal:
+Nemesis encounters should be one-on-one, deadly, and rewarding if won.
+
+Design:
+- Nemesis appears.
+- Player chooses one champion.
+- Champion fights alone.
+- Nemesis is far more dangerous than normal quarry fights.
+- Victory gives settlement resources and a unique champion card to the winner.
+- Failure kills/scars/punishes the champion heavily.
+
+Required behaviour:
+
+1. Nemesis setup:
+- Keep fight one-on-one.
+- Do not let full party fight unless a future special rule says so.
+- UI should clearly say this is a Champion Duel.
+
+2. Deadlier nemesis:
+- Increase nemesis HP/damage/status pressure carefully.
+- Make intent/deck behaviour more threatening.
+- Add tests around target damage/lethality.
+- Do not make it impossible at early required points.
+
+3. Victory rewards:
+- Gain a few basic resources.
+- Gain rare/random monster resources from a random unlocked quarry.
+- Champion gains one unique nemesis champion card.
+- Reward card goes into that survivor's personal deck/run deck.
+- Champion card should be very strong and usually Exhaust.
+
+4. Champion cards:
+Create original cards, one per nemesis.
+Example design:
+- Butcher-style card: low cost, huge damage, Exhaust, maybe applies Bleed/Stagger/Vulnerable.
+- Other nemeses get equally distinctive powerful cards.
+
+Do not copy exact KDM names or text like "Hack City". Use original names.
+
+5. UI:
+- Nemesis result screen shows:
+  - champion
+  - resources won
+  - champion card gained
+  - what the card does
+- Survivor detail shows the champion card.
+
+6. Tests:
+- nemesis fight is one champion only.
+- victory grants resources from unlocked quarry pool.
+- victory grants champion card to the correct survivor only.
+- champion card appears in run deck.
+- champion card exhausts/limits correctly.
+- defeat kills/scars/punishes champion.
+- reward cannot be duplicated.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Add nemesis champion duel rewards"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

@@ -1,0 +1,65 @@
+Convert fighting arts and weapon proficiency from deck-added cards into passives.
+
+Goal:
+Reduce deck bloat and make survivor growth operate as visible passive/active abilities rather than extra cards.
+
+Design:
+- Gear provides most deck cards.
+- Panic/curse/injury/story/nemesis champion cards may still enter decks.
+- Fighting arts become passive effects or active buttons.
+- Weapon proficiency becomes passive effects by level.
+- Survivors benefit from every proficiency passive up to their current level.
+
+Strict rules:
+- Do not remove gear cards.
+- Do not remove Panic cards.
+- Do not remove nemesis champion cards.
+- Preserve existing survivors with old fighting art/proficiency cards by migration.
+- Do not break combat hooks.
+- Do not broadly rewrite combatLogic.
+
+Required behaviour:
+
+1. Fighting arts:
+- Stop adding ordinary fighting art cards to run decks.
+- Convert current fighting arts to passive definitions.
+- Some fighting arts may define active buttons.
+- Active fighting art buttons should appear near the survival action bar or hunter action bar.
+- Active buttons need usage limits: once per fight, once per round, or as defined.
+
+2. Weapon proficiency:
+- Stop adding proficiency reward cards to run decks.
+- Proficiency level gives passive effects.
+- Level 3 includes levels 1 and 2.
+- Existing weapon proficiency combat bonuses should still work.
+- Preview/passive registry should show which bonuses are active.
+
+3. Migration:
+- If old survivors have fighting art/proficiency cards in personalDeckAdditions solely because of old systems, remove or convert them safely.
+- Do not remove real personal story/nemesis/Panic cards.
+
+4. UI:
+- Survivor details and hunter panel/passive registry should show passive fighting arts and proficiency effects.
+- If a fighting art has an active button, show it with clear remaining uses.
+
+5. Tests:
+- building a run deck no longer adds fighting art/proficiency cards.
+- existing gear still adds gear cards.
+- Panic/story/nemesis cards still can appear.
+- fighting art passive still affects combat.
+- active fighting art button can be used and respects usage limit.
+- proficiency level 2 includes level 1 passive.
+- old save migration removes obsolete deck cards safely.
+- passive registry exposes fighting art and proficiency passives.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Convert fighting arts and proficiency to passives"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

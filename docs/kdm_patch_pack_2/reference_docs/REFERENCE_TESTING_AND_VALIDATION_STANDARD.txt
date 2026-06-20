@@ -1,0 +1,26 @@
+TESTING AND VALIDATION STANDARD FOR EVERY PATCH
+
+Every patch must run:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Every patch must add/update tests proving:
+1. UI text and runtime behaviour match.
+2. Preview and actual resolution match.
+3. Save migration does not break old saves.
+4. Unknown/legacy values do not crash the game.
+5. Old conflicting behaviour is removed or explicitly migrated.
+
+Stop and report if:
+- App.jsx is rewritten broadly.
+- combatLogic.js is rewritten broadly.
+- The patch only changes card/innovation text but not runtime behaviour.
+- Build fails.
+- Tests fail.
+- Existing save compatibility is removed.
+- Death/principle rewards can be claimed twice.
+- A principle can be changed after being locked.
+- A normal innovation still duplicates a campaign principle.
+- Signature weapons become ordinary building-unlock recipes.

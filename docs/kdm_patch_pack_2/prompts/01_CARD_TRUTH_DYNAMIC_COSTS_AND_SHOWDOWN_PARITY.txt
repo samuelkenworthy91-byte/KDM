@@ -1,0 +1,121 @@
+Fix visible named quarry mechanic counters, spend choices, dynamic costs, and Armoury/Showdown card parity.
+
+Context:
+Current known baseline before this pack was e22f8dffcbe8d64e1320cb739a40718273ccb197.
+The user playtested Pale Hunt Lion / White Lion katana and Lion Katars and found text/runtime drift.
+
+Playtest issues:
+1. Pale Hunt Lion katana card fronts do not clearly show exact damage/block previews with bonuses.
+2. Mane Held Breath Cut says it can spend Ambush, but in play it only shows 5 damage and does not visibly let the player choose how much Ambush to spend.
+3. Ambush, Pounce, Graze, Momentum and similar named quarry mechanics are not visibly tracked like Bleed, Poison, Charge or Block.
+4. A survivor equipped with 2 Lion/Pale Hunt Lion Katars still had Katar cards costing their normal cost in Showdown.
+5. Armoury text, gear previews, Showdown card fronts, dynamic costs, and actual combat resolution can drift apart.
+
+Goal:
+Make card text, preview, adjusted cost, spend choices, and playCard runtime all use the same implemented effect model.
+
+Strict rules:
+- Do not rewrite App.jsx or combatLogic.js broadly.
+- Keep the patch small and targeted.
+- Preserve old save compatibility.
+- Do not rebalance the whole gear catalogue.
+- Add focused tests.
+- Keep build/test passing.
+
+Required behaviour:
+
+1. Add visible named mechanic counters to combat state.
+Use a safe structure such as:
+namedMechanicCounters: {
+  Ambush: 0,
+  Pounce: 0,
+  Graze: 0,
+  Momentum: 0,
+  Charge: 0
+}
+It must safely support unknown named mechanic strings.
+
+2. When a card gains a named mechanic, increment that named counter.
+For Pale Hunt Lion:
+- Patient Edge visibly gains Ambush 1.
+- Pounce-related cards visibly gain/spend Pounce if their text says so.
+- Do not hide Ambush only inside Target Avoidance.
+- If Ambush also applies Target Avoidance, that is fine, but Ambush must also show.
+
+3. Add spendable named mechanic effects.
+Use clear effect names such as:
+- gainNamedMechanic
+- spendNamedMechanicForDamage
+- spendNamedMechanicForBlock
+
+For Mane Held Breath Cut:
+- base damage 5
+- player can spend 0 to current Ambush
+- each Ambush spent adds +2 damage
+- spent Ambush is removed from the counter
+- if no Ambush exists, it remains a 5 damage attack
+- actual combat result must match preview
+
+4. Add a simple UI choice for spend amount.
+Show:
+Spend Ambush: 0 / 1 / 2 / 3...
+or a small selector.
+Selected spend affects preview and actual play result.
+
+5. Show named mechanic counters visibly in combat UI.
+Near survivor statuses, show non-zero counters:
+Ambush 2, Pounce 1, Graze 1, Momentum 1, Charge 3.
+Hide 0 counters.
+
+6. Improve visible card front preview.
+Show exact preview text, e.g.:
+- Preview: 5 base + 2 Strength + 4 Ambush spend - 1 Monster Block = 10 HP damage
+- Preview: Gain 2 Block + 2 Ambush/Pounce condition = 4 Block
+- Preview: Katar pair discount: -1 cost
+
+7. Make card wording consistent everywhere:
+- combat card front
+- Showdown/combat preview
+- Armoury preview
+- gear/card detail panels
+- simplified card summary helpers
+
+Do not leave text-only rules.
+
+8. Fix Katar pair dynamic cost:
+- One equipped Katar: no discount.
+- Two equipped Katars: Cost 1 -> 0, Cost 2 -> 1.
+- visible adjusted cost must match actual energy spent.
+- dynamic cost helper should be shared by preview and playCard if possible.
+
+Tests:
+- Patient Edge gains visible Ambush.
+- Mane Held Breath Cut no Ambush deals base plus normal modifiers only.
+- Mane Held Breath Cut with Ambush can spend chosen amount.
+- Spent Ambush is removed.
+- Card preview includes named mechanic spend.
+- Non-zero named counters can be exposed for UI.
+- Armour conditional Block still requires matching mechanic used this turn.
+- One Katar does not discount.
+- Two Katars discount.
+- adjusted cost equals actual energy spent.
+- card wording does not contradict implemented effects.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Add visible named mechanic spend previews"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD
+
+Stop and report if:
+- combatLogic.js is rewritten broadly
+- App.jsx is rewritten broadly
+- build/tests fail
+- only text changes but Ambush is not spendable
+- dynamic cost displays correctly but energy spent is still wrong
