@@ -117,6 +117,7 @@ import {
   resolveDeathMemoryChoice,
   spendMemories
 } from './game/memoryEconomy.js';
+import { resolveMemoryTraining } from './game/memoryTrainingLogic.js';
 import {
   applyLanternYearTimeline,
   resolveLanternTimelineChoice
@@ -2018,6 +2019,10 @@ export default function App() {
     });
   };
 
+  const handleMemoryTraining = (survivorId, cardId) => {
+    updateSettlement(current => resolveMemoryTraining(current, survivorId, { cardId }));
+  };
+
   const handlePainLesson = (survivorId, injuryId) => {
     updateSettlement(current => {
       if (!current.builtMemoryInnovations.includes('painLessons')) return current;
@@ -3363,6 +3368,7 @@ export default function App() {
             onForgetCard={handleForgetCard}
             onMemoryCardRemoval={handleMemoryCardRemoval}
             onWeaponDrill={handleWeaponDrill}
+            onMemoryTraining={handleMemoryTraining}
             onPainLesson={handlePainLesson}
             onShrineOfNames={handleShrineOfNames}
             onReturnToTitle={showTitle}

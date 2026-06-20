@@ -351,6 +351,7 @@ function SurvivorCard({
   onForgetCard,
   onMemoryCardRemoval,
   onWeaponDrill,
+  onMemoryTraining,
   onPainLesson,
   onShrineOfNames
 }) {
@@ -825,6 +826,25 @@ function SurvivorCard({
           ))}
         </div>
       )}
+      {memoryBuilt('nightDrills') || memoryBuilt('memoryPit') ? (
+        <div className="memory-action-row">
+          <button
+            type="button"
+            disabled={
+              isMemoryActionUsed(settlement, 'memoryTraining') ||
+              settlement.settlementMemory < 1
+            }
+            title={isMemoryActionUsed(settlement, 'memoryTraining')
+              ? 'Already used this Lantern Year'
+              : settlement.settlementMemory < 1
+                ? 'Not enough Memory'
+                : ''}
+            onClick={() => onMemoryTraining(survivor.id)}
+          >
+            Memory Training: roll a lesson (1 Memory)
+          </button>
+        </div>
+      ) : null}
       {memoryBuilt('shrineOfNames') && (
         <div className="memory-action-row">
           <button
@@ -871,6 +891,7 @@ export default function SettlementScreen({
   onForgetCard,
   onMemoryCardRemoval,
   onWeaponDrill,
+  onMemoryTraining,
   onPainLesson,
   onShrineOfNames,
   onReturnToTitle
@@ -988,7 +1009,7 @@ export default function SettlementScreen({
   ) || activeSurvivor || livingSurvivors[0];
   const builtActionIds = new Set(builtMemoryInnovations.flatMap(item => item.actionUnlocks || []));
   const actionTabs = [
-    builtActionIds.has('weaponDrills') && 'training',
+    (builtActionIds.has('weaponDrills') || builtActionIds.has('memoryTraining')) && 'training',
     (hasEarlyForgettingAccess(settlement) ||
       ['quietNight', 'taboo', 'painLessons'].some(id => builtActionIds.has(id))) && 'recovery',
     builtActionIds.has('shrineOfNames') && 'legacy',
@@ -1174,6 +1195,7 @@ export default function SettlementScreen({
     const memoryCost = {
       quietNight: 1,
       weaponDrills: 1,
+      memoryTraining: 1,
       taboo: 2,
       shrineOfNames: 2
     }[actionId] || 0;
@@ -1382,6 +1404,7 @@ export default function SettlementScreen({
               onForgetCard={onForgetCard}
               onMemoryCardRemoval={onMemoryCardRemoval}
               onWeaponDrill={onWeaponDrill}
+              onMemoryTraining={onMemoryTraining}
               onPainLesson={onPainLesson}
               onShrineOfNames={onShrineOfNames}
             />
@@ -1488,6 +1511,7 @@ export default function SettlementScreen({
                 onForgetCard={onForgetCard}
                 onMemoryCardRemoval={onMemoryCardRemoval}
                 onWeaponDrill={onWeaponDrill}
+                onMemoryTraining={onMemoryTraining}
                 onPainLesson={onPainLesson}
                 onShrineOfNames={onShrineOfNames}
               />
@@ -1536,32 +1560,54 @@ export default function SettlementScreen({
 
           {activeActionTab === 'training' && (
             <article className="item-card">
-              <h4>Weapon Drills</h4>
-              <InnovationClarity innovation={innovationCards.weaponDrills} />
-              <label className="field-label">
-                Training card
-                <select
-                  value={actionTrainingCardId}
-                  onChange={event => setActionTrainingCardId(event.target.value)}
-                >
-                  {trainingCardIds.map(cardId => (
-                    <option key={cardId} value={cardId}>
-                      {cards[cardId]?.name || 'Unknown / Legacy'}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                disabled={!selectedActionSurvivor || !actionTrainingCardId ||
-                  getMemoryActionStatus('weaponDrills') !== 'Available in Actions'}
-                title={getMemoryActionStatus('weaponDrills')}
-                onClick={() => onWeaponDrill(selectedActionSurvivor.id, actionTrainingCardId)}
-              >
-                Teach {cards[actionTrainingCardId]?.name || 'training card'} (1 Memory)
-              </button>
-              {getMemoryActionStatus('weaponDrills') !== 'Available in Actions' && (
-                <p className="missing">{getMemoryActionStatus('weaponDrills')}</p>
+              {builtActionIds.has('weaponDrills') && (
+                <>
+                  <h4>Weapon Drills</h4>
+                  <InnovationClarity innovation={innovationCards.weaponDrills} />
+                  <label className="field-label">
+                    Training card
+                    <select
+                      value={actionTrainingCardId}
+                      onChange={event => setActionTrainingCardId(event.target.value)}
+                    >
+                      {trainingCardIds.map(cardId => (
+                        <option key={cardId} value={cardId}>
+                          {cards[cardId]?.name || 'Unknown / Legacy'}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={!selectedActionSurvivor || !actionTrainingCardId ||
+                      getMemoryActionStatus('weaponDrills') !== 'Available in Actions'}
+                    title={getMemoryActionStatus('weaponDrills')}
+                    onClick={() => onWeaponDrill(selectedActionSurvivor.id, actionTrainingCardId)}
+                  >
+                    Teach {cards[actionTrainingCardId]?.name || 'training card'} (1 Memory)
+                  </button>
+                  {getMemoryActionStatus('weaponDrills') !== 'Available in Actions' && (
+                    <p className="missing">{getMemoryActionStatus('weaponDrills')}</p>
+                  )}
+                </>
+              )}
+              {builtActionIds.has('memoryTraining') && (
+                <>
+                  <h4>Memory Training</h4>
+                  <InnovationClarity innovation={innovationCards.nightDrills} />
+                  <button
+                    type="button"
+                    disabled={!selectedActionSurvivor ||
+                      getMemoryActionStatus('memoryTraining') !== 'Available in Actions'}
+                    title={getMemoryActionStatus('memoryTraining')}
+                    onClick={() => onMemoryTraining(selectedActionSurvivor.id)}
+                  >
+                    Conduct Memory Training (1 Memory)
+                  </button>
+                  {getMemoryActionStatus('memoryTraining') !== 'Available in Actions' && (
+                    <p className="missing">{getMemoryActionStatus('memoryTraining')}</p>
+                  )}
+                </>
               )}
             </article>
           )}

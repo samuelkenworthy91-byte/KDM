@@ -233,6 +233,30 @@ function slugify(value) {
     .replace(/^_+|_+$/g, '');
 }
 
+const MECHANIC_ALIASES = {
+  Ambush: ['Pounce'],
+  Momentum: ['Graze'],
+  'Ash Memory': ['Time Slip'],
+  Charge: ['Surge'],
+  'Blood-Water': ['Submerge', 'Drag', 'Marked'],
+  Poison: ['Bloat', 'Tongue Snare'],
+  Snare: ['Bind Wound'],
+  Flourish: ['Duel', 'Riposte'],
+  Chorus: ['Smoke Veil', 'Panic Control'],
+  Resin: ['Plate Lock', 'Fortress Block'],
+  Flame: ['Crystal Guard', 'Crystal Edge', 'Imperial Fire'],
+  Radiance: ['Blind', 'Warmth'],
+  Judgment: ['Dominion', 'Royal Guard']
+};
+
+function mechanicNames(mechanic) {
+  return [mechanic, ...(MECHANIC_ALIASES[mechanic] || [])];
+}
+
+function mechanicSlugs(mechanic) {
+  return mechanicNames(mechanic).map(slugify);
+}
+
 function cardId(sourceGearId, name) {
   return `normal_${sourceGearId}_${slugify(name)}`;
 }
@@ -242,20 +266,27 @@ function titleCaseSlot(slot) {
 }
 
 function setupEffect(mechanic, amount = 1) {
-  if (mechanic === 'Charge') return { type: 'gainCharge', amount };
-  return { type: 'preparedSelf', amount };
+  if (mechanic === 'Charge') return { type: 'gainCharge', amount, mechanic };
+  if (mechanic === 'Ambush') return { type: 'targetAvoidance', amount, mechanic };
+  if (mechanic === 'Momentum') return { type: 'nextAttackBonus', amount, mechanic };
+  if (mechanic === 'Ash Memory') return { type: 'drawIfPreviousCardAttack', amount, mechanic };
+  if (mechanic === 'Blood-Water') return { type: 'markTarget', amount, mechanic };
+  if (mechanic === 'Flourish') return { type: 'nextCounterBonus', amount, mechanic };
+  if (mechanic === 'Chorus') return { type: 'removePanicAnyOrSurvival', amount, mechanic };
+  if (mechanic === 'Resin') return { type: 'guardSelf', amount, mechanic };
+  return { type: 'nextAttackBonus', amount, mechanic };
 }
 
 function mechanicTargetEffect(mechanic, amount = 1) {
-  if (mechanic === 'Poison') return { type: 'poisonTarget', amount };
-  if (mechanic === 'Snare') return { type: 'snareTarget', amount };
-  if (mechanic === 'Flame') return { type: 'burnTarget', amount };
-  if (mechanic === 'Radiance') return { type: 'blindTarget', amount };
-  if (mechanic === 'Judgment' || mechanic === 'Blood-Water') return { type: 'markTarget', amount };
+  if (mechanic === 'Poison') return { type: 'poisonTarget', amount, mechanic };
+  if (mechanic === 'Snare') return { type: 'snareTarget', amount, mechanic };
+  if (mechanic === 'Flame') return { type: 'burnTarget', amount, mechanic };
+  if (mechanic === 'Radiance') return { type: 'blindTarget', amount, mechanic };
+  if (mechanic === 'Judgment' || mechanic === 'Blood-Water') return { type: 'markTarget', amount, mechanic };
   return setupEffect(mechanic, amount);
 }
 
-function makeCard({ sourceGearId, name, cost, description, effects, type = 'skill', tags = [], weaponType = null, exhaust = false }) {
+function makeCard({ sourceGearId, name, cost, description, effects, type = 'skill', tags = [], mechanics = [], weaponType = null, exhaust = false }) {
   return {
     id: cardId(sourceGearId, name),
     name,
@@ -264,6 +295,7 @@ function makeCard({ sourceGearId, name, cost, description, effects, type = 'skil
     effects,
     type,
     tags,
+    mechanics,
     sourceType: 'equipment',
     sourceGearId,
     ...(weaponType ? { weaponType } : {}),
@@ -278,7 +310,8 @@ function weaponCardSpecs(suite, weaponType) {
   const finisher = suite.finisher;
   const mechanic = suite.mechanic;
   const finisherText = finisher.endsWith(',') ? finisher : finisher;
-  const commonTags = ['gear', 'weapon', 'normal', weaponType, slugify(mechanic)];
+  const commonTags = ['gear', 'weapon', 'normal', weaponType, ...mechanicSlugs(mechanic)];
+  const mechanics = mechanicNames(mechanic);
   const specs = {
     katana: [
       [`${primary} Patient Edge`, 0, `Gain ${mechanic} 1. Your next Katana attack this fight deals +2 damage.`, [setupEffect(mechanic), { type: 'nextAttackBonus', amount: 2 }], 'skill'],
@@ -344,6 +377,7 @@ function weaponCardSpecs(suite, weaponType) {
     effects,
     type,
     tags: commonTags,
+    mechanics,
     weaponType
   }));
 }
@@ -401,7 +435,10 @@ function makeArmourItem(suite, slot, index) {
     name: cardName,
     cost: 1,
     description,
-    effects: [{ type: 'block', amount: 2 }, { type: 'block', amount: 2 }],
+    effects: [
+      { type: 'block', amount: 2 },
+      { type: 'conditionalBlock', amount: 2, requiresMechanicUsedThisTurn: mechanicNames(suite.mechanic) }
+    ],
     tags: ['gear', 'armor', 'normal', slugify(suite.mechanic)],
   });
   return {
@@ -437,7 +474,8 @@ function makeInstrumentItem(suite) {
       cost: 0,
       description: `Choose a survivor. They gain ${suite.mechanic} 1 or 2 Block.`,
       effects: [setupEffect(suite.mechanic), { type: 'block', amount: 2 }],
-      tags: ['gear', 'instrument', 'normal', slugify(suite.mechanic)]
+      tags: ['gear', 'instrument', 'normal', ...mechanicSlugs(suite.mechanic)],
+      mechanics: mechanicNames(suite.mechanic)
     }),
     makeCard({
       sourceGearId: id,
@@ -445,7 +483,8 @@ function makeInstrumentItem(suite) {
       cost: 3,
       description: `[AURA] Cards using ${suite.mechanicPair} are +1 stronger this fight. Exhaust.`,
       effects: [{ type: 'aura', auraType: 'globalDamageBonus', amount: 1, duration: 'combat' }],
-      tags: ['gear', 'instrument', 'aura', 'normal', slugify(suite.mechanic)],
+      tags: ['gear', 'instrument', 'aura', 'normal', ...mechanicSlugs(suite.mechanic)],
+      mechanics: mechanicNames(suite.mechanic),
       exhaust: true
     }),
     makeCard({
@@ -454,7 +493,8 @@ function makeInstrumentItem(suite) {
       cost: 2,
       description: `Choose a survivor. Their next hit deals +4 damage, or +6 if they already used ${suite.mechanic} this fight.`,
       effects: [{ type: 'nextAttackBonus', amount: 4 }],
-      tags: ['gear', 'instrument', 'normal', slugify(suite.mechanic)]
+      tags: ['gear', 'instrument', 'normal', ...mechanicSlugs(suite.mechanic)],
+      mechanics: mechanicNames(suite.mechanic)
     })
   ];
   return {
@@ -491,7 +531,8 @@ function makeToolItem(suite, name, index) {
       cost: 0,
       description: fieldText,
       effects: [mechanicTargetEffect(suite.mechanic), { type: 'healSelf', amount: 1 }, { type: 'testBonus', amount: 1 }],
-      tags: ['gear', 'tool', 'normal', slugify(suite.mechanic)]
+      tags: ['gear', 'tool', 'normal', ...mechanicSlugs(suite.mechanic)],
+      mechanics: mechanicNames(suite.mechanic)
     }),
     makeCard({
       sourceGearId: id,
@@ -499,7 +540,8 @@ function makeToolItem(suite, name, index) {
       cost: 1,
       description: riskyText,
       effects: [{ type: 'nextAttackBonus', amount: 3 }, { type: 'block', amount: 2 }],
-      tags: ['gear', 'tool', 'normal', 'risk', slugify(suite.mechanic)]
+      tags: ['gear', 'tool', 'normal', 'risk', ...mechanicSlugs(suite.mechanic)],
+      mechanics: mechanicNames(suite.mechanic)
     })
   ];
   return {
@@ -547,3 +589,4 @@ const normalQuarryCatalogue = buildNormalQuarryCatalogue();
 export const normalQuarryGear = normalQuarryCatalogue.gear;
 export const normalQuarryCards = normalQuarryCatalogue.cards;
 export const normalQuarrySuiteDefinitions = normalQuarrySuites;
+export const normalQuarryMechanicAliases = MECHANIC_ALIASES;

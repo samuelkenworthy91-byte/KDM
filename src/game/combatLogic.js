@@ -333,6 +333,23 @@ function isConsumableCard(card) {
   return (card?.tags || []).some(tag => ['consumable', 'singleUse', 'lost'].includes(tag));
 }
 
+function normalizeMechanicName(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function hasUsedRequiredMechanic(state, required = []) {
+  const used = new Set((state.namedMechanicsUsedThisTurn || []).map(normalizeMechanicName));
+  return (Array.isArray(required) ? required : [required])
+    .some(mechanic => used.has(normalizeMechanicName(mechanic)));
+}
+
+function collectCardMechanics(card) {
+  return [
+    ...(card.mechanics || []),
+    ...(card.effects || []).map(effect => effect.mechanic)
+  ].filter(Boolean);
+}
+
 function removeCardInstances(pile = [], consumedIds = new Set()) {
   return (pile || []).filter(card => !consumedIds.has(card.instanceId));
 }
@@ -539,6 +556,7 @@ export function createCombatState(monsterOverride = monsters.whiteLion, runBonus
     hasMonsterBane: Boolean(runBonus.hasMonsterBane),
     cardsPlayedThisTurn: 0,
     attacksPlayedThisTurn: 0,
+    namedMechanicsUsedThisTurn: [],
     firstBlockPlayed: false,
     survivalSpentThisTurn: 0,
     blockGainedThisTurn: 0,
@@ -1237,6 +1255,12 @@ export function playCard(cardIndex, state) {
         break;
       }
       case 'conditionalBlock': {
+        if (
+          effect.requiresMechanicUsedThisTurn &&
+          !hasUsedRequiredMechanic(state, effect.requiresMechanicUsedThisTurn)
+        ) {
+          break;
+        }
         const nextBlockAura = consumeFirstAura(activeAuras, 'nextSurvivorBlockBonus');
         activeAuras = nextBlockAura.auras;
         const auraBlockBonus = activeAuraAmount(activeAuras, 'globalBlockCardBonus') + nextBlockAura.amount;
@@ -1245,7 +1269,9 @@ export function playCard(cardIndex, state) {
         const block = (isLowHp ? effect.lowHpAmount : effect.amount) + auraBlockBonus + affinityBlockBonus;
         const penalty = !state.firstBlockPlayed && firstBlockEffect &&
           state.injuries?.includes('crackedRibs') ? 1 : 0;
-        survivor = { ...survivor, block: survivor.block + Math.max(0, block - penalty) };
+        const gained = Math.max(0, block - penalty);
+        survivor = { ...survivor, block: survivor.block + gained };
+        blockGainedThisTurn += gained;
         firstBlockEffect = false;
         break;
       }
@@ -1848,6 +1874,12 @@ export function playCard(cardIndex, state) {
     monsterHitsThisTurn,
     cardsPlayedThisTurn: (state.cardsPlayedThisTurn || 0) + 1,
     attacksPlayedThisTurn: (state.attacksPlayedThisTurn || 0) + (isAttack ? 1 : 0),
+    namedMechanicsUsedThisTurn: [
+      ...new Set([
+        ...(state.namedMechanicsUsedThisTurn || []),
+        ...collectCardMechanics(card)
+      ])
+    ],
     blockGainedThisTurn,
     affinityTriggers,
     cardDiscardedThisTurn,
@@ -2604,6 +2636,7 @@ export function endTurn(state) {
     survivalFeedback: '',
     cardsPlayedThisTurn: 0,
     attacksPlayedThisTurn: 0,
+    namedMechanicsUsedThisTurn: [],
     survivalSpentThisTurn: 0,
     blockGainedThisTurn: 0,
     cardDiscardedThisTurn: false,
