@@ -279,6 +279,7 @@ const art = (
   trigger: options.trigger || 'Passive.',
   effect: passiveEffects[0] || { type: 'describedPassive' },
   passiveEffects,
+  hooks: options.hooks || {},
   grantsCards: options.grantsCards || [],
   tags,
   rarity: options.rarity || 'common',
@@ -298,7 +299,17 @@ Object.assign(fightingArts, Object.fromEntries([
   art('fieldTeacher', 'Field Teacher', 'After a successful hunt, another surviving party member gains +1 weapon proficiency XP.', ['support', 'weapon', 'party'], [{ type: 'partyWeaponXp', value: 1 }], { grantsCards: ['takeTheLesson'] }),
   art('useTheFear', 'Use the Fear', 'If Panic is in this survivor’s discard pile, their first attack each combat deals +2.', ['panic', 'attack'], [{ type: 'firstAttackIfPanicDiscard', value: 2 }], { grantsCards: ['fearIntoFire'] }),
   art('quietMadnessStyle', 'Quiet Madness Style', 'If this survivor plays no attack cards on their turn, gain 1 survival.', ['panic', 'strange'], [{ type: 'survivalIfNoAttack', value: 1 }], { grantsCards: ['doNotLookAway'] }),
-  art('carefulCarver', 'Careful Carver', 'Breaking a weak point with a Precise card slightly improves harvest quality.', ['harvest', 'precise'], [{ type: 'preciseBreakHarvestBonus', value: 1 }], { grantsCards: ['cleanCut'] }),
+  art('carefulCarver', 'Careful Carver', 'Breaking a weak point with a Precise card slightly improves harvest quality.', ['harvest', 'precise'], [{ type: 'preciseBreakHarvestBonus', value: 1 }], {
+    grantsCards: ['cleanCut'],
+    hooks: {
+      harvestRolled: {
+        type: 'improveHarvestQuality',
+        amount: 1,
+        tags: ['precise'],
+        onceKey: 'carefulCarver:preciseHarvest'
+      }
+    }
+  }),
   art('brutalButcher', 'Brutal Butcher', 'Gain +3 break damage against hide, shell, and body weak points, but fragile parts are easier to ruin.', ['harvest', 'brutal'], [{ type: 'brutalBreakBonus', value: 3, fragileRisk: 1 }], { grantsCards: ['brutalBreak'] }),
   art('eyeHunter', 'Eye Hunter', 'Head and eye weak-point attacks gain +2 break damage with dagger, katar, or bow.', ['harvest', 'precise', 'dagger', 'katar', 'bow'], [{ type: 'taggedWeakPointBreakBonus', tags: ['head', 'eye'], weapons: ['dagger', 'katar', 'bow'], value: 2 }]),
   art('partBreaker', 'Part Breaker', 'Shell, hide, and horn weak-point attacks gain +3 break damage with hammer, axe, or club.', ['harvest', 'breaker', 'hammer', 'axe', 'club'], [{ type: 'taggedWeakPointBreakBonus', tags: ['shell', 'hide', 'horn'], weapons: ['hammer', 'axe', 'club'], value: 3 }]),
@@ -319,7 +330,17 @@ Object.assign(fightingArts, Object.fromEntries([
   art('lowLanternGuard', 'Low Lantern Guard', 'The first block card each combat gains +2 block.', ['block', 'defensive'], [{ type: 'firstBlockBonus', value: 2 }], { grantsCards: ['lowLanternCrawl'] }),
   art('counterPulse', 'Counter Pulse', 'After using Counter, the next attack deals +2.', ['counter', 'attack'], [{ type: 'counterNextAttackBonus', value: 2 }], { grantsCards: ['pounceReversal'] }),
   art('sharedGuard', 'Shared Guard', 'The first time this survivor gains 8 block in a turn, the next party member gains 3 block.', ['support', 'block', 'party'], [{ type: 'blockThresholdPartyBlock', threshold: 8, value: 3 }], { grantsCards: ['holdTheLine'] }),
-  art('panicTurner', 'Panic Turner', 'The first Panic removed each combat gives another party member +2 block.', ['panic', 'support'], [{ type: 'panicRemovedPartyBlock', value: 2 }], { grantsCards: ['turnTheRoar'] }),
+  art('panicTurner', 'Panic Turner', 'The first Panic removed each combat gives another party member +2 block.', ['panic', 'support'], [{ type: 'panicRemovedPartyBlock', value: 2 }], {
+    grantsCards: ['turnTheRoar'],
+    hooks: {
+      panicRemoved: {
+        type: 'addPartyBlockEffect',
+        amount: 2,
+        oncePerCombat: true,
+        onceKey: 'panicTurner:firstPanicRemoved'
+      }
+    }
+  }),
   art('disorderedShape', 'Disordered Shape', 'The first attack each combat deals +2 while this survivor has a disorder.', ['disorder', 'attack'], [{ type: 'firstAttackIfDisorder', value: 2 }], { grantsCards: ['rageWithShape'] }),
   art('scarMemoryArt', 'Scar Memory', 'With any scar, the first skill played each combat draws 1.', ['scar', 'draw'], [{ type: 'firstSkillIfScarDraw', value: 1 }], { grantsCards: ['scarMemory'] }),
   art('frontLantern', 'Front Lantern', 'In the first party slot, start combat with +2 block.', ['position', 'block', 'party'], [{ type: 'frontPositionBlock', value: 2 }], { grantsCards: ['lowLanternCrawl'] }),
@@ -330,7 +351,75 @@ Object.assign(fightingArts, Object.fromEntries([
   art('woundMender', 'Wound Mender', 'The first skill played while wounded heals 1 HP once per combat.', ['wound', 'healing'], [{ type: 'firstSkillWoundedHeal', value: 1 }], { grantsCards: ['boneSetterStance'] }),
   art('clearerTerror', 'Clearer Terror', 'Adding Panic can clarify the current tell once per combat.', ['panic', 'tell'], [{ type: 'panicClarifiesTell', value: 1 }], { grantsCards: ['doNotLookAway'] }),
   art('preciseOath', 'Precise Oath', 'The first Precise attack each combat gains +2 break damage.', ['precise', 'weakPoint'], [{ type: 'firstPreciseBreakBonus', value: 2 }], { grantsCards: ['cleanCut'] }),
-  art('harvestVow', 'Harvest Vow', 'The first intact weak point broken each hunt slightly improves harvest quality.', ['harvest', 'weakPoint'], [{ type: 'firstBreakHarvestBonus', value: 1 }]),
+  art('harvestVow', 'Harvest Vow', 'The first intact weak point broken each hunt slightly improves harvest quality.', ['harvest', 'weakPoint'], [{ type: 'firstBreakHarvestBonus', value: 1 }], {
+    hooks: {
+      harvestRolled: {
+        type: 'improveHarvestQuality',
+        amount: 1,
+        oncePerCombat: true,
+        onceKey: 'harvestVow:firstHarvest'
+      }
+    }
+  }),
+  art('blueKnuckleDoctrine', 'Blue Knuckle Doctrine', 'The first time damage is fully prevented with Block or Guarded, counter damage equals Blue affinity count.', ['blue', 'block', 'counter'], [], {
+    trigger: 'First fully prevented hit.',
+    fullDescription: 'The first time damage is fully prevented with Block or Guarded, counter damage equals Blue affinity count.',
+    hooks: {
+      damagePrevented: {
+        type: 'counterDamageFromAffinity',
+        affinity: 'blue',
+        oncePerCombat: true,
+        onceKey: 'blueKnuckleDoctrine:firstPreventedHit'
+      }
+    }
+  }),
+  art('secondKnifeTruth', 'Second Knife Truth', 'If the second attack this turn comes from the same gear instance, it gains +1 break damage and records practice for that survivor, gear, and card.', ['weapon', 'combo', 'learning'], [{ type: 'sameGearSecondAttackBreakBonus', value: 1 }], {
+    trigger: 'Second same-gear attack.',
+    hooks: {
+      cardPlayed: {
+        type: 'recordGearCardPractice',
+        cardTypes: ['attack'],
+        sameGearAsPrevious: true
+      }
+    }
+  }),
+  art('harvestWithoutMercy', 'Harvest Without Mercy', 'On a Precise or Harvest weak-point break, improve harvest quality by one step and gain 1 Panic.', ['harvest', 'precise', 'panic'], [], {
+    trigger: 'Precise or Harvest weak-point break.',
+    hooks: {
+      harvestRolled: [
+        {
+          type: 'improveHarvestQuality',
+          amount: 1,
+          tags: ['precise', 'harvest']
+        },
+        {
+          type: 'addPanicToDiscard',
+          amount: 1,
+          tags: ['precise', 'harvest'],
+          onceKey: 'harvestWithoutMercy:panicOnHarvest'
+        }
+      ]
+    }
+  }),
+  art('purpleGutInstinct', 'Purple Gut Instinct', 'Once per hunt, spend 1 Survival to convert a failed harvest, retreat, or weak-point test by 2 or less into a Messy success.', ['purple', 'survival', 'harvest', 'retreat'], [], {
+    trigger: 'Failed test by 2 or less.',
+    hooks: {
+      harvestRolled: {
+        type: 'convertCloseFailureToMessy',
+        margin: 2,
+        survivalCost: 1,
+        oncePerHunt: true,
+        onceKey: 'purpleGutInstinct:closeFailure'
+      },
+      retreat: {
+        type: 'convertCloseFailureToMessy',
+        margin: 2,
+        survivalCost: 1,
+        oncePerHunt: true,
+        onceKey: 'purpleGutInstinct:closeFailure'
+      }
+    }
+  }),
   art('lastBreathGift', 'Last Breath Gift', 'When reduced to 1 HP, another living party member gains 1 survival once per hunt.', ['wound', 'support', 'party'], [{ type: 'oneHpPartySurvival', value: 1 }], { rarity: 'uncommon', grantsCards: ['sharedBreath'] }),
   art('patientPredator', 'Patient Predator', 'If the first card played this combat is an attack, it applies Marked.', ['attack', 'marked', 'patience'], [{ type: 'firstCardAttackMarks' }], { rarity: 'uncommon', grantsCards: ['patientBlade'] }),
   art('oathAgainstDeath', 'Oath Against Death', 'Once per hunt, a block card played at 1 HP gains +8 block.', ['rare', 'block', 'death'], [{ type: 'oneHpBlockBonus', value: 8 }], { rarity: 'rare', grantsCards: ['lanternOath'] }),

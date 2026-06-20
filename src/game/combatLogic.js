@@ -1040,6 +1040,13 @@ export function playCard(cardIndex, state) {
           flatBreakBonus += passive.value || 0;
           artTriggers.firstOpenWeakPointBreakBonus = true;
         }
+        if (passive.type === 'sameGearSecondAttackBreakBonus' &&
+          isAttack &&
+          (state.attacksPlayedThisTurn || 0) === 1 &&
+          state.previousGearInstanceId &&
+          state.previousGearInstanceId === card.gearInstanceId) {
+          flatBreakBonus += passive.value || 0;
+        }
       });
       if (proficiencyLevel >= 3 && weaponType === 'bow') flatBreakBonus += 1;
       if (cardTags.includes('breaker')) flatBreakBonus += 1;
@@ -1085,6 +1092,26 @@ export function playCard(cardIndex, state) {
             overkill: Math.max(0, rawBreakDamage - weakPoint.breakValue),
             monsterLevel: monster.level || 1
           });
+          const harvestHookContext = runFightingArtHooks(fightingArtHooks, harvestRolled, {
+            state: {
+              ...state,
+              survivor,
+              monster,
+              drawPile,
+              hand,
+              discardPile
+            },
+            survivor,
+            monster,
+            card,
+            weakPoint,
+            selectedWeakPoint,
+            harvestResult: harvestBreakResult,
+            weaponType,
+            cardTags
+          });
+          harvestBreakResult = harvestHookContext.harvestResult || harvestBreakResult;
+          discardPile = harvestHookContext.state?.discardPile || discardPile;
         }
         return {
           ...weakPoint,
@@ -1825,6 +1852,8 @@ export function playCard(cardIndex, state) {
     affinityTriggers,
     cardDiscardedThisTurn,
     previousCardType: card.type,
+    previousGearInstanceId: card.gearInstanceId || null,
+    previousCardId: card.id || null,
     weaponCardsPlayed,
     weaponMasteryUsed,
     weaponTurnTriggers,

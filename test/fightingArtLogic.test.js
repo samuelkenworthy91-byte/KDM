@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   cardPlayed,
   combatStart,
+  harvestRolled,
   initializeFightingArtHooks,
   panicGained,
   panicRemoved,
@@ -151,4 +152,54 @@ test('object-only hooks are safe no-ops until reducers exist', () => {
   const context = { state: { unchanged: true } };
 
   assert.equal(runFightingArtHooks(hooks, combatStart, context), context);
+});
+
+test('object hooks can improve harvest quality by one step', () => {
+  const hooks = initializeFightingArtHooks(['harvestArt'], {
+    artData: {
+      harvestArt: {
+        id: 'harvestArt',
+        hooks: {
+          harvestRolled: { type: 'improveHarvestQuality', amount: 1 }
+        }
+      }
+    }
+  });
+  const result = runFightingArtHooks(hooks, harvestRolled, {
+    state: {},
+    harvestResult: { quality: 'messy', reason: 'Base roll.' }
+  });
+
+  assert.equal(result.harvestResult.quality, 'clean');
+  assert.match(result.harvestResult.reason, /improved harvest quality/);
+});
+
+test('object hooks record gear-card practice by survivor, gear instance, and card id', () => {
+  const hooks = initializeFightingArtHooks(['practiceArt'], {
+    artData: {
+      practiceArt: {
+        id: 'practiceArt',
+        hooks: {
+          cardPlayed: {
+            type: 'recordGearCardPractice',
+            cardTypes: ['attack'],
+            sameGearAsPrevious: true
+          }
+        }
+      }
+    }
+  });
+  const result = runFightingArtHooks(hooks, cardPlayed, {
+    previousState: { previousGearInstanceId: 'gear-1' },
+    state: {
+      survivor: { id: 'survivor-1' }
+    },
+    card: {
+      id: 'slash',
+      type: 'attack',
+      gearInstanceId: 'gear-1'
+    }
+  });
+
+  assert.equal(result.state.survivor.gearCardPractice['survivor-1:gear-1:slash'], 1);
 });
