@@ -4,7 +4,39 @@ export const events = [
     "sourceSeed": "Broken Lanterns",
     "id": "ashWickScatter",
     "section": "core",
-    "mode": "choice",
+    "eventType": "huntRoll",
+    "eventSurvivorRule": "partyLeader",
+    "roll": { "die": 10 },
+    "modifiers": [
+      { "type": "survival", "amountPer": 1, "label": "Event survivor Survival" },
+      { "type": "trait", "traitId": "lanternEyed", "amount": 2, "label": "Lantern-Eyed" },
+      { "type": "passiveTag", "tag": "survival", "amount": 1, "label": "Survival passive" },
+      { "type": "principle", "group": "society", "id": "workTogether", "amount": 1, "label": "Work Together" }
+    ],
+    "resultBands": [
+      {
+        "id": "badOmen",
+        "label": "Bad Omen",
+        "max": 4,
+        "resultText": "The cool glass shows a death that has not happened yet.",
+        "effects": { "addPanic": 1 }
+      },
+      {
+        "id": "salvage",
+        "label": "Salvage",
+        "min": 5,
+        "max": 8,
+        "resultText": "The hunter gathers the safe fragments before the light changes.",
+        "effects": { "gainResource": { "resourceId": "scrap", "amount": 1 } }
+      },
+      {
+        "id": "warning",
+        "label": "Warning Read",
+        "min": 9,
+        "resultText": "The lantern-shape becomes a warning the party can carry.",
+        "effects": { "nextCombatStartBlock": 2 }
+      }
+    ],
     "description": "A trail of cold lamp fragments makes the hunters choose between salvage and safety.",
     "choices": [
       {
@@ -50,7 +82,39 @@ export const events = [
     "sourceSeed": "Corpse",
     "id": "bodyUnderTheFaces",
     "section": "core",
-    "mode": "choice",
+    "eventType": "huntRoll",
+    "eventSurvivorRule": "lowestHp",
+    "roll": { "die": 10 },
+    "modifiers": [
+      { "type": "scar", "scarId": "deadEyeCalm", "amount": 2, "label": "Dead-Eye Calm" },
+      { "type": "trait", "traitId": "quietListener", "amount": 2, "label": "Quiet Listener" },
+      { "type": "wounded", "amount": -1, "label": "Already wounded" },
+      { "type": "partyWounded", "amount": 1, "label": "Party knows pain" }
+    ],
+    "resultBands": [
+      {
+        "id": "scream",
+        "label": "The Body Screams",
+        "max": 3,
+        "resultText": "The hand comes free, and the corpse gives up a scream.",
+        "effects": { "addPanic": 1, "loseHp": 1 }
+      },
+      {
+        "id": "named",
+        "label": "Named and Settled",
+        "min": 4,
+        "max": 8,
+        "resultText": "A made-up name settles the body long enough to pass.",
+        "effects": { "healHp": 1 }
+      },
+      {
+        "id": "warmPrize",
+        "label": "Warm Prize",
+        "min": 9,
+        "resultText": "The hunter listens past the fear and takes what the body protected.",
+        "effects": { "gainRandomResource": { "pool": "basicOrMonster", "amount": 1 } }
+      }
+    ],
     "description": "A body lies half-swallowed by stone faces, still clutching something warm.",
     "choices": [
       {
@@ -96,7 +160,38 @@ export const events = [
     "sourceSeed": "Cancer Pigeons",
     "id": "tumourBirds",
     "section": "core",
-    "mode": "choice",
+    "eventType": "huntRoll",
+    "eventSurvivorRule": "randomLivingSurvivor",
+    "roll": { "die": 10 },
+    "modifiers": [
+      { "type": "trait", "traitId": "boneStrong", "amount": 2, "label": "Bone-Strong" },
+      { "type": "disorder", "disorderId": "cowardice", "amount": -2, "label": "Cowardice" },
+      { "type": "gearKeyword", "keyword": "Weapon", "amount": 1, "label": "Armed hunter" }
+    ],
+    "resultBands": [
+      {
+        "id": "swarmed",
+        "label": "Swarmed",
+        "max": 3,
+        "resultText": "The pale shapes burst across the path and leave the hunter shaken.",
+        "effects": { "addPanic": 1, "nextCombatMonsterEnrage": 1 }
+      },
+      {
+        "id": "stillness",
+        "label": "Stillness",
+        "min": 4,
+        "max": 7,
+        "resultText": "The hunter stays still until the omen passes overhead.",
+        "effects": { "gainSurvival": 1 }
+      },
+      {
+        "id": "guardedNest",
+        "label": "Guarded Cache",
+        "min": 8,
+        "resultText": "The hunter forces a passage and finds what was being guarded.",
+        "effects": { "gainRandomResource": { "pool": "basicOrMonster", "amount": 1 } }
+      }
+    ],
     "description": "Pale birds with swollen throats hop around the path, pecking at lantern smoke.",
     "choices": [
       {

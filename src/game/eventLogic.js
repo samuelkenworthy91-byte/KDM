@@ -8,6 +8,7 @@ import { injuries } from '../data/injuries.js';
 import { scars } from '../data/scars.js';
 import { removePanicFromSurvivor } from './deckLogic.js';
 import { getNewLifeIntimacyModifiers } from './principleEffects.js';
+import { getActiveSurvivorPassives } from './passiveRegistry.js';
 
 const BASIC_IDS = BASIC_RESOURCE_IDS;
 const MONSTER_IDS = Object.values(resources).filter(item => item.type === 'monster' && !item.creatureId).map(item => item.id);
@@ -15,6 +16,11 @@ const RARE_IDS = Object.values(resources).filter(item => ['rare', 'strange'].inc
 
 function pick(items) {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function pickWithRandom(items, random = Math.random) {
+  if (!items.length) return null;
+  return items[Math.floor(random() * items.length)];
 }
 
 function getPool(pool, quarry) {
@@ -397,8 +403,192 @@ function applyEffects(effects, state, context) {
   return next;
 }
 
+function livingParty(context = {}, state = {}) {
+  const party = Array.isArray(context.runParty) && context.runParty.length
+    ? context.runParty
+    : Array.isArray(state.runParty) ? state.runParty : [state.runSurvivor];
+  return party.filter(survivor => survivor?.id && survivor.hp > 0 && survivor.alive !== false);
+}
+
+export function selectEventSurvivor(event = {}, state = {}, context = {}) {
+  const party = livingParty(context, state);
+  const fallback = state.runSurvivor || party[0] || null;
+  const rule = event.eventSurvivorRule || 'partyLeader';
+  const random = context.random || Math.random;
+  if (event.allowsChoice || rule === 'playerChoice') {
+    const selectedId = context.eventSurvivorId || context.selectedSurvivorId;
+    const selected = party.find(survivor => survivor.id === selectedId) || null;
+    return {
+      survivor: selected,
+      rule,
+      reason: selected
+        ? `${selected.name || selected.id} was chosen by the player.`
+        : 'Choose an event survivor to resolve this event.',
+      requiresChoice: !selected
+    };
+  }
+  if (!party.length) {
+    return { survivor: fallback, rule, reason: 'No living party member was available.' };
+  }
+  if (rule === 'randomLivingSurvivor') {
+    const survivor = pickWithRandom(party, random);
+    return { survivor, rule, reason: 'Random living survivor.' };
+  }
+  if (rule === 'lowestHp') {
+    const survivor = [...party].sort((a, b) => (a.hp || 0) - (b.hp || 0))[0];
+    return { survivor, rule, reason: 'Lowest current HP.' };
+  }
+  if (rule === 'highestSurvival') {
+    const survivor = [...party].sort((a, b) => (b.survival || 0) - (a.survival || 0))[0];
+    return { survivor, rule, reason: 'Highest Survival.' };
+  }
+  if (rule === 'lowestSurvival') {
+    const survivor = [...party].sort((a, b) => (a.survival || 0) - (b.survival || 0))[0];
+    return { survivor, rule, reason: 'Lowest Survival.' };
+  }
+  if (rule === 'scout') {
+    const survivor = party.find(item =>
+      item.traits?.includes('watchful') ||
+      item.traits?.includes('quietListener') ||
+      item.fightingArts?.includes('openingReader')
+    ) || party[0];
+    return { survivor, rule, reason: survivor === party[0] ? 'Party leader acts as scout.' : 'Scout trait or art.' };
+  }
+  return { survivor: party[0], rule: 'partyLeader', reason: 'Party leader.' };
+}
+
+function getPrinciples(settlement = {}) {
+  return settlement.campaignPrinciples || settlement.principles || {};
+}
+
+function modifierValue(rule = {}, survivor = {}, state = {}, context = {}) {
+  if (rule.type === 'survival') return (survivor.survival || 0) * (rule.amountPer || 1);
+  if (rule.type === 'wounded') return survivor.hp < survivor.maxHp ? rule.amount || 0 : 0;
+  if (rule.type === 'trait') return survivor.traits?.includes(rule.id || rule.traitId) ? rule.amount || 0 : 0;
+  if (rule.type === 'scar') return survivor.scars?.includes(rule.id || rule.scarId) ? rule.amount || 0 : 0;
+  if (rule.type === 'disorder') return survivor.disorders?.includes(rule.id || rule.disorderId) ? rule.amount || 0 : 0;
+  if (rule.type === 'partyWounded') {
+    return livingParty(context, state).some(item => item.hp < item.maxHp) ? rule.amount || 0 : 0;
+  }
+  if (rule.type === 'principle') {
+    const principles = getPrinciples(context.settlement);
+    const group = rule.group;
+    const expected = rule.id;
+    const current = group ? principles[group] : null;
+    const currentId = typeof current === 'object' ? current?.id : current;
+    return currentId === expected ? rule.amount || 0 : 0;
+  }
+  if (rule.type === 'passiveTag') {
+    const passives = getActiveSurvivorPassives({
+      survivor,
+      settlement: context.settlement,
+      huntState: context.huntState,
+      currentQuarryId: context.quarry?.id
+    });
+    return passives.some(passive =>
+      passive.active !== false && passive.tags?.includes(rule.tag)
+    ) ? rule.amount || 0 : 0;
+  }
+  if (rule.type === 'gearKeyword') {
+    const passives = getActiveSurvivorPassives({
+      survivor,
+      equippedGear: survivor.boundGear,
+      currentQuarryId: context.quarry?.id
+    });
+    return passives.some(passive =>
+      passive.sourceType === 'Gear' &&
+      passive.tags?.some(tag => String(tag).toLowerCase() === String(rule.keyword).toLowerCase())
+    ) ? rule.amount || 0 : 0;
+  }
+  return 0;
+}
+
+function modifierLabel(rule = {}) {
+  if (rule.label) return rule.label;
+  if (rule.type === 'survival') return 'Survival';
+  if (rule.type === 'wounded') return 'Wounded survivor';
+  if (rule.type === 'trait') return `Trait: ${idLabel(rule.id || rule.traitId)}`;
+  if (rule.type === 'scar') return `Scar: ${idLabel(rule.id || rule.scarId)}`;
+  if (rule.type === 'disorder') return `Disorder: ${idLabel(rule.id || rule.disorderId)}`;
+  if (rule.type === 'partyWounded') return 'Wounded party member';
+  if (rule.type === 'principle') return `Principle: ${idLabel(rule.id)}`;
+  if (rule.type === 'passiveTag') return `Passive tag: ${rule.tag}`;
+  if (rule.type === 'gearKeyword') return `Gear keyword: ${rule.keyword}`;
+  return `Unknown modifier: ${rule.type || 'legacy'}`;
+}
+
+export function getHuntEventRollBreakdown(event = {}, survivor = {}, state = {}, context = {}) {
+  const baseRoll = Math.min(event.roll?.die || 10, Math.max(1, Math.floor(
+    context.roll ?? ((context.random || Math.random)() * (event.roll?.die || 10) + 1)
+  )));
+  const modifiers = (event.modifiers || []).map(rule => ({
+    id: rule.id || `${rule.type}:${rule.label || rule.tag || rule.id || ''}`,
+    label: modifierLabel(rule),
+    amount: modifierValue(rule, survivor, state, context)
+  })).filter(row => row.amount !== 0);
+  const finalRoll = baseRoll + modifiers.reduce((sum, row) => sum + row.amount, 0);
+  return { baseRoll, modifiers, finalRoll };
+}
+
+function getOutcomeBand(event = {}, finalRoll) {
+  const bands = Array.isArray(event.resultBands) ? event.resultBands : [];
+  return bands.find(band => (
+    (band.min == null || finalRoll >= band.min) &&
+    (band.max == null || finalRoll <= band.max)
+  )) || bands.at(-1) || {
+    id: 'legacy',
+    label: 'Legacy Outcome',
+    resultText: 'The hunt event resolves.',
+    effects: {}
+  };
+}
+
+function resolveHuntRollEvent(event, choice, state, context = {}) {
+  const selectedId = choice && typeof choice === 'object'
+    ? choice.eventSurvivorId || choice.survivorId
+    : null;
+  const selection = selectEventSurvivor(event, state, { ...context, eventSurvivorId: selectedId });
+  if (selection.requiresChoice) {
+    return {
+      eventId: event.id,
+      requiresEventSurvivorChoice: true,
+      eventSurvivorRule: selection.rule,
+      eventSurvivorReason: selection.reason,
+      eligibleSurvivors: livingParty(context, state)
+    };
+  }
+  const eventSurvivor = selection.survivor || state.runSurvivor;
+  const roll = getHuntEventRollBreakdown(event, eventSurvivor, state, context);
+  const outcomeBand = getOutcomeBand(event, roll.finalRoll);
+  const resolved = applyEffects(outcomeBand.effects || {}, {
+    ...state,
+    runSurvivor: eventSurvivor,
+    appliedEffects: []
+  }, context);
+  return {
+    eventId: event.id,
+    choiceId: 'huntRoll',
+    eventSurvivor,
+    eventSurvivorRule: selection.rule,
+    eventSurvivorReason: selection.reason,
+    roll,
+    outcomeBand: {
+      id: outcomeBand.id,
+      label: outcomeBand.label || idLabel(outcomeBand.id),
+      min: outcomeBand.min,
+      max: outcomeBand.max
+    },
+    outcomeText: outcomeBand.resultText || outcomeBand.outcomeText || event.resultText || 'The hunt event resolves.',
+    ...resolved
+  };
+}
+
 export function resolveEvent(event, choice, state, context) {
   if (!event) return null;
+
+  if (event.eventType === 'huntRoll') {
+    return resolveHuntRollEvent(event, choice, state, context);
+  }
   
   if (event.mode === 'automatic') {
     return {

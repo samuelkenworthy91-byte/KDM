@@ -728,6 +728,18 @@ select {
   background: #11100e;
 }
 
+.event-roll-breakdown {
+  margin: 1rem 0;
+  border: 1px solid #6f6046;
+  padding: 0.85rem;
+  background: #1f1b14;
+}
+
+.event-roll-breakdown h3 {
+  margin-top: 0;
+  color: #e8bd69;
+}
+
 .intent {
   border-left: 3px solid #b58a4a;
   padding: 0.65rem 0.8rem;

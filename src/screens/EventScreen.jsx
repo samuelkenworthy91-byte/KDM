@@ -15,19 +15,22 @@ export default function EventScreen({
   const [result, setResult] = useState(null);
   const context = { runParty, settlement, selectedQuarry: { id: selectedQuarry }, quarry: { id: selectedQuarry } };
   const choices = event.choices || [];
+  const livingParty = (runParty || []).filter(survivor => survivor?.hp > 0 && survivor.alive !== false);
+  const isRollEvent = event.eventType === 'huntRoll';
+  const needsEventSurvivorChoice = isRollEvent && (event.allowsChoice || event.eventSurvivorRule === 'playerChoice');
   const isAutomatic = event.mode === 'automatic';
 
   useEffect(() => {
     setResult(null);
   }, [event?.id]);
 
-  // Automatic events still render their text and outcome before the player continues.
+  // Automatic and roll events still render their text and outcome before the player continues.
   useEffect(() => {
-    if (isAutomatic && !result) {
+    if ((isAutomatic || (isRollEvent && !needsEventSurvivorChoice)) && !result) {
       const next = onChoose(null);
       setResult(next);
     }
-  }, [isAutomatic, result, onChoose]);
+  }, [isAutomatic, isRollEvent, needsEventSurvivorChoice, result, onChoose]);
 
   const choose = choice => {
     if (!canUseEventChoice(choice, context)) return;
@@ -41,6 +44,10 @@ export default function EventScreen({
   const autoPreview = event.autoOutcome?.effects
     ? formatEventEffects(event.autoOutcome.effects, context)
     : [];
+  const chooseEventSurvivor = survivorId => {
+    const next = onChoose({ eventSurvivorId: survivorId });
+    setResult(next);
+  };
 
   return (
     <section className="event-screen">
@@ -49,7 +56,7 @@ export default function EventScreen({
       <p className="event-description">
         {formatValueForDisplay(event.longDescription || event.description)}
       </p>
-      {isAutomatic && !result && (
+      {(isAutomatic || (isRollEvent && !needsEventSurvivorChoice)) && !result && (
         <p className="run-bonus-note">This event resolves immediately. The result will be shown before the hunt continues.</p>
       )}
       
@@ -57,7 +64,20 @@ export default function EventScreen({
         <p className="missing">Paranoia warns that every choice may conceal a worse outcome.</p>
       )}
 
-      {!result && !isAutomatic ? (
+      {!result && needsEventSurvivorChoice ? (
+        <div className="event-choices">
+          <h3>Choose Event Survivor</h3>
+          {livingParty.map(survivor => (
+            <button
+              type="button"
+              key={survivor.id}
+              onClick={() => chooseEventSurvivor(survivor.id)}
+            >
+              {survivor.name} - HP {survivor.hp}/{survivor.maxHp}, Survival {survivor.survival || 0}
+            </button>
+          ))}
+        </div>
+      ) : !result && !isAutomatic && !isRollEvent ? (
         <div className="event-choices">
           {choices.map(choice => {
             const lockedText = getChoiceLockedText(choice, context);
@@ -94,7 +114,7 @@ export default function EventScreen({
             </div>
           )}
         </div>
-      ) : !result && isAutomatic ? (
+      ) : !result && (isAutomatic || isRollEvent) ? (
         <div className="event-outcome">
           <p className="outcome-text">The event is resolving.</p>
           {autoPreview.length > 0 && (
@@ -113,6 +133,31 @@ export default function EventScreen({
           <p className="outcome-text">
             {formatValueForDisplay(result.outcomeText || 'The hunt event resolves.')}
           </p>
+          {result.roll && (
+            <section className="event-roll-breakdown" aria-label="Hunt event roll breakdown">
+              <h3>Roll Result</h3>
+              {result.eventSurvivor && (
+                <p>
+                  Event survivor: <strong>{result.eventSurvivor.name || result.eventSurvivor.id}</strong>
+                  {' '}({result.eventSurvivorReason})
+                </p>
+              )}
+              <p>Base roll: {result.roll.baseRoll}</p>
+              {result.roll.modifiers?.length > 0 ? (
+                <ul>
+                  {result.roll.modifiers.map(modifier => (
+                    <li key={modifier.id}>
+                      {modifier.label}: {modifier.amount > 0 ? '+' : ''}{modifier.amount}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No modifiers.</p>
+              )}
+              <p>Final roll: {result.roll.finalRoll}</p>
+              {result.outcomeBand && <p>Outcome band: {result.outcomeBand.label}</p>}
+            </section>
+          )}
           {result.appliedEffects?.length > 0 && (
             <>
               <h3>Applied Effects</h3>

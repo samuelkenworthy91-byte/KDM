@@ -2213,10 +2213,11 @@ export default function App() {
     const result = resolveEvent(
       currentEvent,
       choice,
-      { runResources, runSurvivor, runModifiers, settlementMemoryDelta: 0 },
+      { runResources, runSurvivor, runParty, runModifiers, settlementMemoryDelta: 0 },
       {
         quarry: quarries[selectedQuarry],
         runParty,
+        settlement,
         settlementMemory: settlement.settlementMemory,
         hasGravesUpgrade: settlement.builtInnovations.includes('storytellerCircle')
       }
@@ -2231,7 +2232,8 @@ export default function App() {
         }
       });
     });
-    const previousAdditions = runSurvivor.personalDeckAdditions || [];
+    const previousEventSurvivor = runParty.find(survivor => survivor.id === result.runSurvivor.id) || runSurvivor;
+    const previousAdditions = previousEventSurvivor.personalDeckAdditions || [];
     const eventCardIds = (result.runSurvivor.personalDeckAdditions || []).slice(previousAdditions.length);
     if (eventCardIds.length) {
       setRunDeck(current => [...current, ...getCardsFromIds(eventCardIds, 'Hunt event')]);
