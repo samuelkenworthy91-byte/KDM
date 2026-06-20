@@ -2907,7 +2907,7 @@ export default function App() {
         if (settlementMemory > 0) {
           const loss = Math.min(settlementMemory, consequences.settlementMemoryLoss);
           settlementMemory -= loss;
-          details.push(`Settlement Memory -${loss}`);
+          details.push(`Memory -${loss}`);
         } else if (consequences.populationLossIfNoMemory) {
           population = Math.max(0, population - consequences.populationLossIfNoMemory);
           details.push(`Population -${consequences.populationLossIfNoMemory}`);
@@ -2925,7 +2925,7 @@ export default function App() {
         } else {
           const loss = Math.min(settlementMemory, consequences.settlementMemoryLossFallback || 0);
           settlementMemory -= loss;
-          details.push(`Settlement Memory -${loss}`);
+          details.push(`Memory -${loss}`);
         }
       }
       details.unshift(`${runSurvivor.name} died`, `Bound gear destroyed: ${lostGear.length}`);

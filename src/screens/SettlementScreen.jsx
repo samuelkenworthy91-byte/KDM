@@ -577,7 +577,7 @@ function SurvivorCard({
                         : isMemoryActionUsed(settlement, 'quietNight')
                           ? 'Already used this Lantern Year'
                           : settlement.settlementMemory < 1
-                            ? 'Not enough settlementMemory'
+                            ? 'Not enough Memory'
                             : ''}
                       onClick={() => confirmForget(
                         personalCard?.name || cardId,
@@ -598,7 +598,7 @@ function SurvivorCard({
                         : isMemoryActionUsed(settlement, 'taboo')
                           ? 'Already used this Lantern Year'
                           : settlement.settlementMemory < 2
-                            ? 'Not enough settlementMemory'
+                            ? 'Not enough Memory'
                             : ''}
                       onClick={() => confirmForget(
                         personalCard?.name || cardId,
@@ -816,7 +816,7 @@ function SurvivorCard({
               title={isMemoryActionUsed(settlement, 'weaponDrills')
                 ? 'Already used this Lantern Year'
                 : settlement.settlementMemory < 1
-                  ? 'Not enough settlementMemory'
+                  ? 'Not enough Memory'
                   : ''}
               onClick={() => onWeaponDrill(survivor.id, cardId)}
             >
@@ -836,7 +836,7 @@ function SurvivorCard({
             title={isMemoryActionUsed(settlement, 'shrineOfNames')
               ? 'Already used this Lantern Year'
               : settlement.settlementMemory < 2
-                ? 'Not enough settlementMemory'
+                ? 'Not enough Memory'
                 : ''}
             onClick={() => onShrineOfNames(survivor.id)}
           >
@@ -2341,11 +2341,11 @@ export default function SettlementScreen({
                     <h4>{entry.survivorName}</h4>
                     <p>{entry.cause}</p>
                     <p className="muted-text">
-                      Lay them to rest for 1 Memory, or recover one basic resource.
+                      Lay them to rest, or recover one basic resource.
                     </p>
                     <div className="button-row">
                       <button type="button" onClick={() => onResolveDeath(entry.id, 'bury')}>
-                        Lay to Rest (+1 Memory)
+                        Lay to Rest
                       </button>
                       <button
                         type="button"

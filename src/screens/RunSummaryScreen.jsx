@@ -70,7 +70,7 @@ export default function RunSummaryScreen({ summary, onContinue }) {
           <dd>{summary?.rowReached ?? 0}</dd>
         </div>
         <div>
-          <dt>settlementMemory Earned</dt>
+          <dt>Memory Earned</dt>
           <dd>+{summary?.settlementMemoryEarned ?? 0}</dd>
         </div>
         <div>

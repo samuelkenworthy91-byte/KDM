@@ -55,7 +55,7 @@ export function formatEventEffect(key, value, context = {}) {
     case 'gainSettlementMemory':
       return value > 0
         ? 'No Memory gained under the current economy.'
-        : `Lose Settlement Memory x${Math.abs(value)}.`;
+        : `Lose Memory x${Math.abs(value)}.`;
     case 'loseHp':
       return `Lose HP x${value}.`;
     case 'healHp':
@@ -106,7 +106,7 @@ export function formatEventEffect(key, value, context = {}) {
     case 'pendingSpecialChildTrait':
       return `Future newborn may gain ${idLabel(value)}.`;
     case 'gravesMemoryBonus':
-      return `If the grave tradition applies, gain Settlement Memory x${value}.`;
+      return `If the grave tradition applies, gain Memory x${value}.`;
     case 'chance':
       return `Chance ${value.percent}%: ${formatEventEffects(value.success, context).join(' ')} Otherwise: ${formatEventEffects(value.failure, context).join(' ')}`;
     default:
@@ -173,7 +173,7 @@ function applyEffects(effects, state, context) {
     next.settlementMemoryDelta += delta;
     next.appliedEffects.push(delta >= 0
       ? 'No Memory gained under the current economy.'
-      : `Lose Settlement Memory x${Math.abs(delta)}.`);
+      : `Lose Memory x${Math.abs(delta)}.`);
   }
   if (effects.loseHp) {
     handledKeys.add('loseHp');
@@ -381,7 +381,7 @@ function applyEffects(effects, state, context) {
     handledKeys.add('gravesMemoryBonus');
     if (context.hasGravesUpgrade) {
       next.settlementMemoryDelta += effects.gravesMemoryBonus;
-      next.appliedEffects.push(`Gain Settlement Memory x${effects.gravesMemoryBonus} from grave tradition.`);
+      next.appliedEffects.push(`Gain Memory x${effects.gravesMemoryBonus} from grave tradition.`);
     }
   }
   if (effects.chance) {

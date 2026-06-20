@@ -67,7 +67,7 @@ export function getInnovationPaymentWarnings(resourceId) {
     warnings.push(`${resource.type === 'level3Rare' ? 'Level 3 rare' : resource.type} resource.`);
   }
   if (resource.id === 'loveJuice') {
-    warnings.push('Love Juice has a future intimacy protection use.');
+    warnings.push('Love Juice has an intimacy protection use.');
   }
   return warnings;
 }

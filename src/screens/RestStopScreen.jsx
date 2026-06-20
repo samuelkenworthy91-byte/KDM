@@ -92,7 +92,7 @@ export default function RestStopScreen({
               onChange={event => setStoryReward(event.target.value)}
             >
               <option value="survival">Gain 1 Survival each</option>
-              <option value="memory">Gain 1 Settlement Memory</option>
+              <option value="memory">Gain 1 Memory</option>
             </select>
           </div>
 

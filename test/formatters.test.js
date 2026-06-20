@@ -14,7 +14,7 @@ import {
 test('formats common type and amount effects', () => {
   assert.equal(
     formatEffectForDisplay({ type: 'settlementMemory', amount: 1 }),
-    '+1 Settlement Memory'
+    '+1 Memory'
   );
   assert.equal(
     formatEffectForDisplay({ type: 'population', amount: -1 }),

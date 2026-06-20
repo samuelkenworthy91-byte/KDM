@@ -176,7 +176,7 @@ export function resolveHuntRetreat({
     case 'theFireGoesLow':
       if (settlementMemory < 2) population = Math.max(0, population - 1);
       settlementMemory = Math.max(0, settlementMemory - 2);
-      affectedDetails.push('Settlement Memory decreased by up to 2.');
+      affectedDetails.push('Memory decreased by up to 2.');
       break;
     case 'brokenNerve': {
       const target = chooseLiving(living());
@@ -257,7 +257,7 @@ export function resolveHuntRetreat({
       break;
     case 'badOmen':
       settlementMemory = Math.max(0, settlementMemory - 1);
-      affectedDetails.push('Settlement Memory decreased by 1.');
+      affectedDetails.push('Memory decreased by 1.');
       break;
     case 'stolenInTheNight': {
       let removal = removeRandomResources(

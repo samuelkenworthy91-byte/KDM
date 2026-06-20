@@ -25,7 +25,7 @@ function updateNominatedSurvivors(settlement, nominatedSurvivorIds, updater) {
 function effectText(effect, detail = '') {
   const labels = {
     gainSettlementMemory: 'No Memory award under the current economy',
-    loseSettlementMemory: `Settlement Memory -${effect.amount}`,
+    loseSettlementMemory: `Memory -${effect.amount}`,
     gainPopulation: `Population +${effect.amount}`,
     losePopulation: `Population -${effect.amount}`,
     gainResource: `Gained ${effect.amount} ${effect.resourceId}`,

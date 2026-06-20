@@ -18,7 +18,7 @@ export default function GraveLegacyScreen({ summary, showAllChoices, onChooseLeg
           Row reached: {summary?.rowReached ?? 0} | Nodes completed:{' '}
           {summary?.nodesCompleted ?? 0}
         </p>
-        <p>settlementMemory earned from this run: +{summary?.settlementMemoryEarned ?? 0}</p>
+        <p>Memory earned from this run: +{summary?.settlementMemoryEarned ?? 0}</p>
       </div>
 
       <div className="grave-card-grid" aria-label="Grave legacy options">

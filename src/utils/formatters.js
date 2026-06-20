@@ -13,9 +13,9 @@ import { scars } from '../data/scars.js';
 const IS_DEV = Boolean(import.meta.env?.DEV);
 
 const LABELS = {
-  settlementMemory: 'Settlement Memory',
-  gainSettlementMemory: 'Settlement Memory',
-  loseSettlementMemory: 'Settlement Memory',
+  settlementMemory: 'Memory',
+  gainSettlementMemory: 'Memory',
+  loseSettlementMemory: 'Memory',
   population: 'Population',
   gainPopulation: 'Population',
   losePopulation: 'Population',
@@ -75,7 +75,7 @@ export function formatEffectForDisplay(effect) {
     return `${signed(-(Number.isFinite(amount) ? amount : 1))} ${lookupName(resources, effect.removeResource)}`;
   }
   if (!type && effect.addSettlementMemory != null) {
-    return `${signed(effect.addSettlementMemory ?? amount)} Settlement Memory`;
+    return `${signed(effect.addSettlementMemory ?? amount)} Memory`;
   }
   if (!type && effect.population != null) return `${signed(effect.population)} Population`;
   if (!type && effect.survival != null) return `${signed(effect.survival)} Survival`;
@@ -90,15 +90,15 @@ export function formatEffectForDisplay(effect) {
     return `${signed(-(Number.isFinite(amount) ? amount : 1))} ${lookupName(resources, effect.resourceId)}`;
   }
   if (type === 'resourceOrMemory') {
-    return `${formatResourceAmount(effect.resourceId, amount)} or Settlement Memory`;
+    return `${formatResourceAmount(effect.resourceId, amount)} or Memory`;
   }
   if (type === 'resourceOrResource') {
     return `${amount || 1} ${(effect.resourceIds || []).map(id => lookupName(resources, id)).join(' or ')}`;
   }
   if (['settlementMemory', 'gainSettlementMemory'].includes(type)) {
-    return `${signed(amount)} Settlement Memory`;
+    return `${signed(amount)} Memory`;
   }
-  if (type === 'loseSettlementMemory') return `${signed(-Math.abs(amount))} Settlement Memory`;
+  if (type === 'loseSettlementMemory') return `${signed(-Math.abs(amount))} Memory`;
   if (['population', 'gainPopulation'].includes(type)) return `${signed(amount)} Population`;
   if (type === 'losePopulation') return `${signed(-Math.abs(amount))} Population`;
   if (type === 'heal' || type === 'healSurvivor' || type === 'healAllSurvivors') {
