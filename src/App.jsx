@@ -168,6 +168,8 @@ import RunSummaryScreen from './screens/RunSummaryScreen.jsx';
 import SettlementScreen from './screens/SettlementScreen.jsx';
 import SurvivorProgressScreen from './screens/SurvivorProgressScreen.jsx';
 import TitleScreen from './screens/TitleScreen.jsx';
+import PrincipleChoiceScreen from './screens/PrincipleChoiceScreen.jsx';
+import { chooseCampaignPrinciple } from './game/campaignPrincipleLogic.js';
 
 function applyChildTrait(survivor, rawTraitId, recordInnate = true) {
   const traitId = normalizeChildTraitId(rawTraitId);
@@ -1883,6 +1885,11 @@ export default function App() {
     setAppliedInnovationId(innovationId);
   };
 
+  const handleChooseCampaignPrinciple = (group, optionId) => {
+    updateSettlement(current => chooseCampaignPrinciple(current, group, optionId));
+    setScreen('settlement');
+  };
+
   const handleForgetCard = (survivorId, cardId) => {
     updateSettlement(current => {
       const survivor = current.survivors.find(item => item.id === survivorId);
@@ -3371,7 +3378,16 @@ export default function App() {
             onMemoryTraining={handleMemoryTraining}
             onPainLesson={handlePainLesson}
             onShrineOfNames={handleShrineOfNames}
+            onOpenPrincipleChoice={() => setScreen('principleChoice')}
             onReturnToTitle={showTitle}
+          />
+        ) : <TitleScreen slots={listSaveSlots()} onLoad={handleLoad} onNew={() => {}} onDelete={handleDelete} />;
+      case 'principleChoice':
+        return settlement ? (
+          <PrincipleChoiceScreen
+            pendingChoice={settlement.pendingPrincipleChoice}
+            onChoose={handleChooseCampaignPrinciple}
+            onCancel={() => setScreen('settlement')}
           />
         ) : <TitleScreen slots={listSaveSlots()} onLoad={handleLoad} onNew={() => {}} onDelete={handleDelete} />;
       case 'partySelection':

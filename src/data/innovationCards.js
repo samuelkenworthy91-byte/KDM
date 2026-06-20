@@ -68,7 +68,6 @@ export const BASE_INNOVATION_POOL_IDS = [
   'ammonia',
   'cooking',
   'bloodletting',
-  'graves',
   'oralTradition',
   'sharedWarnings',
   'trailSignals',
@@ -164,9 +163,18 @@ export const innovationCards = {
   ),
   graves: card(
     'graves', 'Graves', 'legacy',
-    'The settlement gives the dead a place to remain.',
-    ['Grave legacy grants +1 Memory.', 'Adds Death Archive and Shrine of Names to the pool.'],
-    { addsToInnovationPool: ['deathArchive', 'shrineOfNames'], tags: ['death', 'legacy'] }
+    'Deprecated normal innovation. Graves is now a permanent Death Principle.',
+    ['Choose Graves through the Death Principle story trigger instead.'],
+    {
+      addsToInnovationPool: [],
+      tags: ['death', 'legacy', 'deprecated', 'principle'],
+      deckWeight: 0,
+      implemented: false,
+      playerSummary: 'Moved to campaign principles.',
+      howToUse: 'Triggered by the first survivor death as a permanent campaign principle.',
+      actionLocation: 'Campaign Principle choice',
+      whyItMatters: 'Death principles are permanent settlement laws, not normal innovations.'
+    }
   ),
   oralTradition: card(
     'oralTradition', 'Oral Tradition', 'culture',

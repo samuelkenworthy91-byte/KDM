@@ -90,8 +90,13 @@ import {
 } from '../game/survivorIdentity.js';
 import { canSpendMemories, getMemoryBalance } from '../game/memoryEconomy.js';
 import { getHarvestBenefitLabels } from '../game/harvestRewardLogic.js';
+import {
+  campaignPrincipleGroups,
+  getCampaignPrinciple,
+  getCampaignPrincipleOptions
+} from '../data/campaignPrinciples.js';
 
-const baseTabs = ['overview', 'survivors', 'armory', 'innovations', 'population', 'graveyard', 'quarries'];
+const baseTabs = ['overview', 'survivors', 'armory', 'innovations', 'principles', 'population', 'graveyard', 'quarries'];
 
 function InnovationClarity({ innovation }) {
   return (
@@ -894,6 +899,7 @@ export default function SettlementScreen({
   onMemoryTraining,
   onPainLesson,
   onShrineOfNames,
+  onOpenPrincipleChoice,
   onReturnToTitle
 }) {
   const [tab, setTab] = useState('overview');
@@ -2089,6 +2095,64 @@ export default function SettlementScreen({
               ))}
             </details>
           </section>
+        </div>
+      )}
+
+      {tab === 'principles' && (
+        <div className="settlement-panel">
+          <h3>Campaign Principles</h3>
+          <p className="muted-text">
+            Principles are permanent settlement-wide laws triggered by story moments. They are not normal innovations.
+          </p>
+          {settlement.pendingPrincipleChoice && (
+            <article className="item-card">
+              <p className="eyebrow">Decision Required</p>
+              <h4>{campaignPrincipleGroups[settlement.pendingPrincipleChoice.group]?.name || 'Campaign Principle'}</h4>
+              <p>Trigger: {settlement.pendingPrincipleChoice.trigger}</p>
+              <button type="button" onClick={onOpenPrincipleChoice}>
+                Choose Principle
+              </button>
+            </article>
+          )}
+          <div className="item-grid">
+            {Object.entries(campaignPrincipleGroups).map(([group, definition]) => {
+              const option = getCampaignPrinciple(settlement.principles?.[group]);
+              return (
+                <article className="item-card" key={group}>
+                  <p className="eyebrow">{definition.triggerLabel}</p>
+                  <h4>{definition.name}</h4>
+                  {option ? (
+                    <>
+                      <p><strong>{option.name}</strong></p>
+                      <p>{option.playerSummary}</p>
+                      <p><strong>Effect:</strong> {option.mechanicalSummary}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Not chosen yet.</p>
+                      <p className="muted-text">
+                        Choices: {getCampaignPrincipleOptions(group).map(item => item.name).join(' or ')}
+                      </p>
+                    </>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+          {settlement.principleHistory?.length > 0 && (
+            <details>
+              <summary>Principle History ({settlement.principleHistory.length})</summary>
+              {settlement.principleHistory.map((entry, index) => {
+                const option = getCampaignPrinciple(entry.optionId);
+                return (
+                  <p key={`${entry.group}-${entry.optionId}-${index}`}>
+                    {formatValueForDisplay(entry.group)}: {option?.name || entry.optionName || entry.optionId}
+                    {entry.trigger ? ` - ${entry.trigger}` : ''}
+                  </p>
+                );
+              })}
+            </details>
+          )}
         </div>
       )}
 

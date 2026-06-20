@@ -123,6 +123,7 @@ export function normalizeInnovationDeckState(state = {}, options = {}) {
     ...(options.ownedIds || []),
     ...(state.builtInnovationIds || [])
   ]);
+  const excludedPoolIds = new Set(options.excludePoolIds || []);
 
   return {
     discoveredInnovationIds: uniqueIds([
@@ -132,7 +133,7 @@ export function normalizeInnovationDeckState(state = {}, options = {}) {
     availableInnovationPoolIds: uniqueIds([
       ...(options.defaultPoolIds || []),
       ...(state.availableInnovationPoolIds || [])
-    ]),
+    ]).filter(id => !excludedPoolIds.has(id)),
     builtInnovationIds: ownedIds,
     innovationHistory: Array.isArray(state.innovationHistory)
       ? state.innovationHistory.map(normalizeInnovationHistoryEntry)

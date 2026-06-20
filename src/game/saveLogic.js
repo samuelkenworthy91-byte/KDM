@@ -21,6 +21,10 @@ import {
 } from './survivorIdentity.js';
 import { getMemoryBalance } from './memoryEconomy.js';
 import { normalizeInnovationDeckState } from './innovationModel.js';
+import {
+  emptyPrinciples,
+  normalizeCampaignPrincipleState
+} from './campaignPrincipleLogic.js';
 
 const LEGACY_SAVE_KEY = 'settlement';
 const ACTIVE_SLOT_KEY = 'lanternDeckbuilder.activeSlot';
@@ -278,7 +282,11 @@ export const defaultSettlement = {
   rumouredInnovations: []
   ,
   unlockedRecipeFamilies: ['paleHuntLion'],
-  rumourTexts: []
+  rumourTexts: [],
+  principles: { ...emptyPrinciples },
+  pendingPrincipleChoice: null,
+  principleHistory: [],
+  principleUses: {}
 };
 
 export function getSaveSlotKey(slotId) {
@@ -428,9 +436,15 @@ export function normalizeSettlement(data = {}) {
       ? innovationDeckState.builtInnovationIds
       : [])
   ])];
+  const principleState = normalizeCampaignPrincipleState({
+    ...data,
+    builtInnovations: legacyBuiltInnovationIds,
+    lanternYear: Number.isFinite(data.lanternYear) ? data.lanternYear : null
+  });
   const normalizedInnovationDeckState = normalizeInnovationDeckState(innovationDeckState, {
     ownedIds: builtInnovationIds,
-    defaultPoolIds: BASE_INNOVATION_POOL_IDS
+    defaultPoolIds: BASE_INNOVATION_POOL_IDS,
+    excludePoolIds: ['graves']
   });
   const builtMemoryInnovationIds = [...new Set([
     ...(Array.isArray(data.builtMemoryInnovations) ? data.builtMemoryInnovations : []),
@@ -476,6 +490,10 @@ export function normalizeSettlement(data = {}) {
     pendingDeathResolutions: Array.isArray(data.pendingDeathResolutions)
       ? data.pendingDeathResolutions
       : [],
+    principles: principleState.principles,
+    pendingPrincipleChoice: principleState.pendingPrincipleChoice,
+    principleHistory: principleState.principleHistory,
+    principleUses: principleState.principleUses,
     monsterKnowledge: data.monsterKnowledge || {},
     nextRunBonus: data.nextRunBonus || {},
     graveHistory: Array.isArray(data.graveHistory)

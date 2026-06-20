@@ -6,6 +6,7 @@ import { normalizeDefeatedQuarryLevels } from '../data/quarries.js';
 import { getInnovationDefinition } from './innovationModel.js';
 
 const unique = values => [...new Set((values || []).filter(Boolean))];
+const NORMAL_INNOVATION_DISABLED_IDS = new Set(['graves']);
 
 export function getHighestQuarryLevel(settlement) {
   return Math.max(
@@ -69,7 +70,11 @@ export function getInnovationDeckEntries(settlement) {
 
 export function getDrawableInnovationIdsForSettlement(settlement) {
   return getInnovationDeckEntries(settlement)
-    .filter(entry => ['available', 'drawn'].includes(entry.status) && entry.implemented)
+    .filter(entry =>
+      ['available', 'drawn'].includes(entry.status) &&
+      entry.implemented &&
+      !NORMAL_INNOVATION_DISABLED_IDS.has(entry.id)
+    )
     .map(entry => entry.id);
 }
 
@@ -91,6 +96,7 @@ export function drawInnovationCandidates(settlement, count = 3, random = Math.ra
 export function applyInnovationChoice(settlement, innovationId, timestamp = new Date().toISOString()) {
   const card = innovationCards[innovationId];
   if (!card) return settlement;
+  if (NORMAL_INNOVATION_DISABLED_IDS.has(innovationId) || card.implemented === false) return settlement;
   const state = settlement.innovationDeckState || {};
   if (state.builtInnovationIds?.includes(innovationId)) return settlement;
 
