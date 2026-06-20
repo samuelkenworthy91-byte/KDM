@@ -33,7 +33,7 @@ export const resources = {
   claw: resource('claw', 'Claw', 'monster', 'A sharp trophy from a slain creature.'),
   strangeEye: resource('strangeEye', 'Strange Eye', 'strange', 'An eye that remembers impossible sights.'),
   scrap: resource('scrap', 'Scrap', 'basic', 'Salvaged metal and useful debris.'),
-  loveJuice: resource('loveJuice', 'Love Juice', 'basic', 'A rare life-giving basic resource used for future intimacy protection.'),
+  loveJuice: resource('loveJuice', 'Love Juice', 'basic', 'A rare life-giving basic resource used for intimacy protection.'),
   fur: resource('fur', 'Fur', 'legacy', 'Warm monster fur.'),
   horn: resource('horn', 'Horn', 'monster', 'Dense horn suitable for tools and weapons.'),
   ichor: resource('ichor', 'Ichor', 'rare', 'Potent fluid taken from an advanced quarry.'),
@@ -374,7 +374,7 @@ Object.values(resources).forEach(item => {
   item.basicResource = BASIC_RESOURCE_IDS.includes(item.id);
   item.genericDropWeight = genericDropWeights[item.id] ?? 0;
   item.specialUse = item.id === 'loveJuice'
-    ? 'Future intimacy protection.'
+    ? 'Intimacy protection.'
     : item.specialUse || null;
 });
 

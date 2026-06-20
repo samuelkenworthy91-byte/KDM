@@ -56,7 +56,7 @@ test('all resources have material tags and love juice has special use metadata',
     assert.ok(Array.isArray(resource.materialTags), `${resource.id} needs materialTags`);
     assert.ok(resource.materialTags.length > 0, `${resource.id} needs at least one material tag`);
   });
-  assert.equal(resources.loveJuice.specialUse, 'Future intimacy protection.');
+  assert.equal(resources.loveJuice.specialUse, 'Intimacy protection.');
 });
 
 test('generic drop weights make love juice rarer than the other basics', () => {

@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { events } from '../src/data/events.js';
-import { formatEventEffects, resolveEvent } from '../src/game/eventLogic.js';
+import {
+  calculateIntimacyProjections,
+  formatEventEffects,
+  resolveEvent,
+  shouldLoveJuiceProtectIntimacy,
+  spendLoveJuiceForIntimacy
+} from '../src/game/eventLogic.js';
+import { innovationCards } from '../src/data/innovationCards.js';
 import { meetsLockedRequirement } from '../src/game/eventRequirementLogic.js';
 
 const mockSurvivor = (id, traits = [], boundGear = []) => ({
@@ -80,6 +87,65 @@ test('Event Requirement Logic', async (t) => {
       ]
     };
     assert.strictEqual(meetsLockedRequirement(reqFail, context), false);
+  });
+});
+
+test('Love Juice intimacy support', async (t) => {
+  await t.test('spends one Love Juice before intimacy protection', () => {
+    const settlement = { stash: { loveJuice: 2, bone: 1 } };
+    const spent = spendLoveJuiceForIntimacy(settlement);
+
+    assert.equal(spent.stash.loveJuice, 1);
+    assert.equal(spent.stash.bone, 1);
+    assert.equal(settlement.stash.loveJuice, 2);
+  });
+
+  await t.test('cannot spend Love Juice when unavailable', () => {
+    assert.equal(spendLoveJuiceForIntimacy({ stash: { bone: 1 } }), null);
+  });
+
+  await t.test('Love Juice protects only negative intimacy rolls and never guarantees success', () => {
+    assert.equal(shouldLoveJuiceProtectIntimacy({
+      roll: 0.05,
+      tragedyChance: 0.2,
+      loveJuiceSelected: true
+    }), true);
+    assert.equal(shouldLoveJuiceProtectIntimacy({
+      roll: 0.6,
+      tragedyChance: 0.2,
+      loveJuiceSelected: true
+    }), false);
+    assert.equal(shouldLoveJuiceProtectIntimacy({
+      roll: 0.05,
+      tragedyChance: 0.2,
+      loveJuiceSelected: false
+    }), false);
+  });
+
+  await t.test('intimacy projections expose transparent rows including Love Juice', () => {
+    const participant = mockSurvivor('s1');
+    participant.name = 'Aster';
+    participant.injuries = ['brokenLeg'];
+    const projections = calculateIntimacyProjections({
+      stash: { loveJuice: 1 },
+      population: 10,
+      survivors: [participant],
+      innovationDeckState: { builtInnovationIds: ['language', 'ammonia'] }
+    }, innovationCards, {
+      participants: [participant],
+      mitigateRisk: true,
+      loveJuiceSelected: true
+    });
+
+    assert.ok(projections.modifierRows.some(row => row.label === 'Base chance'));
+    assert.ok(projections.modifierRows.some(row => row.label === 'Language' && row.type === 'success'));
+    assert.ok(projections.modifierRows.some(row => row.label === 'Ammonia' && row.type === 'tragedy'));
+    assert.ok(projections.modifierRows.some(row => row.label.includes('untreated severe injury')));
+    assert.ok(projections.modifierRows.some(row => row.source === 'loveJuice' && row.selected));
+    assert.equal(projections.loveJuiceAvailable, true);
+    assert.equal(projections.loveJuiceSelected, true);
+    assert.equal(projections.finalSuccessChance, 0.3);
+    assert.equal(projections.finalTragedyChance, 0);
   });
 });
 

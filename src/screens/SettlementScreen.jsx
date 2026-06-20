@@ -873,6 +873,7 @@ export default function SettlementScreen({
   const [intimacyMaleId, setIntimacyMaleId] = useState('');
   const [intimacyFemaleId, setIntimacyFemaleId] = useState('');
   const [spendMemoryOnIntimacy, setSpendMemoryOnIntimacy] = useState(false);
+  const [useLoveJuiceOnIntimacy, setUseLoveJuiceOnIntimacy] = useState(false);
   const [timelineNomineeId, setTimelineNomineeId] = useState('');
   const [showDeckInspection, setShowDeckInspection] = useState(false);
   const [newbornFirstName, setNewbornFirstName] = useState('');
@@ -963,6 +964,11 @@ export default function SettlementScreen({
   const memoryBalance = getMemoryBalance(settlement);
   const validMaleParticipant = livingMales.some(survivor => survivor.id === intimacyMaleId);
   const validFemaleParticipant = livingFemales.some(survivor => survivor.id === intimacyFemaleId);
+  const selectedIntimacyParticipants = [
+    livingMales.find(survivor => survivor.id === intimacyMaleId),
+    livingFemales.find(survivor => survivor.id === intimacyFemaleId)
+  ].filter(Boolean);
+  const loveJuiceAvailable = (settlement.stash?.loveJuice || 0) > 0;
   const activeSurvivor = livingSurvivors.find(survivor => survivor.id === settlement.activeSurvivorId);
   const selectedActionSurvivor = livingSurvivors.find(survivor =>
     survivor.id === actionSurvivorId
@@ -2167,23 +2173,28 @@ export default function SettlementScreen({
           )}
 
           {(() => {
-            const projections = calculateIntimacyProjections(settlement, innovationCards);
+            const projections = calculateIntimacyProjections(settlement, innovationCards, {
+              participants: selectedIntimacyParticipants,
+              mitigateRisk: spendMemoryOnIntimacy,
+              loveJuiceSelected: useLoveJuiceOnIntimacy
+            });
             return (
               <div className="intimacy-transparency">
                 <div className="odds-breakdown">
                   <h4>Intimacy Odds</h4>
-                  <p>Base Success: {(projections.baseSuccessChance * 100).toFixed(0)}%</p>
-                  <p>Base Tragedy Risk: {(projections.baseTragedyChance * 100).toFixed(0)}%</p>
-
-                  {projections.modifiers.length > 0 && (
-                    <ul className="modifier-list">
-                      {projections.modifiers.map((mod, idx) => (
-                        <li key={idx} className={mod.value > 0 ? 'bonus' : 'penalty'}>
-                          {mod.name}: {mod.value > 0 ? '+' : ''}{(mod.value * 100).toFixed(0)}% {mod.type}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <ul className="modifier-list">
+                    {projections.modifierRows.map((row, idx) => (
+                      <li
+                        key={`${row.label}-${idx}`}
+                        className={row.value > 0 ? 'bonus' : row.value < 0 ? 'penalty' : 'muted-text'}
+                      >
+                        {row.label}: {row.type === 'protection'
+                          ? row.detail
+                          : `${row.value > 0 ? '+' : ''}${(row.value * 100).toFixed(0)}% ${row.type}`}
+                        {row.detail && row.type !== 'protection' ? ` - ${row.detail}` : ''}
+                      </li>
+                    ))}
+                  </ul>
 
                   <div className="final-odds">
                     <strong>Final Success Chance: {(projections.finalSuccessChance * 100).toFixed(0)}%</strong><br/>
@@ -2194,10 +2205,7 @@ export default function SettlementScreen({
                 <div className="how-to-improve">
                   <h4>How to Improve Odds</h4>
                   <ul>
-                    {!settlement.innovationDeckState.builtInnovationIds.includes('cooking') && <li>Innovate: Cooking (+10% success)</li>}
-                    {!settlement.innovationDeckState.builtInnovationIds.includes('language') && <li>Innovate: Language (+5% success)</li>}
-                    {!settlement.innovationDeckState.builtInnovationIds.includes('ammonia') && <li>Innovate: Ammonia (-10% tragedy)</li>}
-                    <li>Discovery: Certain landmarks may offer bonuses.</li>
+                    {projections.improvementTips.map(tip => <li key={tip}>{tip}</li>)}
                   </ul>
                 </div>
               </div>
@@ -2222,23 +2230,6 @@ export default function SettlementScreen({
             <option value="">Choose survivor</option>
             {livingFemales.map(survivor => <option key={survivor.id} value={survivor.id}>{getSurvivorDisplayName(survivor)}</option>)}
           </select>
-          <button
-            type="button"
-            disabled={
-              intimacyUsedThisYear ||
-              Boolean(settlement.pendingNewborn) ||
-              !validMaleParticipant ||
-              !validFemaleParticipant
-            }
-            onClick={() => {
-              onAttemptIntimacy(intimacyMaleId, intimacyFemaleId, {
-                mitigateRisk: spendMemoryOnIntimacy
-              });
-              setSpendMemoryOnIntimacy(false);
-            }}
-          >
-            Attempt Intimacy
-          </button>
           <label className="toggle-label">
             <input
               type="checkbox"
@@ -2248,9 +2239,43 @@ export default function SettlementScreen({
             />
             Spend 1 Memory to reduce tragedy risk by 10%
           </label>
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={useLoveJuiceOnIntimacy}
+              disabled={!loveJuiceAvailable}
+              onChange={event => setUseLoveJuiceOnIntimacy(event.target.checked)}
+            />
+            Spend 1 Love Juice to prevent negative outcomes from this attempt
+            {' '}({settlement.stash?.loveJuice || 0} available)
+          </label>
+          <button
+            type="button"
+            disabled={
+              intimacyUsedThisYear ||
+              Boolean(settlement.pendingNewborn) ||
+              !validMaleParticipant ||
+              !validFemaleParticipant ||
+              (useLoveJuiceOnIntimacy && !loveJuiceAvailable)
+            }
+            onClick={() => {
+              onAttemptIntimacy(intimacyMaleId, intimacyFemaleId, {
+                mitigateRisk: spendMemoryOnIntimacy,
+                useLoveJuice: useLoveJuiceOnIntimacy
+              });
+              setSpendMemoryOnIntimacy(false);
+              setUseLoveJuiceOnIntimacy(false);
+            }}
+          >
+            Attempt Intimacy
+          </button>
           <p className="muted-text">
             Newborn trait and fighting-art investment will use escalating Memory costs.
             The central spending hook is ready; quality tables arrive in a later patch.
+          </p>
+          <p className="muted-text">
+            Love Juice prevents tragedy, death, severe wound, Panic, or resource-loss consequences from
+            this intimacy attempt. It does not improve the chance of a newborn.
           </p>
           <p className="muted-text">
             Children inherit the birthing parent&apos;s family name when available, then the other
@@ -2278,6 +2303,8 @@ export default function SettlementScreen({
                   Year {entry.lanternYear ?? '?'}: {entry.participantNames?.join(' and ') || 'Unknown participants'}
                   {entry.roll ? ` rolled ${entry.roll}.` : ''}{' '}
                   {formatHistoryDetail(entry.outcome || entry.result)}
+                  {entry.loveJuiceUsed ? ' Love Juice spent.' : ''}
+                  {entry.loveJuiceProtectionApplied ? ' Negative outcome prevented.' : ''}
                   {entry.deathName ? ` ${entry.deathName} died.` : ''}
                   <small>{new Date(entry.timestamp).toLocaleString()}</small>
                 </li>

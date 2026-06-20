@@ -78,7 +78,12 @@ import {
   rollBossScar,
   rollLowHpCondition
 } from './game/conditionLogic.js';
-import { calculateIntimacyProjections, resolveEvent } from './game/eventLogic.js';
+import {
+  calculateIntimacyProjections,
+  resolveEvent,
+  shouldLoveJuiceProtectIntimacy,
+  spendLoveJuiceForIntimacy
+} from './game/eventLogic.js';
 import { buildRunDeck, getCardsFromIds, getPersonalCardId, removePanicFromSurvivor } from './game/deckLogic.js';
 import {
   EARLY_FORGETTING_COST,
@@ -3056,12 +3061,18 @@ export default function App() {
         })
         : current;
       if (!memorySettlement) return current;
+      const loveJuiceProtected = Boolean(options.useLoveJuice);
+      const protectedSettlement = loveJuiceProtected
+        ? spendLoveJuiceForIntimacy(memorySettlement)
+        : memorySettlement;
+      if (!protectedSettlement) return current;
 
-      const projections = calculateIntimacyProjections(current, innovationCards);
-      const tragedyChance = Math.max(
-        0,
-        projections.finalTragedyChance - (options.mitigateRisk ? 0.1 : 0)
-      );
+      const projections = calculateIntimacyProjections(protectedSettlement, innovationCards, {
+        participants: [male, female],
+        mitigateRisk: options.mitigateRisk,
+        loveJuiceSelected: loveJuiceProtected
+      });
+      const tragedyChance = projections.finalTragedyChance;
       const roll = Math.random();
 
       let populationChange = 0;
@@ -3072,7 +3083,15 @@ export default function App() {
       let pendingNewborn = current.pendingNewborn;
       let finalRollValue = Math.floor(roll * 10) + 1; // For history display
 
-      if (roll < tragedyChance) {
+      const loveJuiceProtectionApplied = shouldLoveJuiceProtectIntimacy({
+        roll,
+        tragedyChance,
+        loveJuiceSelected: loveJuiceProtected
+      });
+
+      if (loveJuiceProtectionApplied) {
+        outcome = 'Love Juice protected the participants from intimacy tragedy. No birth.';
+      } else if (roll < tragedyChance) {
         // Tragedy / Wound
         if (Math.random() < 0.5) {
           deathId = Math.random() < 0.5 ? male.id : female.id;
@@ -3139,6 +3158,8 @@ export default function App() {
         populationChange,
         memoryAwarded: 0,
         memorySpentOnMitigation: options.mitigateRisk ? 1 : 0,
+        loveJuiceUsed: loveJuiceProtected,
+        loveJuiceProtectionApplied,
         deathName: deathSurvivor?.name || null
       };
       if (pendingNewborn) pendingNewborn.historyTimestamp = historyEntry.timestamp;
@@ -3149,7 +3170,7 @@ export default function App() {
             lanternYear: current.lanternYear
           })
         ])
-        : memorySettlement;
+        : protectedSettlement;
 
       return {
         ...resolvedSettlement,

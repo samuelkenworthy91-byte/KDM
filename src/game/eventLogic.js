@@ -426,32 +426,164 @@ export function resolveEvent(event, choice, state, context) {
   };
 }
 
-export function calculateIntimacyProjections(settlement, innovationCards) {
-  const baseSuccessChance = 0.5; // rolls 6-10
-  const baseTragedyChance = 0.2; // rolls 1-2
-  
+const SEVERE_INTIMACY_INJURIES = new Set([
+  'brokenArm',
+  'deepCut',
+  'shatteredNerve',
+  'bleedingTorso',
+  'crushedChest',
+  'brokenLeg'
+]);
+
+function clampChance(value, min = 0, max = 1) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function percentRow(label, value, category, source, options = {}) {
+  return {
+    label,
+    value,
+    category,
+    source,
+    type: options.type || category,
+    detail: options.detail || '',
+    protects: options.protects || []
+  };
+}
+
+function getBuiltInnovationIds(settlement = {}) {
+  return settlement.innovationDeckState?.builtInnovationIds || [];
+}
+
+function getParticipantRows(participants = []) {
+  return participants.flatMap(participant => {
+    const severeInjuries = (participant?.injuries || [])
+      .filter(injuryId => SEVERE_INTIMACY_INJURIES.has(injuryId));
+    if (!severeInjuries.length) return [];
+    return [
+      percentRow(
+        `${participant.name || 'Participant'} untreated severe injury`,
+        -0.1,
+        'participant',
+        'participant',
+        {
+          type: 'success',
+          detail: severeInjuries
+            .map(injuryId => injuries[injuryId]?.name || idLabel(injuryId))
+            .join(', ')
+        }
+      )
+    ];
+  });
+}
+
+export function hasLoveJuice(settlement = {}) {
+  return (settlement.stash?.loveJuice || 0) > 0;
+}
+
+export function spendLoveJuiceForIntimacy(settlement = {}) {
+  if (!hasLoveJuice(settlement)) return null;
+  return {
+    ...settlement,
+    stash: {
+      ...(settlement.stash || {}),
+      loveJuice: Math.max(0, (settlement.stash?.loveJuice || 0) - 1)
+    }
+  };
+}
+
+export function shouldLoveJuiceProtectIntimacy({ roll, tragedyChance, loveJuiceSelected } = {}) {
+  return Boolean(loveJuiceSelected) && Number(roll) < Number(tragedyChance);
+}
+
+export function calculateIntimacyProjections(settlement = {}, innovationCards = {}, options = {}) {
+  const baseSuccessChance = 0.35;
+  const baseTragedyChance = 0.2;
+  const participants = (options.participants || []).filter(Boolean);
+  const loveJuiceSelected = Boolean(options.loveJuiceSelected);
+  const memoryMitigationSelected = Boolean(options.mitigateRisk);
+  const loveJuiceAvailable = hasLoveJuice(settlement);
+
+  const modifierRows = [
+    percentRow('Base chance', baseSuccessChance, 'base', 'base', {
+      type: 'success'
+    }),
+    percentRow('Base tragedy risk', baseTragedyChance, 'base', 'base', {
+      type: 'tragedy'
+    })
+  ];
   const modifiers = [];
   const builtIds = settlement.innovationDeckState?.builtInnovationIds || [];
   
   builtIds.forEach(id => {
     const card = innovationCards[id];
     if (card?.mechanicalEffects?.intimacySuccessBonus) {
-      modifiers.push({
-        name: card.name,
-        value: card.mechanicalEffects.intimacySuccessBonus,
-        type: 'success',
-        source: 'innovation'
-      });
+      const row = percentRow(
+        card.name,
+        card.mechanicalEffects.intimacySuccessBonus,
+        'innovation',
+        'innovation',
+        { type: 'success' }
+      );
+      modifiers.push(row);
+      modifierRows.push(row);
     }
     if (card?.mechanicalEffects?.intimacyTragedyReduction) {
-      modifiers.push({
-        name: card.name,
-        value: -card.mechanicalEffects.intimacyTragedyReduction,
-        type: 'tragedy',
-        source: 'innovation'
-      });
+      const row = percentRow(
+        card.name,
+        -card.mechanicalEffects.intimacyTragedyReduction,
+        'innovation',
+        'innovation',
+        { type: 'tragedy' }
+      );
+      modifiers.push(row);
+      modifierRows.push(row);
     }
   });
+
+  getParticipantRows(participants).forEach(row => {
+    modifiers.push(row);
+    modifierRows.push(row);
+  });
+
+  if (memoryMitigationSelected) {
+    const row = percentRow('Memory mitigation', -0.1, 'risk', 'memory', {
+      type: 'tragedy',
+      detail: 'Spend 1 Memory to reduce tragedy risk for this attempt.'
+    });
+    modifiers.push(row);
+    modifierRows.push(row);
+  }
+
+  if ((settlement.survivors || []).filter(survivor => survivor.alive !== false).length >= (settlement.population || 0)) {
+    const row = percentRow('No open population capacity', -0.15, 'risk', 'population', {
+      type: 'success',
+      detail: 'Name or recover population space before relying on births.'
+    });
+    modifiers.push(row);
+    modifierRows.push(row);
+  }
+
+  const loveJuiceRow = {
+    label: loveJuiceSelected
+      ? 'Love Juice protection selected'
+      : loveJuiceAvailable
+        ? 'Love Juice protection available'
+        : 'Love Juice protection unavailable',
+    value: 0,
+    category: 'resource',
+    source: 'loveJuice',
+    type: 'protection',
+    available: loveJuiceAvailable,
+    selected: loveJuiceSelected,
+    detail: loveJuiceSelected
+      ? 'Consumes 1 Love Juice before the attempt. It prevents intimacy tragedy, death, severe wound, Panic, and resource-loss consequences from this attempt only.'
+      : loveJuiceAvailable
+        ? 'Spend 1 Love Juice before the attempt to prevent negative outcomes; it does not improve birth odds.'
+        : 'No Love Juice in the settlement stash.',
+    protects: ['tragedy', 'death', 'severeWound', 'panic', 'resourceLoss']
+  };
+  modifierRows.push(loveJuiceRow);
 
   const successBonus = modifiers
     .filter(m => m.type === 'success')
@@ -460,15 +592,34 @@ export function calculateIntimacyProjections(settlement, innovationCards) {
     .filter(m => m.type === 'tragedy')
     .reduce((total, m) => total + m.value, 0);
 
-  const finalSuccessChance = Math.min(0.95, baseSuccessChance + successBonus);
-  const finalTragedyChance = Math.max(0.01, baseTragedyChance + tragedyReduction);
+  const finalSuccessChance = clampChance(baseSuccessChance + successBonus, 0.05, 0.85);
+  const finalTragedyChance = clampChance(baseTragedyChance + tragedyReduction, 0, 0.85);
+  modifierRows.push(percentRow('Final chance', finalSuccessChance, 'final', 'final', {
+    type: 'success'
+  }));
+  modifierRows.push(percentRow('Final tragedy risk', finalTragedyChance, 'final', 'final', {
+    type: 'tragedy'
+  }));
 
   return {
     baseSuccessChance,
     baseTragedyChance,
     modifiers,
+    modifierRows,
+    loveJuiceAvailable,
+    loveJuiceSelected,
+    memoryMitigationSelected,
     finalSuccessChance,
     finalTragedyChance,
+    improvementTips: [
+      !getBuiltInnovationIds(settlement).includes('language') && 'Innovate Language for +5% success.',
+      !getBuiltInnovationIds(settlement).includes('cooking') && 'Innovate Cooking for +10% success.',
+      !getBuiltInnovationIds(settlement).includes('ammonia') && 'Innovate Ammonia to reduce tragedy risk.',
+      participants.some(participant => (participant?.injuries || []).some(injuryId => SEVERE_INTIMACY_INJURIES.has(injuryId))) &&
+        'Treat severe participant injuries before attempting intimacy.',
+      !loveJuiceAvailable && 'Find Love Juice from basic resource rewards to protect against tragedy.',
+      loveJuiceAvailable && 'Use Love Juice when you want safety; it will not raise the birth chance.'
+    ].filter(Boolean),
     outcomes: [
       { label: 'Tragedy / Wound', chance: finalTragedyChance, risk: true },
       { label: 'No Birth', chance: Math.max(0, 1 - finalSuccessChance - finalTragedyChance) },
