@@ -895,7 +895,6 @@ export default function SettlementScreen({
   onCraft,
   onAttemptInnovation,
   onTimelineChoice,
-  onCreateSurvivor,
   onSelectSurvivor,
   onStartHunt,
   onAttemptIntimacy,
@@ -915,11 +914,6 @@ export default function SettlementScreen({
   const [tab, setTab] = useState('overview');
   const [showLockedGear, setShowLockedGear] = useState(false);
   const [activeArmouryTab, setActiveArmouryTab] = useState('Stored Gear');
-  const [survivorName, setSurvivorName] = useState('');
-  const [survivorGender, setSurvivorGender] = useState('other');
-  const [survivorAppearance, setSurvivorAppearance] = useState('');
-  const [useSpecialTrait, setUseSpecialTrait] = useState(false);
-  const [startingTrait, setStartingTrait] = useState('');
   const [intimacyMaleId, setIntimacyMaleId] = useState('');
   const [intimacyFemaleId, setIntimacyFemaleId] = useState('');
   const [spendMemoryOnIntimacy, setSpendMemoryOnIntimacy] = useState(false);
@@ -1219,18 +1213,6 @@ export default function SettlementScreen({
     return 'Available in Actions';
   };
 
-  const submitSurvivor = event => {
-    event.preventDefault();
-    onCreateSurvivor(survivorName, survivorGender, {
-      appearance: survivorAppearance,
-      useSpecialTrait,
-      startingTrait
-    });
-    setSurvivorName('');
-    setSurvivorAppearance('');
-    setUseSpecialTrait(false);
-    setStartingTrait('');
-  };
 
   const huntButton = (
     <button
@@ -1431,64 +1413,6 @@ export default function SettlementScreen({
 
       {tab === 'survivors' && (
         <div className="settlement-panel">
-          <h3>Create Survivor</h3>
-          <form className="survivor-form" onSubmit={submitSurvivor}>
-            <input value={survivorName} placeholder="Founder name" onChange={event => setSurvivorName(event.target.value)} />
-            <select value={survivorGender} onChange={event => setSurvivorGender(event.target.value)}>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
-            <input
-              value={survivorAppearance}
-              placeholder="Appearance (optional)"
-              onChange={event => setSurvivorAppearance(event.target.value)}
-            />
-            {settlement.pendingSpecialChildTrait && (
-              <div className="item-card">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={useSpecialTrait}
-                    onChange={event => setUseSpecialTrait(event.target.checked)}
-                  />
-                  Use pending special child trait
-                </label>
-                <strong>
-                  {childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.name ||
-                    settlement.pendingSpecialChildTrait}
-                </strong>
-                <p>
-                  {formatValueForDisplay(
-                    childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.description
-                  )}
-                </p>
-                <p className="effect-text">
-                  {formatModifierEffect(
-                    childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.effectText ||
-                    childTraits[normalizeChildTraitId(settlement.pendingSpecialChildTrait)]?.mechanicalEffect
-                  )}
-                </p>
-              </div>
-            )}
-            {settlement.builtMemoryInnovations.includes('trialNames') && (
-              <select value={startingTrait} onChange={event => setStartingTrait(event.target.value)}>
-                <option value="">No Trial Name trait</option>
-                {Object.values(startingTraits).map(trait => (
-                  <option value={trait.id} key={trait.id}>
-                    {trait.name}: {formatModifierEffect(trait.effect)}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button type="submit" disabled={livingSurvivors.length >= settlement.population}>Create Survivor</button>
-          </form>
-          <p className="muted-text">
-            Founders keep one name. Children born through intimacy receive a given name and family name.
-          </p>
-          {livingSurvivors.length >= settlement.population && (
-            <p className="muted-text">Named survivors already match the settlement population.</p>
-          )}
           <h3>Living Survivors</h3>
           <section className="memory-actions-panel">
             <h3>Memory Actions</h3>
