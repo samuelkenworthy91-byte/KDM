@@ -751,20 +751,7 @@ export default function App() {
   };
 
   const handleCreate = data => {
-    const initialSurvivors = (data.founderDrafts || []).map(draft =>
-      createSurvivor(draft.name, draft.gender, {
-        appearance: draft.appearance,
-        generationType: 'founder'
-      })
-    );
-    const activeSurvivorId = initialSurvivors[0]?.id || null;
-    const next = normalizeSettlement({
-      ...defaultSettlement,
-      settlementName: data.settlementName,
-      population: data.population,
-      survivors: initialSurvivors,
-      activeSurvivorId
-    });
+    const next = normalizeSettlement({ ...defaultSettlement, ...data });
     setActiveSlot(createSlot);
     saveSettlement(next, createSlot);
     setActiveSlotState(createSlot);
@@ -3016,6 +3003,33 @@ export default function App() {
     setScreen('nemesisResult');
   };
 
+  const handleCreateSurvivor = (name, gender, options) => {
+    updateSettlement(current => {
+      const survivor = createSurvivor(name, gender, {
+        ...options,
+        generationType: 'founder'
+      });
+      let nextSurvivor = survivor;
+      if (options?.useSpecialTrait && current.pendingSpecialChildTrait) {
+        nextSurvivor = applyChildTrait(nextSurvivor, current.pendingSpecialChildTrait);
+      }
+      if (
+        options?.startingTrait &&
+        startingTraits[options.startingTrait] &&
+        current.builtMemoryInnovations.includes('trialNames')
+      ) {
+        nextSurvivor.traits.push(options.startingTrait);
+      }
+      nextSurvivor = applyNewSurvivorSettlementBonuses(nextSurvivor, current);
+      return {
+        ...current,
+        survivors: [...current.survivors, nextSurvivor],
+        activeSurvivorId: current.activeSurvivorId || nextSurvivor.id,
+        pendingSpecialChildTrait: options?.useSpecialTrait ? null : current.pendingSpecialChildTrait
+      };
+    });
+  };
+
   const handleAttemptIntimacy = (maleId, femaleId, options = {}) => {
     updateSettlement(current => {
       if (current.lastIntimacyLanternYear === current.lanternYear) return current;
@@ -3323,6 +3337,7 @@ export default function App() {
             onCraft={handleCraft}
             onAttemptInnovation={handleAttemptInnovation}
             onTimelineChoice={handleTimelineChoice}
+            onCreateSurvivor={handleCreateSurvivor}
             onSelectSurvivor={survivorId => updateSettlement(current => ({ ...current, activeSurvivorId: survivorId }))}
             onStartHunt={prepareHunt}
             onAttemptIntimacy={handleAttemptIntimacy}
