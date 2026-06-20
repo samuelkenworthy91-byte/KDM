@@ -202,22 +202,37 @@ export function queueSocietyPrincipleIfNeeded(settlement = {}) {
 
 export { getWorkTogetherMemoryCost, markWorkTogetherUsed };
 
+function normalizeOdds(odds = {}) {
+  const raw = {
+    negative: Math.max(0, Number(odds.negative) || 0),
+    neutral: Math.max(0, Number(odds.neutral) || 0),
+    positive: Math.max(0, Number(odds.positive) || 0)
+  };
+  const total = raw.negative + raw.neutral + raw.positive;
+  if (total <= 0) return { negative: 0, neutral: 0, positive: 100 };
+
+  const scaled = {
+    negative: Math.round((raw.negative / total) * 100),
+    neutral: Math.round((raw.neutral / total) * 100),
+    positive: 0
+  };
+  scaled.positive = 100 - scaled.negative - scaled.neutral;
+  if (scaled.positive < 0) {
+    scaled.neutral = Math.max(0, scaled.neutral + scaled.positive);
+    scaled.positive = 0;
+  }
+  return scaled;
+}
+
 export function adjustRestOutcomeOddsForPrinciples(settlement = {}, odds = {}) {
-  const negative = Math.max(0, Number(odds.negative) || 0);
-  const neutral = Math.max(0, Number(odds.neutral) || 0);
-  const positive = Math.max(0, Number(odds.positive) || 0);
+  const base = normalizeOdds(odds);
   if (!hasCampaignPrinciple(settlement, 'society', 'embraceTheDark')) {
-    return { negative, neutral, positive, modified: false };
+    return { ...base, modified: false };
   }
   const shifted = {
-    negative: Math.max(0, negative - 10),
-    neutral: Math.max(0, neutral - 10),
-    positive: positive + 20
+    negative: Math.max(0, base.negative - 10),
+    neutral: Math.max(0, base.neutral - 10),
+    positive: base.positive + 20
   };
-  const total = shifted.negative + shifted.neutral + shifted.positive;
-  if (total !== 100 && total > 0) {
-    const delta = 100 - total;
-    shifted.positive = Math.max(0, shifted.positive + delta);
-  }
-  return { ...shifted, modified: true };
+  return { ...normalizeOdds(shifted), modified: true };
 }

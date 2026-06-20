@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { getMemoryBalance } from '../game/memoryEconomy.js';
 import {
-  getForgettableRestCards,
+  DEFAULT_REST_OUTCOME_ODDS,
+  getRestOutcomeOdds,
   getRestParty
 } from '../game/restStopLogic.js';
 import { formatValueForDisplay } from '../utils/formatters.js';
@@ -34,6 +34,10 @@ const choices = [
   }
 ];
 
+function formatOdds(odds) {
+  return `Negative ${odds.negative}% / Neutral ${odds.neutral}% / Positive ${odds.positive}%`;
+}
+
 export default function RestStopScreen({
   settlement,
   party,
@@ -61,6 +65,7 @@ export default function RestStopScreen({
   };
 
   const selectedChoice = result ? choices.find(c => c.id === result.choiceId) : null;
+  const restOdds = getRestOutcomeOdds(settlement);
 
   return (
     <section className="event-screen">
@@ -70,6 +75,19 @@ export default function RestStopScreen({
         <>
           <h2>A Brief Shelter</h2>
           <p>There is enough time for one meaningful preparation before the hunt continues.</p>
+
+          <div className="rest-odds-panel">
+            <h3>Rest Outcome Odds</h3>
+            <p>Base: {formatOdds(DEFAULT_REST_OUTCOME_ODDS)}</p>
+            {restOdds.modified ? (
+              <>
+                <p>Current: {formatOdds(restOdds)}</p>
+                <p>Embrace the Dark: worse outcomes -10%, neutral outcomes -10%, positive outcomes +20%.</p>
+              </>
+            ) : (
+              <p>Current: {formatOdds(restOdds)}</p>
+            )}
+          </div>
 
           <div className="rest-selection-context">
             <label className="field-label" htmlFor="rest-survivor">Focus Survivor (for Practice)</label>
@@ -116,6 +134,22 @@ export default function RestStopScreen({
             <p className="outcome-text">{result.outcomeText}</p>
             {result.nextNodeType === 'fight' && (
               <p className="danger-text">Prepare for combat!</p>
+            )}
+            {result.outcomeCategory && (
+              <p>Outcome category: <strong>{result.outcomeCategory}</strong></p>
+            )}
+            {result.healingResults?.length > 0 && (
+              <div className="rest-healing-results">
+                <h3>Healing Applied</h3>
+                <ul>
+                  {result.healingResults.map(entry => (
+                    <li key={entry.survivorId}>
+                      {entry.survivorName}: HP {entry.beforeHp}/{entry.maxHp} {'->'} {entry.afterHp}/{entry.maxHp}
+                      {entry.healed === 0 ? ' (already at max)' : ` (+${entry.healed})`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
           <button type="button" className="continue-button" onClick={onContinue}>

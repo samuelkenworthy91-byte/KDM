@@ -8,6 +8,7 @@ import { createSurvivor, createGearInstance } from './saveLogic.js';
 import { adjustRestOutcomeOddsForPrinciples } from './principleEffects.js';
 
 const living = survivor => survivor?.alive !== false && Number(survivor?.hp) > 0;
+export const DEFAULT_REST_OUTCOME_ODDS = { negative: 30, neutral: 40, positive: 30 };
 
 export function getRestParty(party = [], activeSurvivor = null) {
   const members = (party || []).filter(living);
@@ -24,8 +25,16 @@ function pickRandom(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-export function getRestOutcomeOdds(settlement = {}, baseOdds = { negative: 30, neutral: 40, positive: 30 }) {
+export function getRestOutcomeOdds(settlement = {}, baseOdds = DEFAULT_REST_OUTCOME_ODDS) {
   return adjustRestOutcomeOddsForPrinciples(settlement, baseOdds);
+}
+
+export function getRestOutcomeCategory(settlement = {}, random = Math.random) {
+  const odds = getRestOutcomeOdds(settlement);
+  const roll = Math.max(0, Math.min(99.999, random() * 100));
+  if (roll < odds.negative) return 'negative';
+  if (roll < odds.negative + odds.neutral) return 'neutral';
+  return 'positive';
 }
 
 function getGearLocationId(item = {}) {
@@ -95,17 +104,29 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
 
   // 1. Heal Party
   if (choiceId === 'healParty') {
+    const healingResults = [];
     const runParty = sourceParty.map(survivor => {
       if (!living(survivor)) return survivor;
       const healAmount = Math.max(1, Math.round(survivor.maxHp * 0.25));
+      const beforeHp = Math.max(0, survivor.hp || 0);
+      const afterHp = Math.min(survivor.maxHp, beforeHp + healAmount);
+      healingResults.push({
+        survivorId: survivor.id,
+        survivorName: survivor.name,
+        beforeHp,
+        afterHp,
+        maxHp: survivor.maxHp,
+        healed: afterHp - beforeHp
+      });
       return {
         ...survivor,
-        hp: Math.min(survivor.maxHp, (survivor.hp || 0) + healAmount)
+        hp: afterHp
       };
     });
     return {
       ...base,
       runParty,
+      healingResults,
       applied: true,
       outcomeText: 'The party tends to their wounds and finds a moment of respite.'
     };
@@ -198,21 +219,18 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
 
   // 4. Forage
   if (choiceId === 'forage') {
-    const roll = Math.random() * 100;
+    const outcomeCategory = getRestOutcomeCategory(state.settlement);
     let resourceId = null;
     let outcomeText = '';
 
-    if (roll < 20) {
+    if (outcomeCategory === 'negative') {
       outcomeText = 'The search yielded nothing but dust and shadow.';
-    } else if (roll < 40) {
-      resourceId = 'hide';
-      outcomeText = 'Found a scrap of useful hide.';
-    } else if (roll < 60) {
-      resourceId = 'organ';
-      outcomeText = 'Recovered a preserved organ.';
-    } else if (roll < 80) {
-      resourceId = 'bone';
-      outcomeText = 'Found a sturdy length of bone.';
+    } else if (outcomeCategory === 'neutral') {
+      const resourceIds = ['hide', 'organ', 'bone'];
+      resourceId = pickRandom(resourceIds);
+      outcomeText = resourceId === 'organ'
+        ? 'Recovered a preserved organ.'
+        : `Found a useful ${resourceId}.`;
     } else {
       // Random quarry resource
       const currentQuarryId = state.currentQuarryId || state.monster?.quarryId;
@@ -233,6 +251,8 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
     return {
       ...base,
       runResources,
+      outcomeCategory,
+      odds: getRestOutcomeOdds(state.settlement),
       applied: true,
       outcomeText
     };
@@ -240,17 +260,28 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
 
   // 5. Scout the Dark
   if (choiceId === 'scoutTheDark') {
-    const roll = Math.random() * 100;
+    const outcomeCategory = getRestOutcomeCategory(state.settlement);
 
-    if (roll < 20) {
+    if (outcomeCategory === 'negative') {
       // Encounter (standard fight node)
       return {
         ...base,
+        outcomeCategory,
+        odds: getRestOutcomeOdds(state.settlement),
         applied: true,
         nextNodeType: 'fight',
         outcomeText: 'Scouting reveals a hidden threat! Prepare for an immediate confrontation.'
       };
-    } else if (roll < 30) {
+    } else if (outcomeCategory === 'neutral') {
+      // Quiet route
+      return {
+        ...base,
+        outcomeCategory,
+        odds: getRestOutcomeOdds(state.settlement),
+        applied: true,
+        outcomeText: 'The path ahead is clear and quiet. No extra rewards or dangers found.'
+      };
+    } else if (Math.random() < 0.5) {
       // New Survivor
       const name = generateRandomSurvivorName();
       let survivor = createSurvivor(name); // This gives hp:30, maxHp:30, etc.
@@ -308,10 +339,12 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
       return {
         ...base,
         settlement,
+        outcomeCategory,
+        odds: getRestOutcomeOdds(state.settlement),
         applied: true,
         outcomeText: `A lost soul named ${survivor.name} was found wandering the dark and has joined the settlement, equipped with 1 weapon, 2 armour pieces and 1 tool.`
       };
-    } else if (roll < 40) {
+    } else {
       // Random gear from unlocked building
       const availableGear = getUnlockedRestStopGear(state.settlement);
       const gear = pickRandom(availableGear);
@@ -324,6 +357,8 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
         return {
           ...base,
           settlement,
+          outcomeCategory,
+          odds: getRestOutcomeOdds(state.settlement),
           applied: true,
           outcomeText: `Found a discarded but functional ${gear.name}. It has been added to the settlement's armory.`
         };
@@ -332,17 +367,12 @@ export function resolveRestStopChoice(state, choiceId, options = {}) {
         return {
           ...base,
           runResources,
+          outcomeCategory,
+          odds: getRestOutcomeOdds(state.settlement),
           applied: true,
           outcomeText: 'Found useful scrap in the dark. No unlocked non-consumable gear was available to scavenge.'
         };
       }
-    } else {
-      // Quiet route
-      return {
-        ...base,
-        applied: true,
-        outcomeText: 'The path ahead is clear and quiet. No extra rewards or dangers found.'
-      };
     }
   }
 
