@@ -917,6 +917,75 @@ select {
   margin-top: 0;
 }
 
+.hunter-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.hunter-panel-header h2 {
+  margin-bottom: 0.5rem;
+}
+
+.panel-flip-button {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #7a6845;
+  border-radius: 4px;
+  background: #2a241a;
+  color: #f4e7c5;
+  white-space: nowrap;
+}
+
+.hunter-panel-back {
+  max-height: 22rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.hunter-panel-back > h3 {
+  margin: 0 0 0.65rem;
+  color: #e8bd69;
+}
+
+.hunter-passive-groups {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.hunter-passive-group h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  color: #d8c08a;
+}
+
+.hunter-passive-group ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.hunter-passive-group li {
+  line-height: 1.35;
+}
+
+.hunter-passive-group strong,
+.hunter-passive-group span,
+.hunter-passive-group small {
+  display: block;
+}
+
+.hunter-passive-group span,
+.hunter-passive-group small,
+.passive-empty {
+  color: #b9ad94;
+}
+
+.hunter-passive-group p {
+  margin: 0.15rem 0;
+}
+
 .intent {
   color: #e8bd69;
   font-weight: bold;
@@ -1475,6 +1544,19 @@ select {
 
   .combatants {
     grid-template-columns: 1fr;
+  }
+
+  .hunter-panel-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panel-flip-button {
+    width: 100%;
+  }
+
+  .hunter-panel-back {
+    max-height: 18rem;
   }
 
   .screen-header {

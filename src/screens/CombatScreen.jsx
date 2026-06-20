@@ -24,6 +24,7 @@ export default function CombatScreen({
   runBonus,
   equippedGear,
   hasMonsterBane,
+  settlement,
   victoryButtonText = 'Continue Hunt',
   defeatButtonText = 'View Run Summary',
   onVictory,
@@ -64,7 +65,20 @@ export default function CombatScreen({
   return (
     <section className="combat-screen">
       <div className="combatants">
-        <SurvivorPanel survivor={combat.survivor} />
+        <SurvivorPanel
+          survivor={combat.survivor}
+          passiveContext={{
+            survivor: {
+              ...(runBonus?.survivor || {}),
+              ...combat,
+              ...combat.survivor
+            },
+            settlement,
+            combatState: combat,
+            equippedGear,
+            currentQuarryId: combat.monster?.quarryId
+          }}
+        />
         <MonsterPanel
           monster={combat.monster}
           intent={currentIntent}

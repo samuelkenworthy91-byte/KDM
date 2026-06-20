@@ -41,6 +41,7 @@ export default function PartyCombatScreen({
   partyBonuses,
   pendingPartyEffects = [],
   hasMonsterBane,
+  settlement,
   onVictory,
   onDefeat
 }) {
@@ -246,7 +247,22 @@ export default function PartyCombatScreen({
         <div>
           {combat.members.map(member => (
             <div key={member.survivor.id} className={member.survivor.id === combat.activeCombatant ? 'selected' : ''}>
-              <SurvivorPanel survivor={member.survivor} />
+              <SurvivorPanel
+                survivor={member.survivor}
+                passiveContext={{
+                  survivor: {
+                    ...member,
+                    ...member.survivor
+                  },
+                  settlement,
+                  combatState: {
+                    ...member,
+                    activeAuras: combat.activeAuras,
+                    monster: combat.monster
+                  },
+                  currentQuarryId: combat.monster?.quarryId
+                }}
+              />
             </div>
           ))}
         </div>

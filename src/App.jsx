@@ -3455,6 +3455,7 @@ export default function App() {
             hasMonsterBane={Boolean(
               runSurvivor?.fightingArts?.includes(getMonsterBaneId(pending.nemesisId))
             )}
+            settlement={settlement}
             victoryButtonText="Resolve Nemesis Victory"
             defeatButtonText="Resolve Settlement Defeat"
             onVictory={finishNemesisVictory}
@@ -3576,6 +3577,7 @@ export default function App() {
                 survivor.hp > 0 && survivor.fightingArts?.includes(getMonsterBaneId(selectedQuarry))
               )
             )}
+            settlement={settlement}
             onVictory={handleCombatVictory}
             onDefeat={handleCombatDefeat}
           />
