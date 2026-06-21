@@ -6,6 +6,8 @@ import {
   calculateIntimacyProjections,
   formatEventEffects,
   getHuntEventRollBreakdown,
+  isHuntRollEvent,
+  normalizeHuntEventForRoll,
   resolveEvent,
   selectEventSurvivor,
   shouldLoveJuiceProtectIntimacy,
@@ -180,16 +182,17 @@ test('Event Resolution Logic', async (t) => {
   await t.test('automatic event resolution', () => {
     const result = resolveEvent(event, null, state, context);
     assert.strictEqual(result.outcomeText, 'Success!');
-    assert.strictEqual(result.choiceId, 'automatic');
+    assert.strictEqual(result.choiceId, 'huntRoll');
     assert.strictEqual(result.runSurvivor.survival, 1);
     assert.deepEqual(result.appliedEffects, ['Gain Survival x1.']);
   });
 
-  await t.test('fallback prevents all-locked event softlock', () => {
+  await t.test('legacy fallback events resolve through a default roll band', () => {
     const result = resolveEvent({ id: 'lockedOut', choices: [] }, 'fallback', state, context);
-    assert.strictEqual(result.choiceId, 'fallback');
-    assert.strictEqual(result.runSurvivor.hp, 28);
-    assert.deepEqual(result.appliedEffects, ['Lose HP x2.']);
+    assert.strictEqual(result.choiceId, 'huntRoll');
+    assert.strictEqual(result.runSurvivor.hp, 30);
+    assert.equal(result.outcomeBand.id, 'default');
+    assert.deepEqual(result.appliedEffects, []);
   });
 
   await t.test('readable effect formatter covers common preview text', () => {
@@ -375,6 +378,74 @@ test('Roll-driven hunt event engine', async (t) => {
     assert.deepEqual(result.appliedEffects, ['Gain Survival x1.']);
   });
 
+  await t.test('legacy choice event normalizes to huntRoll bands without choices', () => {
+    const normalized = normalizeHuntEventForRoll({
+      id: 'legacyChoice',
+      choices: [
+        { id: 'low', text: 'Low route', outcomeText: 'Low result.', effects: { loseHp: 1 } },
+        { id: 'mid', text: 'Middle route', outcomeText: 'Middle result.', effects: { gainSurvival: 1 } },
+        { id: 'high', text: 'High route', outcomeText: 'High result.', effects: { gainResource: { resourceId: 'bone' } } }
+      ]
+    });
+
+    assert.equal(normalized.eventType, 'huntRoll');
+    assert.deepEqual(normalized.choices, []);
+    assert.deepEqual(normalized.resultBands.map(band => band.id), ['low', 'mid', 'high']);
+    assert.equal(normalized.resultBands[2].min, 8);
+    assert.equal(isHuntRollEvent(normalized), true);
+  });
+
+  await t.test('automatic event normalizes to a one-band hunt roll event', () => {
+    const normalized = normalizeHuntEventForRoll({
+      id: 'auto',
+      mode: 'automatic',
+      autoOutcome: {
+        outcomeText: 'It happens.',
+        effects: { gainSurvival: 1 }
+      }
+    });
+
+    assert.equal(normalized.eventType, 'huntRoll');
+    assert.deepEqual(normalized.choices, []);
+    assert.equal(normalized.resultBands.length, 1);
+    assert.equal(normalized.resultBands[0].id, 'automatic');
+  });
+
+  await t.test('existing huntRoll keeps result bands and loses legacy choices', () => {
+    const normalized = normalizeHuntEventForRoll({
+      id: 'roll',
+      eventType: 'huntRoll',
+      resultBands: [{ id: 'ok', min: 1, resultText: 'Ok.', effects: {} }],
+      choices: [{ id: 'legacy', text: 'Old route' }]
+    });
+
+    assert.equal(normalized.eventType, 'huntRoll');
+    assert.deepEqual(normalized.choices, []);
+    assert.deepEqual(normalized.resultBands.map(band => band.id), ['ok']);
+  });
+
+  await t.test('Tumour Birds guarded cache resolves on 8+ without throwing', () => {
+    const tumourBirds = events.find(item => item.id === 'tumourBirds');
+    assert.ok(tumourBirds);
+
+    let result;
+    assert.doesNotThrow(() => {
+      result = resolveEvent(tumourBirds, null, state, {
+        ...context,
+        roll: 8,
+        random: () => 0
+      });
+    });
+
+    assert.equal(result.outcomeBand.id, 'guardedNest');
+    assert.match(result.outcomeText, /guarded/i);
+    assert.ok(
+      result.appliedEffects.some(effect =>
+        /Gain .* x1\./.test(effect) || /No resource was available/.test(effect)
+      )
+    );
+  });
+
   await t.test('huntRoll without a valid survivor returns a safe result', () => {
     const result = resolveEvent({
       id: 'noSurvivorRoll',
@@ -400,14 +471,15 @@ test('Roll-driven hunt event engine', async (t) => {
     assert.deepEqual(result.appliedEffects, ['No valid event survivor.']);
   });
 
-  await t.test('old event fallback still resolves safely', () => {
+  await t.test('old event fallback still resolves safely through roll UI', () => {
     const result = resolveEvent({
       id: 'legacyUnknown',
       name: 'Legacy Unknown'
     }, 'fallback', state, context);
 
-    assert.equal(result.choiceId, 'fallback');
-    assert.equal(result.runSurvivor.hp, 18);
+    assert.equal(result.choiceId, 'huntRoll');
+    assert.equal(result.outcomeBand.id, 'default');
+    assert.equal(result.runSurvivor.hp, 20);
   });
 
   await t.test('roll result exposes UI breakdown fields', () => {

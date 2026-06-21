@@ -49,10 +49,28 @@ export default function PartyCombatScreen({
     createPartyCombatState(monster, partyBonuses, pendingPartyEffects)
   );
   const [namedSpendSelections, setNamedSpendSelections] = useState({});
+  const combatMonster = combat?.monster || monster;
   const validMemberEntries = (combat.members || [])
     .map((member, index) => ({ member, index }))
     .filter(entry => entry.member?.survivor?.id);
   const validMembers = validMemberEntries.map(entry => entry.member);
+
+  if (!combatMonster?.id || !Array.isArray(combatMonster.intents)) {
+    return (
+      <section className="placeholder-screen">
+        <p className="eyebrow">Combat Recovery</p>
+        <h2>Combat monster could not be loaded.</h2>
+        <p className="muted-text">Recovery reason: missing combat monster</p>
+        <button type="button" onClick={() => onDefeat({
+          survivors: validMembers.map(member => member.survivor).filter(Boolean),
+          killedBy: monster?.name || 'Unknown quarry',
+          killedById: monster?.baseId || monster?.id || 'unknown'
+        })}>
+          Resolve as Defeat
+        </button>
+      </section>
+    );
+  }
 
   if (!validMembers.length) {
     return (
@@ -74,30 +92,30 @@ export default function PartyCombatScreen({
   const indexedActive = combat.members?.[combat.activePartyIndex];
   const active = indexedActive?.survivor?.id
     ? indexedActive
-    : validMembers.find(member => member.survivor.id === combat.activeCombatant) || validMembers[0];
-  const currentIntent = combat.monster.intents[combat.intentIndex];
+    : validMembers.find(member => member?.survivor?.id === combat.activeCombatant) || validMembers[0];
+  const currentIntent = combatMonster.intents?.[combat.intentIndex] || combatMonster.intents?.[0] || null;
   const combatOver = combat.status !== 'playing';
   const activeAuras = combat.activeAuras || [];
   const fightingArtActions = active ? getActiveFightingArtActions(active) : [];
   const livingPartyHasMonsterBane = validMembers.some(member =>
     member?.survivor?.hp > 0 &&
-    member.fightingArts?.includes(`monsterBane_${combat.monster.quarryId}`)
+    member.fightingArts?.includes(`monsterBane_${combatMonster.quarryId}`)
   );
   const turnNames = combat.combatTurnOrder.map(combatantId =>
     combatantId === 'monster'
       ? 'Monster'
-      : validMembers.find(member => member.survivor.id === combatantId)?.survivor.name
+      : validMembers.find(member => member?.survivor?.id === combatantId)?.survivor.name
   ).filter(Boolean);
-  const brokenWeakPoints = (combat.monster.weakPoints || []).filter(weakPoint => weakPoint.broken);
+  const brokenWeakPoints = (combatMonster.weakPoints || []).filter(weakPoint => weakPoint.broken);
   const selectedWeakPointId = combat.selectedCombatTarget?.type === 'weakPoint'
     ? combat.selectedCombatTarget.id
     : null;
   const selectedWeakPoint = selectedWeakPointId
-    ? combat.monster.weakPoints.find(point => point.id === selectedWeakPointId)
+    ? (combatMonster.weakPoints || []).find(point => point.id === selectedWeakPointId)
     : null;
   const previewAttack = selectedWeakPointId
     ? active?.hand.find(card =>
-      card.type === 'attack' && !card.unplayable && getAdjustedCardCost(card, active) <= active.survivor.energy
+      card.type === 'attack' && !card.unplayable && getAdjustedCardCost(card, active) <= active?.survivor?.energy
     )
     : null;
   const baneRevealsWeakPoints = livingPartyHasMonsterBane || (
@@ -109,12 +127,12 @@ export default function PartyCombatScreen({
         survivor: active.survivor,
         combatState: {
           ...active,
-          monster: combat.monster,
+          monster: combatMonster,
           intentIndex: combat.intentIndex,
           selectedWeakPointId,
           hasMonsterBane: baneRevealsWeakPoints
         },
-        monster: combat.monster,
+        monster: combatMonster,
         selectedTarget: combat.selectedCombatTarget,
         selectedWeakPoint,
         party: validMembers
@@ -198,14 +216,15 @@ export default function PartyCombatScreen({
   };
 
   const finish = () => {
+    const safePartyBonuses = Array.isArray(partyBonuses) ? partyBonuses : [];
     const healedMembers = validMembers.map(member =>
       resolveAfterCombatHealing(cleanupConsumedCards(member), combat.status === 'won' ? 'victory' : 'combat')
     );
     const survivors = healedMembers
       .filter(member => member?.survivor?.id)
       .map(member => {
-        const originalBonus = partyBonuses.find(
-          bonus => bonus?.survivor?.id === member.survivor.id
+        const originalBonus = safePartyBonuses.find(
+          bonus => bonus?.survivor?.id === member?.survivor?.id
         );
         return {
           ...(originalBonus?.survivor || member.survivor),
@@ -235,7 +254,7 @@ export default function PartyCombatScreen({
     const salvageRewards = healedMembers.map(getPostCombatSalvageRewards);
     if (combat.status === 'won') onVictory({
       survivors,
-      monster: combat.monster,
+      monster: combatMonster,
       brokenWeakPoints,
       wounds: healedMembers.flatMap(member => member.woundHistory || []),
       salvageTokens: salvageRewards.reduce((total, reward) => total + reward.salvageTokens, 0),
@@ -247,8 +266,8 @@ export default function PartyCombatScreen({
     });
     else onDefeat({
       survivors,
-      killedBy: combat.monster.name,
-      killedById: combat.monster.baseId || combat.monster.id
+      killedBy: combatMonster.name,
+      killedById: combatMonster.baseId || combatMonster.id
     });
   };
 
@@ -262,7 +281,7 @@ export default function PartyCombatScreen({
         Active combatant: <strong>
           {combat.activeCombatant === 'monster'
             ? 'Monster'
-            : active?.survivor.name}
+            : active?.survivor?.name}
         </strong>
       </p>
       {activeAuras.length > 0 && (
@@ -290,16 +309,16 @@ export default function PartyCombatScreen({
                   combatState: {
                     ...member,
                     activeAuras: combat.activeAuras,
-                    monster: combat.monster
+                    monster: combatMonster
                   },
-                  currentQuarryId: combat.monster?.quarryId
+                  currentQuarryId: combatMonster?.quarryId
                 }}
               />
             </div>
           ))}
         </div>
         <MonsterPanel
-          monster={combat.monster}
+          monster={combatMonster}
           intent={currentIntent}
           hasMonsterBane={baneRevealsWeakPoints}
           intentHintLevel={active?.intentHintLevel || 0}
@@ -323,9 +342,9 @@ export default function PartyCombatScreen({
             }, current))}
           >
             <strong>Monster Body</strong>
-            <small>{combat.monster.hp}/{combat.monster.maxHp} HP</small>
+            <small>{combatMonster.hp}/{combatMonster.maxHp} HP</small>
           </button>
-          {(combat.monster.weakPoints || []).map(weakPoint => (
+          {(combatMonster.weakPoints || []).map(weakPoint => (
             <button
               type="button"
               key={weakPoint.id}
@@ -547,7 +566,7 @@ export default function PartyCombatScreen({
             {active.hand.map((card, index) => {
               const previewState = {
                 ...active,
-                monster: combat.monster,
+                monster: combatMonster,
                 intentIndex: combat.intentIndex,
                 selectedWeakPointId,
                 hasMonsterBane: baneRevealsWeakPoints
@@ -567,13 +586,13 @@ export default function PartyCombatScreen({
                     card,
                     survivor: active.survivor,
                     combatState: previewState,
-                    monster: combat.monster,
+                    monster: combatMonster,
                     selectedTarget: combat.selectedCombatTarget,
                     selectedWeakPoint,
                     party: validMembers,
                     playOptions
                   })}
-                  monster={combat.monster}
+                  monster={combatMonster}
                   survivor={active.survivor}
                   combatState={previewState}
                   party={validMembers}

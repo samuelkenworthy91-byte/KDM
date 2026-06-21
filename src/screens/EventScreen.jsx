@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { formatHistoryDetail, formatValueForDisplay } from '../utils/formatters.js';
-import { canUseEventChoice, getChoiceLockedText } from '../game/eventRequirementLogic.js';
-import { formatEventEffects } from '../game/eventLogic.js';
+import {
+  formatEventEffects,
+  isHuntRollEvent,
+  normalizeHuntEventForRoll
+} from '../game/eventLogic.js';
 
 const formatBandRange = band => {
   if (band.min == null && band.max == null) return 'Any';
@@ -20,37 +23,30 @@ export default function EventScreen({
   selectedQuarry
 }) {
   const [result, setResult] = useState(null);
+  const resolvedEventIdRef = useRef(null);
+  const displayEvent = normalizeHuntEventForRoll(event);
   const context = { runParty, settlement, selectedQuarry: { id: selectedQuarry }, quarry: { id: selectedQuarry } };
-  const choices = event.choices || [];
   const livingParty = (runParty || []).filter(survivor => survivor?.hp > 0 && survivor.alive !== false);
-  const resultBands = Array.isArray(event?.resultBands) ? event.resultBands : [];
-  const isRollEvent = event?.eventType === 'huntRoll' || resultBands.length > 0;
-  const needsEventSurvivorChoice = isRollEvent && (event.allowsChoice || event.eventSurvivorRule === 'playerChoice');
-  const isAutomatic = event.mode === 'automatic';
+  const resultBands = Array.isArray(displayEvent?.resultBands) ? displayEvent.resultBands : [];
+  const isRollEvent = isHuntRollEvent(displayEvent);
+  const needsEventSurvivorChoice = isRollEvent &&
+    (displayEvent.allowsChoice || displayEvent.eventSurvivorRule === 'playerChoice');
 
   useEffect(() => {
     setResult(null);
-  }, [event?.id]);
+    resolvedEventIdRef.current = null;
+  }, [displayEvent?.id]);
 
-  // Automatic and roll events still render their text and outcome before the player continues.
   useEffect(() => {
-    if ((isAutomatic || (isRollEvent && !needsEventSurvivorChoice)) && !result) {
-      const next = onChoose(null);
-      setResult(next);
-    }
-  }, [isAutomatic, isRollEvent, needsEventSurvivorChoice, result, onChoose]);
-
-  const choose = choice => {
-    if (!canUseEventChoice(choice, context)) return;
-    const next = onChoose(choice);
+    if (!isRollEvent || needsEventSurvivorChoice || result) return;
+    if (resolvedEventIdRef.current === displayEvent?.id) return;
+    resolvedEventIdRef.current = displayEvent?.id;
+    const next = onChoose(null);
     setResult(next);
-  };
+  }, [displayEvent?.id, isRollEvent, needsEventSurvivorChoice, result]);
 
-  const isChoiceLocked = choice => !canUseEventChoice(choice, context);
-  const choicePreview = choice => choice.preview ||
-    formatEventEffects(choice.effects || {}, context).join(' ');
-  const autoPreview = event.autoOutcome?.effects
-    ? formatEventEffects(event.autoOutcome.effects, context)
+  const autoPreview = resultBands[0]?.effects
+    ? formatEventEffects(resultBands[0].effects, context)
     : [];
   const chooseEventSurvivor = survivorId => {
     const next = onChoose({ eventSurvivorId: survivorId });
@@ -60,11 +56,11 @@ export default function EventScreen({
   return (
     <section className="event-screen">
       <p className="eyebrow">Hunt Event</p>
-      <h2>{formatValueForDisplay(event.name)}</h2>
+      <h2>{formatValueForDisplay(displayEvent.name)}</h2>
       <p className="event-description">
-        {formatValueForDisplay(event.longDescription || event.description)}
+        {formatValueForDisplay(displayEvent.longDescription || displayEvent.description)}
       </p>
-      {(isAutomatic || (isRollEvent && !needsEventSurvivorChoice)) && !result && (
+      {isRollEvent && !needsEventSurvivorChoice && !result && (
         <p className="run-bonus-note">This event resolves immediately. The result will be shown before the hunt continues.</p>
       )}
       
@@ -75,8 +71,8 @@ export default function EventScreen({
       {isRollEvent && (
         <section className="event-roll-table" aria-label="Hunt event roll table">
           <h3>Roll Table</h3>
-          <p>Event survivor: {event.eventSurvivorRule || 'partyLeader'}</p>
-          <p>Roll: d{event.roll?.die || 10}</p>
+          <p>Event survivor: {displayEvent.eventSurvivorRule || 'partyLeader'}</p>
+          <p>Roll: d{displayEvent.roll?.die || 10}</p>
           <div className="roll-band-list">
             {resultBands.map(band => (
               <div
@@ -104,44 +100,7 @@ export default function EventScreen({
             </button>
           ))}
         </div>
-      ) : !result && !isAutomatic && !isRollEvent ? (
-        <div className="event-choices">
-          {choices.map(choice => {
-            const lockedText = getChoiceLockedText(choice, context);
-            const isLocked = Boolean(lockedText);
-            const preview = choicePreview(choice);
-            
-            return (
-              <div key={choice.id} className="choice-container">
-                <button
-                  type="button"
-                  onClick={() => choose(choice)}
-                  disabled={isLocked}
-                  className={isLocked ? 'locked' : ''}
-                >
-                  {formatValueForDisplay(choice.text)}
-                </button>
-                {preview && <p className="choice-preview">{formatHistoryDetail(preview)}</p>}
-                {isLocked && <p className="locked-text">{lockedText}</p>}
-              </div>
-            );
-          })}
-          {choices.every(isChoiceLocked) && (
-            <div className="choice-container fallback">
-              <button
-                type="button"
-                onClick={() => {
-                  const next = onChoose('fallback');
-                  setResult(next);
-                }}
-              >
-                Force a desperate route (-2 HP)
-              </button>
-              <p className="choice-preview">Fallback: Lose HP x2. The hunt continues.</p>
-            </div>
-          )}
-        </div>
-      ) : !result && (isAutomatic || isRollEvent) ? (
+      ) : !result && isRollEvent ? (
         <div className="event-outcome">
           <p className="outcome-text">The event is resolving.</p>
           {autoPreview.length > 0 && (
@@ -162,7 +121,7 @@ export default function EventScreen({
           </p>
           {result.roll && (
             <section className="event-roll-graphic" aria-label="Roll result graphic">
-              <div className="roll-die">d{event.roll?.die || 10}</div>
+              <div className="roll-die">d{displayEvent.roll?.die || 10}</div>
               <div>
                 <p>Base roll: {result.roll.baseRoll}</p>
                 <p>Final roll: {result.roll.finalRoll}</p>

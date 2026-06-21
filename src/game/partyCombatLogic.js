@@ -28,21 +28,27 @@ import {
 const HAND_SIZE = 5;
 const ENERGY_PER_TURN = 3;
 
+function hasValidCombatSurvivor(member) {
+  return Boolean(member?.survivor?.id);
+}
+
+function isLivingCombatMember(member) {
+  return Boolean(
+    member?.survivor?.id &&
+    Number(member.survivor.hp) > 0 &&
+    member.survivor.isAlive !== false &&
+    member.survivor.alive !== false &&
+    member.status !== 'dead'
+  );
+}
+
 function syncMonster(members, monster) {
   return members.map(member => ({ ...member, monster }));
 }
 
 function livingIndexes(members = []) {
   return members
-    .map((member, index) =>
-      member?.survivor?.id &&
-      member.survivor.hp > 0 &&
-      member.survivor.isAlive !== false &&
-      member.survivor.alive !== false &&
-      member.status !== 'dead'
-        ? index
-        : -1
-    )
+    .map((member, index) => isLivingCombatMember(member) ? index : -1)
     .filter(index => index >= 0);
 }
 
@@ -85,9 +91,12 @@ function prepareTurn(member) {
 }
 
 function applyPendingEffects(state, targetIndex) {
-  const targetId = state.members[targetIndex]?.survivor.id;
+  const targetId = state.members[targetIndex]?.survivor?.id;
   const effects = state.pendingPartyEffects || [];
   let member = state.members[targetIndex];
+  if (!hasValidCombatSurvivor(member)) {
+    return { member, pendingPartyEffects: effects };
+  }
   const remaining = [];
   effects.forEach(effect => {
     const applies = effect.target === 'all' ||
@@ -163,7 +172,7 @@ export function killSurvivorImmediately(member, source) {
 
 function killZeroHpMembers(members, source) {
   return members.map(member =>
-    member.survivor.hp <= 0 && member.status !== 'dead'
+    hasValidCombatSurvivor(member) && member.survivor.hp <= 0 && member.status !== 'dead'
       ? killSurvivorImmediately(member, source)
       : member
   );
@@ -403,8 +412,10 @@ export function createPartyCombatState(monster, partyBonuses, pendingPartyEffect
 export function playPartyCard(cardIndex, state, options = {}) {
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
   if (!livingIndexes(state.members).includes(state.activePartyIndex)) return endPartyTurn(state);
+  const activeBefore = state.members[state.activePartyIndex];
+  if (!hasValidCombatSurvivor(activeBefore)) return endPartyTurn(state);
   const partyHasMonsterBane = state.members.some(member =>
-    member.survivor.hp > 0 && (
+    member?.survivor?.hp > 0 && (
       member.hasMonsterBane ||
       member.fightingArts?.includes(`monsterBane_${state.monster.quarryId}`)
     )
@@ -416,7 +427,6 @@ export function playPartyCard(cardIndex, state, options = {}) {
     (state.monster.weakPoints || []).map(point => [point.id, point.broken])
   );
   const monsterHpBefore = state.monster.hp;
-  const activeBefore = state.members[state.activePartyIndex];
   const playedCard = activeBefore.hand[cardIndex];
   const active = playCard(cardIndex, {
     ...state.members[state.activePartyIndex],
@@ -546,7 +556,7 @@ export function getPartyCounterPreview(state, weakPointId) {
 export function getPartyWeakPointPreview(state, weakPointId) {
   const member = state.members[state.activePartyIndex];
   const weakPoint = state.monster.weakPoints?.find(point => point.id === weakPointId);
-  if (!member || !weakPoint) return null;
+  if (!hasValidCombatSurvivor(member) || !weakPoint) return null;
   const card = member.hand.find(item =>
     item.type === 'attack' && !item.unplayable && item.cost <= member.survivor.energy
   );
@@ -557,7 +567,7 @@ export function getPartyWeakPointPreview(state, weakPointId) {
       breakDamage: 0,
       tellState: getWeakPointTellState(
         weakPoint,
-        state.monster.intents[state.intentIndex],
+        state.monster.intents?.[state.intentIndex],
         state.monster.quarryId
       ),
       cardName: 'No playable attack'
@@ -580,7 +590,7 @@ export function getPartyWeakPointPreview(state, weakPointId) {
   }
   let tellState = getWeakPointTellState(
     weakPoint,
-    state.monster.intents[state.intentIndex],
+    state.monster.intents?.[state.intentIndex],
     state.monster.quarryId
   );
   if (cardTags.includes('exposeWeakPoint')) tellState = 'exposed';
@@ -612,11 +622,11 @@ export function treatPartyWound(memberIndex, location, treatmentType, state) {
   const treatmentId = `${treatmentType}-${memberIndex}`;
   if (state.usedTreatments?.includes(treatmentId)) return state;
   const target = state.members[memberIndex];
-  const woundState = target?.survivor.hitLocations?.[location];
+  const woundState = target?.survivor?.hitLocations?.[location];
   if (!target || !woundState?.wounded || woundState.severe) return state;
   const gearId = treatmentType === 'bandage' ? 'fieldBandages' : 'splintKit';
   const hasGear = state.members.some(member =>
-    member.survivor.hp > 0 &&
+    member?.survivor?.hp > 0 &&
     member.boundGear?.some(gear => gear.equipmentId === gearId)
   );
   if (!hasGear) return state;
@@ -633,8 +643,9 @@ export function treatPartyWound(memberIndex, location, treatmentType, state) {
 export function usePartySurvivalAction(actionId, state) {
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
   if (!livingIndexes(state.members).includes(state.activePartyIndex)) return endPartyTurn(state);
+  if (!hasValidCombatSurvivor(state.members[state.activePartyIndex])) return endPartyTurn(state);
   const partyHasMonsterBane = state.members.some(member =>
-    member.survivor.hp > 0 && (
+    member?.survivor?.hp > 0 && (
       member.hasMonsterBane ||
       member.fightingArts?.includes(`monsterBane_${state.monster.quarryId}`)
     )
@@ -714,6 +725,25 @@ export function usePartyFightingArtAction(actionId, state) {
 
 export function endPartyTurn(state) {
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
+  const activeMember = state.members[state.activePartyIndex];
+  if (!hasValidCombatSurvivor(activeMember)) {
+    const nextIndex = livingIndexes(state.members)[0];
+    if (nextIndex === undefined) {
+      return {
+        ...state,
+        status: 'lost',
+        activePartyIndex: -1,
+        activeCombatant: 'monster',
+        combatTurnOrder: buildTurnOrder(state.members)
+      };
+    }
+    return {
+      ...state,
+      activePartyIndex: nextIndex,
+      activeCombatant: state.members[nextIndex].survivor.id,
+      combatTurnOrder: buildTurnOrder(state.members)
+    };
+  }
   if (!livingIndexes(state.members).includes(state.activePartyIndex)) {
     const nextIndex = livingIndexes(state.members)[0];
     if (nextIndex === undefined) {

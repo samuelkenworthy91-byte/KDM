@@ -53,6 +53,92 @@ function formatResourceGain(resourceId, amount = 1) {
   return `Gain ${resourceName(resourceId)} x${amount}.`;
 }
 
+export function isHuntRollEvent(event = {}) {
+  return Boolean(
+    event?.eventType === 'huntRoll' ||
+    (Array.isArray(event?.resultBands) && event.resultBands.length > 0) ||
+    Array.isArray(event?.choices) ||
+    event?.mode === 'automatic'
+  );
+}
+
+function choiceToResultBand(choice, index) {
+  const ranges = [
+    { min: null, max: 3 },
+    { min: 4, max: 7 },
+    { min: 8, max: null }
+  ];
+  const range = ranges[index] || { min: index * 2 + 1, max: index * 2 + 2 };
+  return {
+    id: choice.id || `choiceBand${index + 1}`,
+    label: choice.text || `Outcome ${index + 1}`,
+    min: range.min,
+    max: range.max,
+    resultText: choice.outcomeText || choice.text || 'The event resolves.',
+    effects: choice.effects || {}
+  };
+}
+
+export function normalizeHuntEventForRoll(event = {}) {
+  if (!event) return event;
+
+  if (
+    event.eventType === 'huntRoll' ||
+    (Array.isArray(event.resultBands) && event.resultBands.length > 0)
+  ) {
+    return {
+      ...event,
+      eventType: 'huntRoll',
+      roll: event.roll || { die: 10 },
+      resultBands: event.resultBands || [],
+      choices: []
+    };
+  }
+
+  if (event.mode === 'automatic') {
+    return {
+      ...event,
+      eventType: 'huntRoll',
+      eventSurvivorRule: event.eventSurvivorRule || 'partyLeader',
+      roll: { die: 10 },
+      resultBands: [{
+        id: 'automatic',
+        label: 'Automatic',
+        min: 1,
+        resultText: event.autoOutcome?.outcomeText || event.description || 'The event resolves.',
+        effects: event.autoOutcome?.effects || {}
+      }],
+      choices: []
+    };
+  }
+
+  if (Array.isArray(event.choices) && event.choices.length) {
+    return {
+      ...event,
+      eventType: 'huntRoll',
+      eventSurvivorRule: event.eventSurvivorRule || 'partyLeader',
+      roll: { die: 10 },
+      resultBands: event.choices.map(choiceToResultBand),
+      choices: []
+    };
+  }
+
+  return {
+    ...event,
+    eventType: 'huntRoll',
+    eventSurvivorRule: event.eventSurvivorRule || 'partyLeader',
+    roll: { die: 10 },
+    resultBands: [{
+      id: 'default',
+      label: 'Resolve',
+      min: 1,
+      resultText: event.description || 'The event resolves.',
+      effects: {}
+    }],
+    choices: []
+  };
+}
+
 export function formatEventEffect(key, value, context = {}) {
   switch (key) {
     case 'gainResource':
@@ -180,8 +266,12 @@ function applyEffects(effects, state, context) {
     const choices = getPool(pool, context.quarry);
     for (let index = 0; index < amount; index += 1) {
       const resourceId = pick(choices);
-      next.runResources.push(resourceId);
-      next.appliedEffects.push(formatResourceGain(resourceId, 1));
+      if (resourceId) {
+        next.runResources.push(resourceId);
+        next.appliedEffects.push(formatResourceGain(resourceId, 1));
+      } else {
+        next.appliedEffects.push('No resource was available to gain.');
+      }
     }
   }
   if (effects.gainSettlementMemory) {
@@ -384,8 +474,12 @@ function applyEffects(effects, state, context) {
     handledKeys.add('gainCreatureResource');
     const choices = getPool('monster', context.quarry);
     const resourceId = pick(choices);
-    next.runResources.push(resourceId);
-    next.appliedEffects.push(formatResourceGain(resourceId, 1));
+    if (resourceId) {
+      next.runResources.push(resourceId);
+      next.appliedEffects.push(formatResourceGain(resourceId, 1));
+    } else {
+      next.appliedEffects.push('No creature resource was available to gain.');
+    }
   }
   if (effects.addQuarryRumour) {
     handledKeys.add('addQuarryRumour');
@@ -613,12 +707,10 @@ function resolveHuntRollEvent(event, choice, state, context = {}) {
 
 export function resolveEvent(event, choice, state, context) {
   if (!event) return null;
+  const normalizedEvent = normalizeHuntEventForRoll(event);
 
-  if (
-    event.eventType === 'huntRoll' ||
-    (Array.isArray(event.resultBands) && event.resultBands.length > 0)
-  ) {
-    return resolveHuntRollEvent(event, choice, state, context);
+  if (isHuntRollEvent(normalizedEvent)) {
+    return resolveHuntRollEvent(normalizedEvent, choice, state, context);
   }
   
   if (event.mode === 'automatic') {

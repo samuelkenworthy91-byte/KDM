@@ -80,6 +80,7 @@ import {
 } from './game/conditionLogic.js';
 import {
   calculateIntimacyProjections,
+  normalizeHuntEventForRoll,
   resolveEvent,
   shouldLoveJuiceProtectIntimacy,
   spendLoveJuiceForIntimacy
@@ -296,16 +297,7 @@ function chooseHuntEvent(level) {
 
   const sourcePool = rollPool.length ? rollPool : pool;
   const selected = sourcePool[Math.floor(Math.random() * sourcePool.length)];
-  if (
-    selected?.eventType === 'huntRoll' ||
-    (Array.isArray(selected?.resultBands) && selected.resultBands.length > 0)
-  ) {
-    return {
-      ...selected,
-      choices: []
-    };
-  }
-  return selected;
+  return normalizeHuntEventForRoll(selected);
 }
 
 function createScaledMonster(quarryId, level, type, partySize = 1) {
@@ -1146,7 +1138,7 @@ export default function App() {
       if (nodeSurvivor?.disorders?.includes('paranoia')) {
         setRunDeck(current => [...current, cards.panic]);
       }
-      setCurrentEvent(chooseHuntEvent(selectedLevel));
+      setCurrentEvent(normalizeHuntEventForRoll(chooseHuntEvent(selectedLevel)));
       setScreen('event');
       return;
     }
@@ -2341,68 +2333,79 @@ export default function App() {
       }
     );
     if (!result) return null;
+    const resolvedSurvivor = result.runSurvivor?.id ? result.runSurvivor : null;
     const eventConditionGains = { injuries: [], scars: [], disorders: [] };
-    ['injuries', 'scars', 'disorders'].forEach(type => {
-      (result.runSurvivor[type] || []).forEach(conditionId => {
-        if (!(runSurvivor[type] || []).includes(conditionId)) {
-          eventConditionGains[type].push(conditionId);
-          recordConditionGain(type, conditionId);
-        }
+    if (resolvedSurvivor) {
+      ['injuries', 'scars', 'disorders'].forEach(type => {
+        (resolvedSurvivor[type] || []).forEach(conditionId => {
+          if (!(runSurvivor?.[type] || []).includes(conditionId)) {
+            eventConditionGains[type].push(conditionId);
+            recordConditionGain(type, conditionId);
+          }
+        });
       });
-    });
-    const previousEventSurvivor = runParty.find(survivor => survivor.id === result.runSurvivor.id) || runSurvivor;
-    const previousAdditions = previousEventSurvivor.personalDeckAdditions || [];
-    const eventCardIds = (result.runSurvivor.personalDeckAdditions || []).slice(previousAdditions.length);
-    if (eventCardIds.length) {
-      setRunDeck(current => [...current, ...getCardsFromIds(eventCardIds, 'Hunt event')]);
     }
-    setRunResources(result.runResources);
-    setRunSurvivor(result.runSurvivor);
-    setRunParty(current => current.map(survivor =>
-      survivor.id === result.runSurvivor.id ? result.runSurvivor : survivor
-    ));
-    setRunModifiers({
-      ...result.runModifiers,
-      nextEventWarning: false
-    });
+    if (resolvedSurvivor) {
+      const previousEventSurvivor = runParty.find(survivor => survivor.id === resolvedSurvivor.id) || runSurvivor;
+      const previousAdditions = previousEventSurvivor?.personalDeckAdditions || [];
+      const eventCardIds = (resolvedSurvivor.personalDeckAdditions || []).slice(previousAdditions.length);
+      if (eventCardIds.length) {
+        setRunDeck(current => [...current, ...getCardsFromIds(eventCardIds, 'Hunt event')]);
+      }
+    }
+    if (Array.isArray(result.runResources)) setRunResources(result.runResources);
+    if (resolvedSurvivor) {
+      setRunSurvivor(resolvedSurvivor);
+      setRunParty(current => current.map(survivor =>
+        survivor.id === resolvedSurvivor.id ? resolvedSurvivor : survivor
+      ));
+    }
+    if (result.runModifiers) {
+      setRunModifiers({
+        ...result.runModifiers,
+        nextEventWarning: false
+      });
+    }
     updateSettlement(current => {
-      const memorySettlement = result.settlementMemoryDelta > 0
-        ? gainMemories(current, result.settlementMemoryDelta, {
+      const memoryDelta = Number(result.settlementMemoryDelta) || 0;
+      const memorySettlement = memoryDelta > 0
+        ? gainMemories(current, memoryDelta, {
           source: 'hunt-event',
           description: result.outcomeText || 'A hunt event preserved a memory.',
-          survivorIds: [result.runSurvivor.id],
+          survivorIds: resolvedSurvivor?.id ? [resolvedSurvivor.id] : [],
           huntId: currentHuntId
         })
-        : result.settlementMemoryDelta < 0
-          ? spendMemories(current, Math.abs(result.settlementMemoryDelta), {
+        : memoryDelta < 0
+          ? spendMemories(current, Math.min(Math.abs(memoryDelta), current.settlementMemory || current.memories || 0), {
             source: 'hunt-event',
             description: result.outcomeText || 'A hunt event consumed memory.',
-            survivorIds: [result.runSurvivor.id],
+            survivorIds: resolvedSurvivor?.id ? [resolvedSurvivor.id] : [],
             huntId: currentHuntId
           }) || current
           : current;
+      if (!resolvedSurvivor) return memorySettlement;
       return {
       ...memorySettlement,
-      survivors: current.survivors.map(survivor => survivor.id === result.runSurvivor.id
+      survivors: current.survivors.map(survivor => survivor.id === resolvedSurvivor.id
         ? {
           ...survivor,
-          survival: result.runSurvivor.survival,
-          traits: result.runSurvivor.traits,
-          fightingArts: result.runSurvivor.fightingArts,
-          personalDeckAdditions: result.runSurvivor.personalDeckAdditions,
+          survival: resolvedSurvivor.survival,
+          traits: resolvedSurvivor.traits,
+          fightingArts: resolvedSurvivor.fightingArts,
+          personalDeckAdditions: resolvedSurvivor.personalDeckAdditions,
           deckAdditions: [],
-          injuries: result.runSurvivor.injuries,
-          scars: result.runSurvivor.scars,
-          disorders: result.runSurvivor.disorders,
-          permanentModifiers: result.runSurvivor.permanentModifiers
+          injuries: resolvedSurvivor.injuries,
+          scars: resolvedSurvivor.scars,
+          disorders: resolvedSurvivor.disorders,
+          permanentModifiers: resolvedSurvivor.permanentModifiers
         }
         : survivor),
       conditionHistory: {
         ...current.conditionHistory,
         injuryGained: current.conditionHistory.injuryGained ||
-          Boolean(result.runSurvivor.injuries?.length),
+          Boolean(resolvedSurvivor.injuries?.length),
         disorderGained: current.conditionHistory.disorderGained ||
-          Boolean(result.runSurvivor.disorders?.length)
+          Boolean(resolvedSurvivor.disorders?.length)
       },
       pendingSpecialChildTrait: result.pendingSpecialChildTrait || current.pendingSpecialChildTrait,
       discoveredQuarries: result.quarryRumour
@@ -2419,9 +2422,9 @@ export default function App() {
         : current.unlockedQuarries
     };
     });
-    if (result.runSurvivor.hp <= 0) {
+    if (resolvedSurvivor?.hp <= 0) {
       handleCombatDefeat({
-        survivorName: result.runSurvivor.name,
+        survivorName: resolvedSurvivor.name,
         killedBy: currentEvent.name,
         killedById: `event:${currentEvent.id}`
       }, result, eventConditionGains);
@@ -3710,15 +3713,24 @@ export default function App() {
             />
           );
         }
+        const combatMonster = createScaledMonster(
+          selectedQuarry,
+          selectedLevel,
+          currentNode?.type,
+          livingRunParty.length
+        );
+        if (!combatMonster?.id || !Array.isArray(combatMonster.intents)) {
+          return (
+            <InvalidPhaseScreen
+              reason="missing combat monster"
+              onRecover={() => returnToSettlementSafely('missing combat monster', { resetHunt: true })}
+            />
+          );
+        }
         return (
           <PartyCombatScreen
             key={currentNode?.id}
-            monster={createScaledMonster(
-              selectedQuarry,
-              selectedLevel,
-              currentNode?.type,
-              livingRunParty.length
-            )}
+            monster={combatMonster}
             partyBonuses={safePartyBonuses}
             pendingPartyEffects={pendingPartyEffects}
             hasMonsterBane={Boolean(

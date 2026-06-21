@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { applyDamageToSurvivor } from '../src/game/combatLogic.js';
 import {
   createPartyCombatState,
@@ -204,6 +205,14 @@ test('combat creation still creates members from valid bonuses', () => {
   assert.deepEqual(state.members.map(member => member.survivor.id), ['Mira', 'Holt']);
   assert.equal(state.activeCombatant, 'Mira');
   assert.equal(state.status, 'playing');
+});
+
+test('party combat source avoids unsafe bonus and member survivor dereferences', () => {
+  const source = readFileSync(new URL('../src/game/partyCombatLogic.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /bonus\.survivor\.id/);
+  assert.doesNotMatch(source, /\.some\(\s*member =>\s*member\.survivor\.hp/s);
+  assert.match(source, /function hasValidCombatSurvivor/);
+  assert.match(source, /function isLivingCombatMember/);
 });
 
 test('death prevention traits do not save a survivor at zero HP', () => {
