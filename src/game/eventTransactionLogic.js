@@ -41,6 +41,14 @@ function replacePartySurvivor(party, survivor) {
     : [survivor, ...replaced];
 }
 
+const cleanText = (value, fallback = '') =>
+  value == null || value === '' || value === 'null' ? fallback : value;
+
+const cleanEffects = effects =>
+  (Array.isArray(effects) ? effects : [effects])
+    .filter(effect => effect != null && effect !== '' && effect !== 'null')
+    .map(effect => String(effect));
+
 export function createSafeEventState(input = {}) {
   input = input || {};
   const runParty = validParty(input.runParty);
@@ -57,11 +65,13 @@ export function createSafeEventState(input = {}) {
 
 export function createEventRecoveryResult({ event, state, error, message } = {}) {
   const safeState = createSafeEventState(state);
+  const recoveryMessage = cleanText(message, 'The event hit a recovery path.');
+  const recoveryError = cleanText(error?.message || message, 'unknown error');
   return {
-    eventId: event?.id || 'unknownEvent',
+    eventId: cleanText(event?.id, 'unknownEvent'),
     choiceId: 'eventRecovery',
-    outcomeText: message || 'The event hit a recovery path.',
-    appliedEffects: [`Event recovery: ${error?.message || message || 'unknown error'}`],
+    outcomeText: recoveryMessage,
+    appliedEffects: cleanEffects([`Event recovery: ${recoveryError}`]),
     runResources: [...safeState.runResources],
     runSurvivor: safeState.runSurvivor,
     runParty: safeState.runParty,
@@ -78,13 +88,28 @@ function normaliseEventResult(result, safeState, event) {
   const runParty = resultSurvivor
     ? replacePartySurvivor(resultParty.length ? resultParty : safeState.runParty, resultSurvivor)
     : resultParty.length ? resultParty : safeState.runParty;
+  const appliedEffects = cleanEffects(result.appliedEffects);
+  const outcomeText = cleanText(result.outcomeText, 'The hunt event resolves.');
 
   return {
     ...result,
-    eventId: result.eventId || event?.id || 'unknownEvent',
-    choiceId: result.choiceId || 'huntRoll',
-    outcomeText: result.outcomeText || 'The hunt event resolves.',
-    appliedEffects: Array.isArray(result.appliedEffects) ? result.appliedEffects : [],
+    eventId: cleanText(result.eventId, event?.id || 'unknownEvent'),
+    choiceId: cleanText(result.choiceId, 'huntRoll'),
+    outcomeText,
+    outcomeBand: result.outcomeBand
+      ? {
+        ...result.outcomeBand,
+        id: cleanText(result.outcomeBand.id, 'outcome'),
+        label: cleanText(result.outcomeBand.label, 'Outcome'),
+        resultText: cleanText(
+          result.outcomeBand.resultText || result.outcomeBand.outcomeText,
+          result.outcomeText || 'The event changes the hunt.'
+        )
+      }
+      : null,
+    appliedEffects: appliedEffects.length
+      ? appliedEffects
+      : ['The event changes the hunt.'],
     runResources: Array.isArray(result.runResources)
       ? result.runResources
       : [...safeState.runResources],

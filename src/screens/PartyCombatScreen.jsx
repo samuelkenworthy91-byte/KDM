@@ -36,6 +36,78 @@ const survivalActions = [
   { id: 'endure', name: 'Endure', cost: 2, effect: 'Remove 1 Panic' }
 ];
 
+function createCombatRecoveryState(monster, partyBonuses, error) {
+  const safeMonster = {
+    ...(monster || {}),
+    id: monster?.id || monster?.baseId || monster?.quarryId || 'unknownMonster',
+    baseId: monster?.baseId || monster?.id || monster?.quarryId || 'unknownMonster',
+    quarryId: monster?.quarryId || monster?.id || 'unknownMonster',
+    name: monster?.name || 'Unknown quarry',
+    hp: Number(monster?.hp) || 1,
+    maxHp: Number(monster?.maxHp) || Number(monster?.hp) || 1,
+    intents: Array.isArray(monster?.intents) && monster.intents.length
+      ? monster.intents
+      : [{ id: 'recoveryIntent', name: 'Recovery Intent', damage: 1, targetRule: 'randomLivingSurvivor' }],
+    weakPoints: Array.isArray(monster?.weakPoints) ? monster.weakPoints : []
+  };
+
+  const members = (Array.isArray(partyBonuses) ? partyBonuses : [])
+    .filter(bonus => bonus?.survivor?.id)
+    .map((bonus, index) => ({
+      ...bonus,
+      survivor: {
+        ...bonus.survivor,
+        hp: Number(bonus.survivor.hp) || 1,
+        maxHp: Number(bonus.survivor.maxHp) || 1,
+        survival: Number(bonus.survivor.survival) || 0,
+        maxSurvival: Number(bonus.survivor.maxSurvival) || 3,
+        alive: bonus.survivor.alive !== false,
+        isAlive: bonus.survivor.isAlive !== false
+      },
+      hand: Array.isArray(bonus.hand) ? bonus.hand : [],
+      runDeck: Array.isArray(bonus.runDeck) ? bonus.runDeck : [],
+      drawPile: Array.isArray(bonus.drawPile) ? bonus.drawPile : [],
+      discardPile: Array.isArray(bonus.discardPile) ? bonus.discardPile : [],
+      exhaustPile: Array.isArray(bonus.exhaustPile) ? bonus.exhaustPile : [],
+      survivalActionsUsed: [],
+      status: 'active',
+      combatRecoveryIndex: index
+    }));
+
+  return {
+    status: 'recovery',
+    monster: safeMonster,
+    members,
+    activePartyIndex: 0,
+    activeCombatant: members[0]?.survivor?.id || 'monster',
+    combatTurnOrder: members.length ? members.map(member => member.survivor.id) : ['monster'],
+    intentIndex: 0,
+    selectedCombatTarget: { type: 'monster', id: safeMonster.id },
+    activeAuras: [],
+    combatLog: [
+      `Combat recovery: ${error?.message || 'combat state failed to initialise'}`
+    ],
+    recovered: true
+  };
+}
+
+function safelyCreatePartyCombatState(monster, partyBonuses, pendingPartyEffects) {
+  try {
+    return createPartyCombatState(monster, partyBonuses, pendingPartyEffects);
+  } catch (error) {
+    return createCombatRecoveryState(monster, partyBonuses, error);
+  }
+}
+
+const copyDebugReport = report => {
+  const text = JSON.stringify(report, null, 2);
+  if (typeof navigator !== 'undefined' && navigator?.clipboard?.writeText) {
+    navigator.clipboard.writeText(text);
+  } else if (typeof console !== 'undefined') {
+    console.log(text);
+  }
+};
+
 export default function PartyCombatScreen({
   monster,
   partyBonuses,
@@ -46,7 +118,7 @@ export default function PartyCombatScreen({
   onDefeat
 }) {
   const [combat, setCombat] = useState(() =>
-    createPartyCombatState(monster, partyBonuses, pendingPartyEffects)
+    safelyCreatePartyCombatState(monster, partyBonuses, pendingPartyEffects)
   );
   const [namedSpendSelections, setNamedSpendSelections] = useState({});
   const safeCombatUpdate = (label, updater) => {
@@ -67,10 +139,67 @@ export default function PartyCombatScreen({
     });
   };
   const combatMonster = combat?.monster || monster;
-  const validMemberEntries = (combat.members || [])
+  const validMemberEntries = (combat?.members || [])
     .map((member, index) => ({ member, index }))
     .filter(entry => entry.member?.survivor?.id);
   const validMembers = validMemberEntries.map(entry => entry.member);
+  const combatTurnOrder = Array.isArray(combat?.combatTurnOrder) ? combat.combatTurnOrder : [];
+  const activeAuras = Array.isArray(combat?.activeAuras) ? combat.activeAuras : [];
+
+  if (combat.status === 'recovery') {
+    const combatDebugReport = {
+      screen: 'PartyCombatScreen',
+      recoveryLog: combat?.combatLog || [],
+      monster: {
+        id: monster?.id,
+        baseId: monster?.baseId,
+        quarryId: monster?.quarryId,
+        name: monster?.name,
+        hasIntents: Array.isArray(monster?.intents),
+        intentCount: Array.isArray(monster?.intents) ? monster.intents.length : null
+      },
+      partyBonuses: (Array.isArray(partyBonuses) ? partyBonuses : []).map(bonus => ({
+        survivorId: bonus?.survivor?.id || null,
+        survivorName: bonus?.survivor?.name || null,
+        hasRunDeck: Array.isArray(bonus?.runDeck),
+        runDeckCount: Array.isArray(bonus?.runDeck) ? bonus.runDeck.length : null
+      })),
+      pendingPartyEffects
+    };
+    return (
+      <section className="placeholder-screen">
+        <p className="eyebrow">Combat Recovery</p>
+        <h2>Card combat could not initialise safely.</h2>
+        <p className="muted-text">
+          {combat.combatLog?.at(-1) || 'Recovery reason: unknown combat setup error'}
+        </p>
+        <details>
+          <summary>Combat debug</summary>
+          <pre>{JSON.stringify({
+            monsterId: monster?.id || monster?.baseId || monster?.quarryId || null,
+            monsterName: monster?.name || null,
+            partyBonusCount: Array.isArray(partyBonuses) ? partyBonuses.length : 0,
+            partySurvivorIds: (Array.isArray(partyBonuses) ? partyBonuses : [])
+              .map(bonus => bonus?.survivor?.id || null),
+            pendingPartyEffectsCount: Array.isArray(pendingPartyEffects) ? pendingPartyEffects.length : 0
+          }, null, 2)}</pre>
+        </details>
+        <button type="button" onClick={() => copyDebugReport(combatDebugReport)}>
+          Copy Debug Report
+        </button>
+        <button
+          type="button"
+          onClick={() => onDefeat({
+            survivors: validMembers.map(member => member.survivor).filter(Boolean),
+            killedBy: monster?.name || 'Unknown quarry',
+            killedById: monster?.baseId || monster?.id || 'unknown'
+          })}
+        >
+          Resolve as Defeat
+        </button>
+      </section>
+    );
+  }
 
   if (!combatMonster?.id || !Array.isArray(combatMonster.intents)) {
     return (
@@ -112,7 +241,6 @@ export default function PartyCombatScreen({
     : validMembers.find(member => member?.survivor?.id === combat.activeCombatant) || validMembers[0];
   const currentIntent = combatMonster.intents?.[combat.intentIndex] || combatMonster.intents?.[0] || null;
   const combatOver = combat.status !== 'playing';
-  const activeAuras = combat.activeAuras || [];
   const safeActive = active ? {
     ...active,
     hand: Array.isArray(active.hand) ? active.hand : [],
@@ -127,7 +255,7 @@ export default function PartyCombatScreen({
     member?.survivor?.hp > 0 &&
     member.fightingArts?.includes(`monsterBane_${combatMonster.quarryId}`)
   );
-  const turnNames = combat.combatTurnOrder.map(combatantId =>
+  const turnNames = combatTurnOrder.map(combatantId =>
     combatantId === 'monster'
       ? 'Monster'
       : validMembers.find(member => member?.survivor?.id === combatantId)?.survivor.name

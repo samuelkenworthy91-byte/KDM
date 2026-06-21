@@ -22,6 +22,14 @@ const safeBandLabel = band =>
 const safeBandText = band =>
   safeText(band?.resultText || band?.outcomeText || band?.description, 'The event changes the hunt.');
 
+const safeEffectText = effect => {
+  if (effect == null || effect === '') return null;
+  const formatted = formatHistoryDetail(effect);
+  return formatted == null || formatted === '' || formatted === 'null'
+    ? null
+    : formatted;
+};
+
 export default function EventScreen({
   event,
   hasParanoia,
@@ -73,9 +81,10 @@ export default function EventScreen({
     : resultBands;
   const autoPreview = previewBands.flatMap(band =>
     band?.effects
-      ? formatEventEffects(band.effects, context).map(effect => `${band.label || band.id}: ${effect}`)
+      ? formatEventEffects(band.effects, context)
+        .map(effect => `${safeBandLabel(band)}: ${effect}`)
       : []
-  ).filter(effect => effect != null && effect !== '');
+  ).map(safeEffectText).filter(Boolean);
   const chooseEventSurvivor = survivorId => {
     setChosenEventSurvivorId(survivorId);
   };
@@ -144,9 +153,9 @@ export default function EventScreen({
   return (
     <section className="event-screen">
       <p className="eyebrow">Hunt Event</p>
-      <h2>{formatValueForDisplay(displayEvent.name)}</h2>
+      <h2>{safeText(displayEvent?.name, 'Hunt Event')}</h2>
       <p className="event-description">
-        {formatValueForDisplay(displayEvent.longDescription || displayEvent.description)}
+        {safeText(displayEvent?.longDescription || displayEvent?.description, 'The hunt takes a dangerous turn.')}
       </p>
       {hasParanoia && !result && (
         <p className="missing">Paranoia warns that every choice may conceal a worse outcome.</p>
@@ -217,7 +226,7 @@ export default function EventScreen({
               <h3>Expected Effects</h3>
               <ul>
                 {autoPreview.map((effect, index) => (
-                  <li key={`event-auto-preview-${index}`}>{formatHistoryDetail(effect)}</li>
+                  <li key={`event-auto-preview-${index}`}>{effect}</li>
                 ))}
               </ul>
             </>
@@ -229,9 +238,10 @@ export default function EventScreen({
           <p>Event: {result.eventId || displayEvent?.id || 'unknownEvent'}</p>
           <ul>
             {(result.appliedEffects || ['Event recovery: unknown error'])
-              .filter(effect => effect != null && effect !== '')
+              .map(safeEffectText)
+              .filter(Boolean)
               .map((effect, index) => (
-              <li key={`event-recovery-${index}`}>{formatHistoryDetail(effect)}</li>
+              <li key={`event-recovery-${index}`}>{effect}</li>
             ))}
           </ul>
           <button type="button" onClick={onContinue}>Continue Hunt</button>
@@ -247,7 +257,7 @@ export default function EventScreen({
               <div>
                 <p>Base roll: {result.roll.baseRoll}</p>
                 <p>Final roll: {result.roll.finalRoll}</p>
-                {result.outcomeBand && <p>Outcome: {result.outcomeBand.label}</p>}
+                {result.outcomeBand && <p>Outcome: {safeBandLabel(result.outcomeBand)}</p>}
               </div>
             </section>
           )}
@@ -273,7 +283,7 @@ export default function EventScreen({
                 <p>No modifiers.</p>
               )}
               <p>Final roll: {result.roll.finalRoll}</p>
-              {result.outcomeBand && <p>Outcome band: {result.outcomeBand.label}</p>}
+              {result.outcomeBand && <p>Outcome band: {safeBandLabel(result.outcomeBand)}</p>}
             </section>
           )}
           {result.appliedEffects?.length > 0 && (
@@ -281,9 +291,10 @@ export default function EventScreen({
               <h3>Applied Effects</h3>
               <ul>
                 {result.appliedEffects
-                  .filter(effect => effect != null && effect !== '')
+                  .map(safeEffectText)
+                  .filter(Boolean)
                   .map((effect, index) => (
-                  <li key={`event-effect-${index}`}>{formatHistoryDetail(effect)}</li>
+                  <li key={`event-effect-${index}`}>{effect}</li>
                 ))}
               </ul>
             </>
