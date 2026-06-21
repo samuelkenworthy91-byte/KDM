@@ -5,11 +5,15 @@ import { applyEventDeltas } from './domain/events/eventEffects.js';
 import { getQuarries } from './domain/content/contentIndex.js';
 import { createRunState } from './domain/schema/runStateSchema.js';
 import { createHuntState, advanceHunt, resolveEventNode, resolveFightNode } from './domain/hunt/huntState.js';
+import { applyInnovation } from './domain/innovations/innovationLogic.js';
+import { applyPrincipleChoice } from './domain/principles/principleLogic.js';
 import CombatScreen from './ui/screens/CombatScreen.jsx';
 import CreateSettlementScreen from './ui/screens/CreateSettlementScreen.jsx';
 import EventScreen from './ui/screens/EventScreen.jsx';
 import GearCatalogScreen from './ui/screens/GearCatalogScreen.jsx';
 import HuntScreen from './ui/screens/HuntScreen.jsx';
+import InnovationsScreen from './ui/screens/InnovationsScreen.jsx';
+import PrinciplesScreen from './ui/screens/PrinciplesScreen.jsx';
 import SettlementScreen from './ui/screens/SettlementScreen.jsx';
 
 export default function App() {
@@ -40,6 +44,24 @@ export default function App() {
     );
   }
   if (screen === 'gear') return <GearCatalogScreen onBack={() => setScreen('settlement')} />;
+  if (screen === 'innovations') {
+    return (
+      <InnovationsScreen
+        settlement={settlement}
+        onApplyInnovation={innovation => setSettlement(saveSettlement(applyInnovation(settlement, innovation)))}
+        onBack={() => setScreen('settlement')}
+      />
+    );
+  }
+  if (screen === 'principles') {
+    return (
+      <PrinciplesScreen
+        settlement={settlement}
+        onApplyPrinciple={principle => setSettlement(saveSettlement(applyPrincipleChoice(settlement, principle)))}
+        onBack={() => setScreen('settlement')}
+      />
+    );
+  }
   if (screen === 'combat' || screen === 'huntCombat') {
     const monster = getQuarries()[0] || { id: 'test-monster', name: 'Test Monster', hp: 20 };
     const survivor = settlement.survivors.find(item => item.alive) || settlement.survivors[0];
@@ -93,6 +115,8 @@ export default function App() {
         setHuntState(createHuntState());
         setScreen('hunt');
       }}
+      onOpenInnovations={() => setScreen('innovations')}
+      onOpenPrinciples={() => setScreen('principles')}
     />
   );
 }
