@@ -251,3 +251,34 @@ button:disabled {
 .catalog-card p {
   color: #d8ccb3;
 }
+
+.roll-die {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin: 1.5rem 0;
+}
+
+.die-face {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border: 1px solid rgba(230, 198, 120, 0.45);
+  border-radius: 8px;
+  color: #f4ead2;
+  background: rgba(5, 4, 8, 0.72);
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.die-face.rolling {
+  box-shadow: 0 0 24px rgba(216, 179, 101, 0.28);
+}
+
+.effect-list {
+  display: grid;
+  gap: 0.4rem;
+  padding-left: 1.2rem;
+  color: #f1dca5;
+}
