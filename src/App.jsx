@@ -766,7 +766,32 @@ export default function App() {
   };
 
   const handleCreate = data => {
-    const next = normalizeSettlement({ ...defaultSettlement, ...data });
+    const population = Math.max(1, Number(data.population) || 1);
+    const submittedDrafts = Array.isArray(data.founderDrafts) ? data.founderDrafts : [];
+    const founderDrafts = Array.from({ length: population }, (_, index) => {
+      const draft = submittedDrafts[index] || {};
+      return {
+        name: draft.name?.trim() || `Founder ${index + 1}`,
+        gender: draft.gender || 'other',
+        appearance: draft.appearance?.trim() || ''
+      };
+    });
+    const founders = founderDrafts.map(draft =>
+      createSurvivor(draft.name, draft.gender, {
+        appearance: draft.appearance,
+        generationType: 'founder'
+      })
+    );
+    const activeSurvivorId = founders.find(survivor =>
+      survivor?.id && survivor.alive !== false
+    )?.id || founders[0].id;
+    const next = normalizeSettlement({
+      ...defaultSettlement,
+      ...data,
+      population,
+      survivors: founders,
+      activeSurvivorId
+    });
     setActiveSlot(createSlot);
     saveSettlement(next, createSlot);
     setActiveSlotState(createSlot);
@@ -3079,34 +3104,6 @@ export default function App() {
     setScreen('nemesisResult');
   };
 
-  const handleCreateSurvivor = (name, gender, options) => {
-    if (settlement.pendingNewborn) return;
-    updateSettlement(current => {
-      const survivor = createSurvivor(name, gender, {
-        ...options,
-        generationType: 'founder'
-      });
-      let nextSurvivor = survivor;
-      if (options?.useSpecialTrait && current.pendingSpecialChildTrait) {
-        nextSurvivor = applyChildTrait(nextSurvivor, current.pendingSpecialChildTrait);
-      }
-      if (
-        options?.startingTrait &&
-        startingTraits[options.startingTrait] &&
-        current.builtMemoryInnovations.includes('trialNames')
-      ) {
-        nextSurvivor.traits.push(options.startingTrait);
-      }
-      nextSurvivor = applyNewSurvivorSettlementBonuses(nextSurvivor, current);
-      return {
-        ...current,
-        survivors: [...current.survivors, nextSurvivor],
-        activeSurvivorId: current.activeSurvivorId || nextSurvivor.id,
-        pendingSpecialChildTrait: options?.useSpecialTrait ? null : current.pendingSpecialChildTrait
-      };
-    });
-  };
-
   const handleAttemptIntimacy = (maleId, femaleId, options = {}) => {
     updateSettlement(current => {
       if (current.lastIntimacyLanternYear === current.lanternYear) return current;
@@ -3428,7 +3425,6 @@ export default function App() {
             onCraft={handleCraft}
             onAttemptInnovation={handleAttemptInnovation}
             onTimelineChoice={handleTimelineChoice}
-            onCreateSurvivor={handleCreateSurvivor}
             onSelectSurvivor={survivorId => updateSettlement(current => ({ ...current, activeSurvivorId: survivorId }))}
             onStartHunt={prepareHunt}
             onAttemptIntimacy={handleAttemptIntimacy}
