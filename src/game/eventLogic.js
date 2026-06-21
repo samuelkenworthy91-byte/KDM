@@ -75,13 +75,42 @@ function choiceToResultBand(choice, index) {
     { min: 8, max: null }
   ];
   const range = ranges[index] || { min: index * 2 + 1, max: index * 2 + 2 };
+  const fallbackEffects = index === 0
+    ? { loseHp: 1 }
+    : index === 2
+      ? { gainRandomResource: { pool: 'basicOrMonster', amount: 1 } }
+      : { gainSurvival: 1 };
   return {
     id: choice.id || `choiceBand${index + 1}`,
     label: choice.text || `Outcome ${index + 1}`,
     min: range.min,
     max: range.max,
     resultText: choice.outcomeText || choice.text || 'The event resolves.',
-    effects: choice.effects || {}
+    effects: choice.effects && Object.keys(choice.effects).length > 0
+      ? choice.effects
+      : fallbackEffects
+  };
+}
+
+function ensureMechanicalEffects(event = {}) {
+  const bands = Array.isArray(event.resultBands) ? event.resultBands : [];
+  return {
+    ...event,
+    resultBands: bands.map((band, index) => {
+      if (band.effects && Object.keys(band.effects).length > 0) return band;
+
+      const fallbackEffects = index === 0
+        ? { loseHp: 1 }
+        : index === bands.length - 1
+          ? { gainRandomResource: { pool: 'basicOrMonster', amount: 1 } }
+          : { gainSurvival: 1 };
+
+      return {
+        ...band,
+        effects: fallbackEffects,
+        resultText: band.resultText || band.outcomeText || 'The event changes the hunt.'
+      };
+    })
   };
 }
 
@@ -92,17 +121,17 @@ export function normalizeHuntEventForRoll(event = {}) {
     event.eventType === 'huntRoll' ||
     (Array.isArray(event.resultBands) && event.resultBands.length > 0)
   ) {
-    return {
+    return ensureMechanicalEffects({
       ...event,
       eventType: 'huntRoll',
       roll: event.roll || { die: 10 },
       resultBands: event.resultBands || [],
       choices: []
-    };
+    });
   }
 
   if (event.mode === 'automatic') {
-    return {
+    return ensureMechanicalEffects({
       ...event,
       eventType: 'huntRoll',
       eventSurvivorRule: event.eventSurvivorRule || 'partyLeader',
@@ -115,21 +144,21 @@ export function normalizeHuntEventForRoll(event = {}) {
         effects: event.autoOutcome?.effects || {}
       }],
       choices: []
-    };
+    });
   }
 
   if (Array.isArray(event.choices) && event.choices.length) {
-    return {
+    return ensureMechanicalEffects({
       ...event,
       eventType: 'huntRoll',
       eventSurvivorRule: event.eventSurvivorRule || 'partyLeader',
       roll: { die: 10 },
       resultBands: event.choices.map(choiceToResultBand),
       choices: []
-    };
+    });
   }
 
-  return {
+  return ensureMechanicalEffects({
     ...event,
     eventType: 'huntRoll',
     eventSurvivorRule: event.eventSurvivorRule || 'partyLeader',
@@ -142,7 +171,7 @@ export function normalizeHuntEventForRoll(event = {}) {
       effects: {}
     }],
     choices: []
-  };
+  });
 }
 
 export function formatEventEffect(key, value, context = {}) {
@@ -228,6 +257,15 @@ function appendUnknownEffects(next, effects, handledKeys) {
 }
 
 function applyEffects(effects, state, context) {
+  const safeContext = context || {};
+  const safeQuarry = typeof safeContext.quarry === 'string'
+    ? { id: safeContext.quarry, name: safeContext.quarry }
+    : safeContext.quarry || {
+      id: typeof safeContext.selectedQuarry === 'string'
+        ? safeContext.selectedQuarry
+        : safeContext.selectedQuarry?.id || 'unknownQuarry',
+      name: safeContext.selectedQuarry?.name || 'Unknown quarry'
+    };
   const safeRunSurvivor = state.runSurvivor;
   if (!safeRunSurvivor?.id) {
     return {
@@ -269,7 +307,7 @@ function applyEffects(effects, state, context) {
   if (effects.gainRandomResource) {
     handledKeys.add('gainRandomResource');
     const { pool = 'any', amount = 1 } = effects.gainRandomResource;
-    const choices = getPool(pool, context.quarry);
+    const choices = getPool(pool, safeQuarry);
     for (let index = 0; index < amount; index += 1) {
       const resourceId = pick(choices);
       if (resourceId) {
@@ -282,7 +320,7 @@ function applyEffects(effects, state, context) {
   }
   if (effects.gainSettlementMemory) {
     handledKeys.add('gainSettlementMemory');
-    const minimumDelta = -(Number(context.settlementMemory) || 0);
+    const minimumDelta = -(Number(safeContext.settlementMemory) || 0);
     const delta = effects.gainSettlementMemory > 0
       ? 0
       : Math.max(minimumDelta, effects.gainSettlementMemory);
@@ -359,13 +397,13 @@ function applyEffects(effects, state, context) {
   if (effects.gainTrait) {
     handledKeys.add('gainTrait');
     const trait = effects.gainTrait.type === 'monsterBaneCurrent'
-      ? `monsterBane_${context.quarry?.id || 'unknown'}`
+      ? `monsterBane_${safeQuarry.id || 'unknown'}`
       : effects.gainTrait;
     if (effects.gainTrait.type === 'monsterBaneCurrent') {
       const existingBaneId = getSurvivorMonsterBaneId(next.runSurvivor);
       if (!existingBaneId) {
         next.runSurvivor.fightingArts.push(trait);
-        next.appliedEffects.push(`Monster Bane gained: ${context.quarry?.name || 'Unknown quarry'}`);
+        next.appliedEffects.push(`Monster Bane gained: ${safeQuarry.name || 'Unknown quarry'}`);
       } else {
         next.appliedEffects.push('Monster Bane reward replaced: this survivor already has permanent Monster Bane knowledge.');
         const replacement = generalFightingArts.find(art =>
@@ -478,7 +516,7 @@ function applyEffects(effects, state, context) {
   }
   if (effects.gainCreatureResource) {
     handledKeys.add('gainCreatureResource');
-    const choices = getPool('monster', context.quarry);
+    const choices = getPool('monster', safeQuarry);
     const resourceId = pick(choices);
     if (resourceId) {
       next.runResources.push(resourceId);
@@ -724,38 +762,53 @@ function resolveHuntRollEvent(event, choice, state, context = {}) {
 }
 
 export function resolveEvent(event, choice, state, context) {
-  if (!event) return null;
-  const normalizedEvent = normalizeHuntEventForRoll(event);
+  try {
+    if (!event) return null;
+    const normalizedEvent = normalizeHuntEventForRoll(event);
 
-  if (isHuntRollEvent(normalizedEvent)) {
-    return resolveHuntRollEvent(normalizedEvent, choice, state, context);
-  }
+    if (isHuntRollEvent(normalizedEvent)) {
+      return resolveHuntRollEvent(normalizedEvent, choice, state, context);
+    }
   
-  if (event.mode === 'automatic') {
+    if (event.mode === 'automatic') {
+      return {
+        eventId: event.id,
+        choiceId: 'automatic',
+        outcomeText: event.autoOutcome.outcomeText,
+        ...applyEffects(event.autoOutcome.effects || {}, { ...state, appliedEffects: [] }, context)
+      };
+    }
+
+    if (choice === 'fallback') {
+      return {
+        eventId: event.id,
+        choiceId: 'fallback',
+        outcomeText: 'With no other choice, the party forces a desperate route.',
+        ...applyEffects({ loseHp: 2 }, { ...state, appliedEffects: [] }, context)
+      };
+    }
+
+    if (!choice) return null;
     return {
       eventId: event.id,
-      choiceId: 'automatic',
-      outcomeText: event.autoOutcome.outcomeText,
-      ...applyEffects(event.autoOutcome.effects || {}, { ...state, appliedEffects: [] }, context)
+      choiceId: choice.id,
+      outcomeText: choice.outcomeText,
+      ...applyEffects(choice.effects || {}, { ...state, appliedEffects: [] }, context)
     };
-  }
-
-  if (choice === 'fallback') {
+  } catch (error) {
     return {
-      eventId: event.id,
-      choiceId: 'fallback',
-      outcomeText: 'With no other choice, the party forces a desperate route.',
-      ...applyEffects({ loseHp: 2 }, { ...state, appliedEffects: [] }, context)
+      eventId: event?.id || 'unknownEvent',
+      choiceId: 'eventRecovery',
+      outcomeText: 'The event hit a recovery path.',
+      appliedEffects: [`Event recovery: ${error?.message || 'unknown event error'}`],
+      runResources: [...(state?.runResources || [])],
+      runSurvivor: state?.runSurvivor || null,
+      runParty: Array.isArray(state?.runParty) ? state.runParty : [],
+      runModifiers: { ...(state?.runModifiers || {}) },
+      settlementMemoryDelta: state?.settlementMemoryDelta || 0,
+      recovered: true
     };
   }
-
-  if (!choice) return null;
-  return {
-    eventId: event.id,
-    choiceId: choice.id,
-    outcomeText: choice.outcomeText,
-    ...applyEffects(choice.effects || {}, { ...state, appliedEffects: [] }, context)
-  };
 }
 
 const SEVERE_INTIMACY_INJURIES = new Set([

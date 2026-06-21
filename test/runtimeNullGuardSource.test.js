@@ -18,7 +18,8 @@ test('runtime null guards are present in screen routes and combat source', () =>
   assert.match(app, /reason="missing loadout survivor"/);
   assert.match(app, /reason="missing combat party"/);
   assert.match(app, /reason="missing combat monster"/);
-  assert.match(app, /partyBonuses=\{safePartyBonuses\}/);
+  assert.match(app, /<HuntClashScreen/);
+  assert.doesNotMatch(app.slice(app.indexOf("case 'combat':"), app.indexOf("case 'lootReward':")), /<PartyCombatScreen/);
   assert.match(eventScreen, /normalizeHuntEventForRoll/);
   assert.match(eventScreen, /const resultBands = Array\.isArray\(displayEvent\?\.resultBands\) \? displayEvent\.resultBands : \[\]/);
 });

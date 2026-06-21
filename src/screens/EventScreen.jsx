@@ -56,9 +56,17 @@ export default function EventScreen({
     };
   }, []);
 
-  const autoPreview = resultBands[0]?.effects
-    ? formatEventEffects(resultBands[0].effects, context)
-    : [];
+  const previewBands = lockedRoll
+    ? resultBands.filter(band => (
+      (band.min == null || lockedRoll >= band.min) &&
+      (band.max == null || lockedRoll <= band.max)
+    ))
+    : resultBands;
+  const autoPreview = previewBands.flatMap(band =>
+    band?.effects
+      ? formatEventEffects(band.effects, context).map(effect => `${band.label || band.id}: ${effect}`)
+      : []
+  );
   const chooseEventSurvivor = survivorId => {
     setChosenEventSurvivorId(survivorId);
   };
@@ -69,15 +77,31 @@ export default function EventScreen({
   };
   const safelyChoose = choice => {
     try {
+      if (typeof onChoose !== 'function') {
+        setResult({
+          eventId: displayEvent?.id || 'unknownEvent',
+          choiceId: 'eventRecovery',
+          outcomeText: 'The event hit a recovery path.',
+          appliedEffects: ['Event recovery: event choice handler missing'],
+          recovered: true
+        });
+        return;
+      }
       const next = onChoose(choice);
       setResult(next || {
+        eventId: displayEvent?.id || 'unknownEvent',
+        choiceId: 'eventRecovery',
         outcomeText: 'The event resolved without a result.',
-        appliedEffects: ['No event result was returned.']
+        appliedEffects: ['Event recovery: No event result was returned.'],
+        recovered: true
       });
     } catch (error) {
       setResult({
+        eventId: displayEvent?.id || 'unknownEvent',
+        choiceId: 'eventRecovery',
         outcomeText: 'The event hit a recovery path.',
-        appliedEffects: [`Event recovery: ${error?.message || 'unknown error'}`]
+        appliedEffects: [`Event recovery: ${error?.message || 'unknown error'}`],
+        recovered: true
       });
     }
   };
@@ -189,6 +213,17 @@ export default function EventScreen({
               </ul>
             </>
           )}
+        </div>
+      ) : result?.recovered ? (
+        <div className="event-outcome event-recovery-panel">
+          <h3>Event Recovery</h3>
+          <p>Event: {result.eventId || displayEvent?.id || 'unknownEvent'}</p>
+          <ul>
+            {(result.appliedEffects || ['Event recovery: unknown error']).map((effect, index) => (
+              <li key={`event-recovery-${index}`}>{formatHistoryDetail(effect)}</li>
+            ))}
+          </ul>
+          <button type="button" onClick={onContinue}>Continue Hunt</button>
         </div>
       ) : result ? (
         <div className="event-outcome">

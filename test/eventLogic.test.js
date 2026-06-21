@@ -190,9 +190,9 @@ test('Event Resolution Logic', async (t) => {
   await t.test('legacy fallback events resolve through a default roll band', () => {
     const result = resolveEvent({ id: 'lockedOut', choices: [] }, 'fallback', state, context);
     assert.strictEqual(result.choiceId, 'huntRoll');
-    assert.strictEqual(result.runSurvivor.hp, 30);
+    assert.strictEqual(result.runSurvivor.hp, 29);
     assert.equal(result.outcomeBand.id, 'default');
-    assert.deepEqual(result.appliedEffects, []);
+    assert.deepEqual(result.appliedEffects, ['Lose HP x1.']);
   });
 
   await t.test('readable effect formatter covers common preview text', () => {
@@ -479,7 +479,7 @@ test('Roll-driven hunt event engine', async (t) => {
 
     assert.equal(result.choiceId, 'huntRoll');
     assert.equal(result.outcomeBand.id, 'default');
-    assert.equal(result.runSurvivor.hp, 20);
+    assert.equal(result.runSurvivor.hp, 19);
   });
 
   await t.test('roll result exposes UI breakdown fields', () => {

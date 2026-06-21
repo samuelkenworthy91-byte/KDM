@@ -81,10 +81,14 @@ import {
 import {
   calculateIntimacyProjections,
   normalizeHuntEventForRoll,
-  resolveEvent,
   shouldLoveJuiceProtectIntimacy,
   spendLoveJuiceForIntimacy
 } from './game/eventLogic.js';
+import {
+  applyEventTransactionToRun,
+  createEventRecoveryResult,
+  resolveEventTransaction
+} from './game/eventTransactionLogic.js';
 import { buildRunDeck, getCardsFromIds, getPersonalCardId, removePanicFromSurvivor } from './game/deckLogic.js';
 import {
   EARLY_FORGETTING_COST,
@@ -156,6 +160,7 @@ import { resolveHuntRetreat } from './game/retreatLogic.js';
 import { addPersonalCard, learnFightingArt } from './game/survivorProgression.js';
 import CombatScreen from './screens/CombatScreen.jsx';
 import PartyCombatScreen from './screens/PartyCombatScreen.jsx';
+import HuntClashScreen from './screens/HuntClashScreen.jsx';
 import CreateSettlementScreen from './screens/CreateSettlementScreen.jsx';
 import EventScreen from './screens/EventScreen.jsx';
 import LootRewardScreen from './screens/LootRewardScreen.jsx';
@@ -2320,19 +2325,54 @@ export default function App() {
   };
 
   const handleEventChoice = choice => {
-    const result = resolveEvent(
-      currentEvent,
-      choice,
-      { runResources, runSurvivor, runParty, runModifiers, settlementMemoryDelta: 0 },
-      {
-        quarry: quarries[selectedQuarry],
-        runParty,
-        settlement,
-        settlementMemory: settlement.settlementMemory,
-        hasGravesUpgrade: settlement.builtInnovations.includes('storytellerCircle')
-      }
-    );
-    if (!result) return null;
+    let result;
+    let applied;
+    try {
+      result = resolveEventTransaction({
+        event: currentEvent,
+        choice,
+        state: {
+          runResources,
+          runSurvivor,
+          runParty,
+          runModifiers,
+          settlement
+        },
+        context: {
+          quarry: quarries[selectedQuarry] || {
+            id: selectedQuarry,
+            name: selectedQuarry || 'Unknown quarry'
+          },
+          selectedQuarry,
+          runParty,
+          settlement,
+          settlementMemory: settlement?.settlementMemory || settlement?.memories || 0,
+          hasGravesUpgrade: settlement?.builtInnovations?.includes('storytellerCircle'),
+          random: Math.random
+        }
+      });
+      applied = applyEventTransactionToRun({
+        transaction: result,
+        runState: {
+          runResources,
+          runSurvivor,
+          runParty,
+          runModifiers
+        },
+        settlement
+      });
+    } catch (error) {
+      result = createEventRecoveryResult({
+        event: currentEvent,
+        state: { runResources, runSurvivor, runParty, runModifiers, settlement },
+        error
+      });
+      applied = applyEventTransactionToRun({
+        transaction: result,
+        runState: { runResources, runSurvivor, runParty, runModifiers },
+        settlement
+      });
+    }
     const resolvedSurvivor = result.runSurvivor?.id ? result.runSurvivor : null;
     const eventConditionGains = { injuries: [], scars: [], disorders: [] };
     if (resolvedSurvivor) {
@@ -2353,75 +2393,56 @@ export default function App() {
         setRunDeck(current => [...current, ...getCardsFromIds(eventCardIds, 'Hunt event')]);
       }
     }
-    if (Array.isArray(result.runResources)) setRunResources(result.runResources);
-    if (resolvedSurvivor) {
-      setRunSurvivor(resolvedSurvivor);
-      setRunParty(current => current.map(survivor =>
-        survivor.id === resolvedSurvivor.id ? resolvedSurvivor : survivor
-      ));
-    }
-    if (result.runModifiers) {
+    setRunResources(applied.runResources);
+    setRunSurvivor(applied.runSurvivor);
+    setRunParty(applied.runParty);
+    if (applied.runModifiers) {
       setRunModifiers({
-        ...result.runModifiers,
+        ...applied.runModifiers,
         nextEventWarning: false
       });
     }
-    updateSettlement(current => {
-      const memoryDelta = Number(result.settlementMemoryDelta) || 0;
-      const memorySettlement = memoryDelta > 0
-        ? gainMemories(current, memoryDelta, {
-          source: 'hunt-event',
-          description: result.outcomeText || 'A hunt event preserved a memory.',
-          survivorIds: resolvedSurvivor?.id ? [resolvedSurvivor.id] : [],
-          huntId: currentHuntId
-        })
-        : memoryDelta < 0
-          ? spendMemories(current, Math.min(Math.abs(memoryDelta), current.settlementMemory || current.memories || 0), {
-            source: 'hunt-event',
-            description: result.outcomeText || 'A hunt event consumed memory.',
-            survivorIds: resolvedSurvivor?.id ? [resolvedSurvivor.id] : [],
-            huntId: currentHuntId
-          }) || current
-          : current;
-      if (!resolvedSurvivor) return memorySettlement;
-      return {
-      ...memorySettlement,
-      survivors: current.survivors.map(survivor => survivor.id === resolvedSurvivor.id
-        ? {
-          ...survivor,
-          survival: resolvedSurvivor.survival,
-          traits: resolvedSurvivor.traits,
-          fightingArts: resolvedSurvivor.fightingArts,
-          personalDeckAdditions: resolvedSurvivor.personalDeckAdditions,
-          deckAdditions: [],
-          injuries: resolvedSurvivor.injuries,
-          scars: resolvedSurvivor.scars,
-          disorders: resolvedSurvivor.disorders,
-          permanentModifiers: resolvedSurvivor.permanentModifiers
+    if (applied.settlement) {
+      updateSettlement(current => {
+        const appliedSurvivors = Array.isArray(applied.settlement.survivors)
+          ? applied.settlement.survivors
+          : current.survivors;
+        const next = {
+          ...current,
+          ...applied.settlement,
+          survivors: appliedSurvivors.map(survivor => survivor.id === resolvedSurvivor?.id
+            ? {
+              ...survivor,
+              survival: resolvedSurvivor.survival,
+              traits: resolvedSurvivor.traits,
+              fightingArts: resolvedSurvivor.fightingArts,
+              personalDeckAdditions: resolvedSurvivor.personalDeckAdditions,
+              deckAdditions: [],
+              injuries: resolvedSurvivor.injuries,
+              scars: resolvedSurvivor.scars,
+              disorders: resolvedSurvivor.disorders,
+              permanentModifiers: resolvedSurvivor.permanentModifiers
+            }
+            : survivor),
+          conditionHistory: {
+            ...current.conditionHistory,
+            injuryGained: current.conditionHistory.injuryGained ||
+              Boolean(resolvedSurvivor?.injuries?.length),
+            disorderGained: current.conditionHistory.disorderGained ||
+              Boolean(resolvedSurvivor?.disorders?.length)
+          }
+        };
+        if (result.quarryRumour) {
+          const rumourQuarries = quarryList.filter(quarry =>
+            quarry.role === 'quarry' &&
+            !current.discoveredQuarries.includes(quarry.id)
+          ).slice(0, 1).map(quarry => quarry.id);
+          next.discoveredQuarries = [...new Set([...(current.discoveredQuarries || []), ...rumourQuarries])];
+          next.unlockedQuarries = [...new Set([...(current.unlockedQuarries || []), ...rumourQuarries])];
         }
-        : survivor),
-      conditionHistory: {
-        ...current.conditionHistory,
-        injuryGained: current.conditionHistory.injuryGained ||
-          Boolean(resolvedSurvivor.injuries?.length),
-        disorderGained: current.conditionHistory.disorderGained ||
-          Boolean(resolvedSurvivor.disorders?.length)
-      },
-      pendingSpecialChildTrait: result.pendingSpecialChildTrait || current.pendingSpecialChildTrait,
-      discoveredQuarries: result.quarryRumour
-        ? [...new Set([...current.discoveredQuarries, ...quarryList.filter(quarry =>
-          quarry.role === 'quarry' &&
-          !current.discoveredQuarries.includes(quarry.id)
-        ).slice(0, 1).map(quarry => quarry.id)])]
-        : current.discoveredQuarries,
-      unlockedQuarries: result.quarryRumour
-        ? [...new Set([...current.unlockedQuarries, ...quarryList.filter(quarry =>
-          quarry.role === 'quarry' &&
-          !current.discoveredQuarries.includes(quarry.id)
-        ).slice(0, 1).map(quarry => quarry.id)])]
-        : current.unlockedQuarries
-    };
-    });
+        return next;
+      });
+    }
     if (resolvedSurvivor?.hp <= 0) {
       handleCombatDefeat({
         survivorName: resolvedSurvivor.name,
@@ -3694,32 +3715,13 @@ export default function App() {
             />
           );
         }
-        const monsterId = quarries[selectedQuarry]?.monsterId;
-        const safePartyBonuses = buildSafePartyCombatBonuses({
-          runParty: livingRunParty,
-          existingBonuses: partyCombatBonuses,
-          settlement,
-          monsterId,
-          quarryId: selectedQuarry,
-          runModifiers,
-          runBonus,
-          getLoadoutBonus
-        });
-        if (!safePartyBonuses.length) {
-          return (
-            <InvalidPhaseScreen
-              reason="missing combat party bonuses"
-              onRecover={() => returnToSettlementSafely('missing combat party bonuses', { resetHunt: true })}
-            />
-          );
-        }
         const combatMonster = createScaledMonster(
           selectedQuarry,
           selectedLevel,
           currentNode?.type,
           livingRunParty.length
         );
-        if (!combatMonster?.id || !Array.isArray(combatMonster.intents)) {
+        if (!combatMonster) {
           return (
             <InvalidPhaseScreen
               reason="missing combat monster"
@@ -3728,19 +3730,16 @@ export default function App() {
           );
         }
         return (
-          <PartyCombatScreen
+          <HuntClashScreen
             key={currentNode?.id}
             monster={combatMonster}
-            partyBonuses={safePartyBonuses}
-            pendingPartyEffects={pendingPartyEffects}
-            hasMonsterBane={Boolean(
-              livingRunParty.some(survivor =>
-                survivor.fightingArts?.includes(getMonsterBaneId(selectedQuarry))
-              )
-            )}
-            settlement={settlement}
+            party={livingRunParty}
+            quarryId={selectedQuarry}
+            quarryLevel={selectedLevel}
+            runModifiers={runModifiers}
             onVictory={handleCombatVictory}
             onDefeat={handleCombatDefeat}
+            onRecover={() => returnToSettlementSafely('hunt clash recovery', { resetHunt: true })}
           />
         );
       }
