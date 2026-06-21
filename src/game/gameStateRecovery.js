@@ -21,6 +21,7 @@ export const KNOWN_SCREENS = new Set([
   'retreatResult',
   'innovationPayment',
   'innovationDraw',
+  'principleChoice',
   'nemesisLore',
   'nemesisWarning',
   'nemesisPreparation',
@@ -137,7 +138,8 @@ export function validateGameState(gameState) {
       return invalid('missing current hunt map', 'missing currentRun');
     }
     if (runtime.currentNode) {
-      const nodeExists = runtime.runMap.flat().some(node => node?.id === runtime.currentNode.id);
+      const completionNodeId = runtime.currentNode.sourceNodeId || runtime.currentNode.id;
+      const nodeExists = runtime.runMap.flat().some(node => node?.id === completionNodeId);
       if (!nodeExists) return invalid('invalid current hunt node', 'missing currentRun');
     }
   }

@@ -1011,6 +1011,7 @@ export default function SettlementScreen({
   const livingMales = livingSurvivors.filter(survivor => survivor.gender === 'male');
   const livingFemales = livingSurvivors.filter(survivor => survivor.gender === 'female');
   const intimacyUsedThisYear = settlement.lastIntimacyLanternYear === settlement.lanternYear;
+  const hasPendingNewborn = Boolean(settlement.pendingNewborn);
   const memoryBalance = getMemoryBalance(settlement);
   const validMaleParticipant = livingMales.some(survivor => survivor.id === intimacyMaleId);
   const validFemaleParticipant = livingFemales.some(survivor => survivor.id === intimacyFemaleId);
@@ -1024,7 +1025,7 @@ export default function SettlementScreen({
     survivor.id === actionSurvivorId
   ) || activeSurvivor || livingSurvivors[0];
   const builtActionIds = new Set(builtMemoryInnovations.flatMap(item => item.actionUnlocks || []));
-  const actionTabs = [
+  const actionTabs = hasPendingNewborn ? [] : [
     (builtActionIds.has('weaponDrills') || builtActionIds.has('memoryTraining')) && 'training',
     (hasEarlyForgettingAccess(settlement) ||
       ['quietNight', 'taboo', 'painLessons'].some(id => builtActionIds.has(id))) && 'recovery',
@@ -1033,7 +1034,9 @@ export default function SettlementScreen({
     activeSurvivor && settlement.population > 0 && !Boolean(settlement.pendingTimelineEvent) && 'startHunt'
   ].filter(Boolean);
   const hasCentralActions = actionTabs.length > 0;
-  const settlementTabs = hasCentralActions
+  const settlementTabs = hasPendingNewborn
+    ? ['population']
+    : hasCentralActions
     ? [...baseTabs.slice(0, 2), 'actions', ...baseTabs.slice(2)]
     : baseTabs;
   const selectedActionGearCardEntries = selectedActionSurvivor
@@ -2208,6 +2211,9 @@ export default function SettlementScreen({
                   ? ` (${settlement.pendingNewborn.remainingBirths} twins still waiting)`
                   : ''}
               </h3>
+              <p className="missing">
+                Naming is required before any other settlement actions can continue.
+              </p>
               <p>
                 Parents: {settlement.pendingNewborn.parentNames.join(' and ') || 'Unknown / Legacy'}
               </p>

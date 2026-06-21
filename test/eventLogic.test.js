@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { events } from '../src/data/events.js';
 import {
@@ -25,6 +26,12 @@ const mockSurvivor = (id, traits = [], boundGear = []) => ({
   maxHp: 30,
   survival: 0,
   personalDeckAdditions: []
+});
+
+test('App event route renders recovery UI instead of null for missing currentEvent', () => {
+  const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  assert.match(app, /reason="missing hunt event"/);
+  assert.doesNotMatch(app, /case 'event':[\s\S]*\)\s*:\s*null;/);
 });
 
 const mockSettlement = (innovationIds = []) => ({

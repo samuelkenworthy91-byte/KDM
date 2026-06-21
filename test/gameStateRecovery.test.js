@@ -28,6 +28,30 @@ test('missing run data on combat recovers instead of rendering', () => {
   assert.match(result.reason, /hunt party/);
 });
 
+test('principleChoice is a valid settlement screen without hunt state', () => {
+  const result = validateGameState({
+    activeSlot: 1,
+    settlement: {
+      ...settlement(),
+      pendingPrincipleChoice: { group: 'newLife', trigger: 'First newborn' }
+    },
+    runtime: { ...createEmptyRuntime('principleChoice'), runParty: [], runMap: [], currentNode: null }
+  });
+  assert.equal(result.valid, true);
+});
+
+test('temporary Scout fight combat validates through sourceNodeId', () => {
+  const runtime = {
+    ...createEmptyRuntime('combat'),
+    runMap: [[{ id: 'rest-1', type: 'rest', completed: false }]],
+    currentNode: { id: 'rest-1:scout-fight', sourceNodeId: 'rest-1', type: 'fight' },
+    runParty: [{ id: 'survivor-1', hp: 20 }],
+    partyCombatBonuses: [{ survivor: { id: 'survivor-1', hp: 20 }, runDeck: [] }]
+  };
+  const result = validateGameState({ activeSlot: 1, settlement: settlement(), runtime });
+  assert.equal(result.valid, true);
+});
+
 test('incomplete party combat decks are rejected', () => {
   const runtime = {
     ...createEmptyRuntime('combat'),

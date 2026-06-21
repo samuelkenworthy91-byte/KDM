@@ -158,6 +158,21 @@ test('scoutTheDark provides outcomeText for all paths', () => {
   assert.ok(result.outcomeText.length > 0);
 });
 
+test('negative scoutTheDark result requests an immediate fight without changing rest node id', () => {
+  const s1 = survivor('S1');
+  const result = withRandom(0.05, () =>
+    resolveRestStopChoice(state([s1]), 'scoutTheDark')
+  );
+
+  assert.equal(result.applied, true);
+  assert.equal(result.nextNodeType, 'fight');
+  assert.match(result.outcomeText, /immediate confrontation/);
+
+  const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  assert.match(app, /startImmediateRestFight\(currentNode\)/);
+  assert.doesNotMatch(app, /selectNode\(\{\s*\.\.\.currentNode,\s*type:\s*'fight'\s*\}\)/);
+});
+
 test('scoutTheDark random gear uses active equipment from unlocked buildings', () => {
   const s1 = survivor('S1');
   const settlement = {

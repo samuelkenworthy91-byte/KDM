@@ -92,6 +92,13 @@ import {
 } from './game/cardForgetting.js';
 import { resolveRestStopChoice } from './game/restStopLogic.js';
 import {
+  buildSafePartyCombatBonuses,
+  createScoutFightNode,
+  getCompletionNodeId,
+  hasRecoverableHuntRoute,
+  isValidSelectableNode
+} from './game/huntRouting.js';
+import {
   addNemesisChampionCardToSurvivor,
   createNemesisVictoryReward,
   getNemesisRewardChoice
@@ -173,6 +180,7 @@ import {
   applyNewLifePrincipleToNewborn,
   chooseCampaignPrincipleWithEffects
 } from './game/principleEffects.js';
+import { createPendingPrincipleChoice } from './game/campaignPrincipleLogic.js';
 
 function applyChildTrait(survivor, rawTraitId, recordInnate = true) {
   const traitId = normalizeChildTraitId(rawTraitId);
@@ -653,7 +661,8 @@ export default function App() {
     nemesisResult,
     pendingQuarryDiscoveryId,
     currentHuntId,
-    retreatResult
+    retreatResult,
+    restResult
   ]);
 
   useEffect(() => {
@@ -682,6 +691,12 @@ export default function App() {
           : 'nemesisPreparation');
     }
   }, [settlement?.pendingNemesisEncounter, screen, runSummary?.outcome]);
+
+  useEffect(() => {
+    if (!settlement?.pendingNewborn) return;
+    if (['title', 'createSettlement', 'settlement'].includes(screen)) return;
+    setScreen('settlement');
+  }, [settlement?.pendingNewborn?.id, screen]);
 
   const updateSettlement = updater => {
     setSettlement(current => {
@@ -796,6 +811,7 @@ export default function App() {
   };
 
   const startRun = () => {
+    if (settlement?.pendingNewborn) return;
     if (!settlement || settlement.population <= 0) return;
     const selectedParty = selectedPartyIds
       .slice(0, settlement.maxHuntPartySize)
@@ -952,6 +968,7 @@ export default function App() {
   };
 
   const prepareHunt = survivorId => {
+    if (settlement.pendingNewborn) return;
     if (settlement.pendingTimelineEvent) return;
     const firstId = survivorId || settlement.activeSurvivorId ||
       settlement.survivors.find(survivor => survivor.alive !== false)?.id;
@@ -962,11 +979,112 @@ export default function App() {
     setScreen('partySelection');
   };
 
+  const startFightForNode = node => {
+    if (!isValidSelectableNode(node)) {
+      if (hasRecoverableHuntRoute(runMap, runParty)) {
+        setCurrentNode(null);
+        setScreen('map');
+      } else {
+        returnToSettlementSafely('invalid hunt node selected', { resetHunt: true });
+      }
+      return;
+    }
+    setCurrentNode(node);
+    const monsterId = quarries[selectedQuarry]?.monsterId;
+    const partyBonuses = buildSafePartyCombatBonuses({
+      runParty,
+      existingBonuses: partyCombatBonuses,
+      settlement,
+      monsterId,
+      quarryId: selectedQuarry,
+      runModifiers,
+      runBonus,
+      getLoadoutBonus
+    });
+    setPartyCombatBonuses(partyBonuses);
+    const loadoutBonus = getLoadoutBonus(settlement, monsterId, selectedQuarry);
+    const firstCombatStrength = runBonus.firstCombatStrength || 0;
+    setCombatBonus({
+      ...loadoutBonus,
+      extraMaxHp: (loadoutBonus.extraMaxHp || 0) + (runBonus.extraMaxHp || 0),
+      firstCombatStrength: firstCombatStrength + (loadoutBonus.strength || 0),
+      extraFirstTurnDraw: (loadoutBonus.extraFirstTurnDraw || 0) + (runBonus.extraFirstTurnDraw || 0),
+      startingBlock:
+        (loadoutBonus.startingBlock || 0) +
+        (runModifiers.nextCombatStartBlock || 0) +
+        (runBonus.firstCombatBlock || 0),
+      firstTurnEnergyPenalty: runModifiers.nextCombatEnergyPenalty || 0,
+      monsterBonusHp:
+        (runModifiers.nextCombatMonsterBonusHp || 0) +
+        (runBonus.nextCombatMonsterBonusHp || 0),
+      monsterStartsWounded:
+        (runModifiers.monsterStartsWounded || 0) +
+        (loadoutBonus.monsterStartsWounded || 0),
+      counterDamageBonus: loadoutBonus.counterDamageBonus || 0,
+      monsterEnrage:
+        (runModifiers.monsterEnrage || 0) +
+        (runBonus.retreatMonsterEnrage || 0),
+      firstAttackBonus:
+        (runModifiers.firstAttackBonus || 0) +
+        (runBonus.firstHuntAttackBonus || 0),
+      monsterBaneDamageBonus:
+        settlement.builtInnovations?.includes('monsterArchive') &&
+        runSurvivor?.fightingArts?.includes(getMonsterBaneId(selectedQuarry))
+          ? 1
+          : 0,
+      survivor: (runBonus.startingSurvival || loadoutBonus.startingSurvival)
+        ? {
+          ...runSurvivor,
+          survival: Math.min(
+            runSurvivor?.maxSurvival || 3,
+            (runSurvivor?.survival || 0) +
+              (runBonus.startingSurvival || 0) +
+              (loadoutBonus.startingSurvival || 0)
+          )
+        }
+        : runSurvivor,
+      runDeck,
+      huntDeckConditionsApplied: true
+    });
+    setRunModifiers(current => current.nextEventWarning
+      ? { nextEventWarning: true }
+      : {});
+    setRunBonus(current => ({
+      ...current,
+      firstCombatBlock: 0,
+      firstHuntAttackBonus: 0,
+      extraFirstTurnDraw: 0,
+      startingSurvival: 0,
+      nextCombatMonsterBonusHp: 0
+    }));
+    if (firstCombatStrength) setRunBonus(current => ({ ...current, firstCombatStrength: 0 }));
+    setScreen('combat');
+  };
+
+  const startImmediateRestFight = originNode => {
+    const fightNode = createScoutFightNode(originNode);
+    if (!fightNode) {
+      returnToSettlementSafely('missing rest node for scout fight', { resetHunt: true });
+      return;
+    }
+    startFightForNode(fightNode);
+  };
+
   const selectNode = node => {
+    if (!isValidSelectableNode(node)) {
+      if (hasRecoverableHuntRoute(runMap, runParty)) {
+        setCurrentNode(null);
+        setScreen('map');
+      } else {
+        returnToSettlementSafely('invalid hunt node selected', { resetHunt: true });
+      }
+      return;
+    }
     if (!node.available || node.completed) return;
     setCurrentNode(node);
+    setRestResult(null);
     const completedCount = runMap.flat().filter(item => item.completed).length;
-    const livingParty = runParty.filter(survivor => survivor.hp > 0);
+    const livingParty = runParty.filter(survivor => survivor?.hp > 0 && survivor.alive !== false);
     const nodeSurvivor = livingParty[completedCount % Math.max(1, livingParty.length)];
     if (nodeSurvivor && !['fight', 'elite', 'boss'].includes(node.type)) {
       setRunSurvivor(nodeSurvivor);
@@ -975,85 +1093,7 @@ export default function App() {
     }
 
     if (['fight', 'elite', 'boss'].includes(node.type)) {
-      const monsterId = quarries[selectedQuarry]?.monsterId;
-      const partyBonuses = runParty.filter(survivor => survivor.hp > 0).map((survivor, index) => {
-        const partySettlement = { ...settlement, activeSurvivorId: survivor.id };
-        const loadoutBonus = getLoadoutBonus(partySettlement, monsterId, selectedQuarry);
-        return {
-          ...partyCombatBonuses.find(bonus => bonus.survivor.id === survivor.id),
-          ...loadoutBonus,
-          survivor,
-          runDeck: partyCombatBonuses.find(bonus => bonus.survivor.id === survivor.id)?.runDeck,
-          startingBlock:
-            (loadoutBonus.startingBlock || 0) +
-            (runModifiers.nextCombatStartBlock || 0) +
-            (runBonus.firstCombatBlock || 0),
-          firstTurnEnergyPenalty: runModifiers.nextCombatEnergyPenalty || 0,
-          monsterBaneDamageBonus:
-            settlement.builtInnovations.includes('monsterArchive') &&
-            survivor.fightingArts?.includes(getMonsterBaneId(selectedQuarry)) ? 1 : 0,
-          hasMonsterBane: survivor.fightingArts?.includes(getMonsterBaneId(selectedQuarry)),
-          huntDeckConditionsApplied: true
-        };
-      });
-      setPartyCombatBonuses(partyBonuses);
-      const loadoutBonus = getLoadoutBonus(settlement, monsterId, selectedQuarry);
-      const firstCombatStrength = runBonus.firstCombatStrength || 0;
-      setCombatBonus({
-        ...loadoutBonus,
-        extraMaxHp: (loadoutBonus.extraMaxHp || 0) + (runBonus.extraMaxHp || 0),
-        firstCombatStrength: firstCombatStrength + (loadoutBonus.strength || 0),
-        extraFirstTurnDraw: (loadoutBonus.extraFirstTurnDraw || 0) + (runBonus.extraFirstTurnDraw || 0),
-        startingBlock:
-          (loadoutBonus.startingBlock || 0) +
-          (runModifiers.nextCombatStartBlock || 0) +
-          (runBonus.firstCombatBlock || 0),
-        firstTurnEnergyPenalty: runModifiers.nextCombatEnergyPenalty || 0,
-        monsterBonusHp:
-          (runModifiers.nextCombatMonsterBonusHp || 0) +
-          (runBonus.nextCombatMonsterBonusHp || 0),
-        monsterStartsWounded:
-          (runModifiers.monsterStartsWounded || 0) +
-          (loadoutBonus.monsterStartsWounded || 0),
-        counterDamageBonus: loadoutBonus.counterDamageBonus || 0,
-        monsterEnrage:
-          (runModifiers.monsterEnrage || 0) +
-          (runBonus.retreatMonsterEnrage || 0),
-        firstAttackBonus:
-          (runModifiers.firstAttackBonus || 0) +
-          (runBonus.firstHuntAttackBonus || 0),
-        monsterBaneDamageBonus:
-          settlement.builtInnovations.includes('monsterArchive') &&
-          runSurvivor?.fightingArts?.includes(getMonsterBaneId(selectedQuarry))
-            ? 1
-            : 0,
-        survivor: (runBonus.startingSurvival || loadoutBonus.startingSurvival)
-          ? {
-            ...runSurvivor,
-            survival: Math.min(
-              runSurvivor.maxSurvival || 3,
-              (runSurvivor.survival || 0) +
-                (runBonus.startingSurvival || 0) +
-                (loadoutBonus.startingSurvival || 0)
-            )
-          }
-          : runSurvivor,
-        runDeck,
-        huntDeckConditionsApplied: true
-      });
-      setRunModifiers(current => current.nextEventWarning
-        ? { nextEventWarning: true }
-        : {});
-      setRunBonus(current => ({
-        ...current,
-        firstCombatBlock: 0,
-        firstHuntAttackBonus: 0,
-        extraFirstTurnDraw: 0,
-        startingSurvival: 0,
-        nextCombatMonsterBonusHp: 0
-      }));
-      if (firstCombatStrength) setRunBonus(current => ({ ...current, firstCombatStrength: 0 }));
-      setScreen('combat');
+      startFightForNode(node);
       return;
     }
 
@@ -1078,11 +1118,24 @@ export default function App() {
   };
 
   const completeCurrentNode = () => {
-    if (!currentNode) return;
-    setRunMap(map => completeMapNode(map, currentNode.id));
+    if (!currentNode) {
+      if (hasRecoverableHuntRoute(runMap, runParty)) {
+        setScreen('map');
+      } else {
+        returnToSettlementSafely('missing hunt node completion', { resetHunt: true });
+      }
+      return;
+    }
+    const completionNodeId = getCompletionNodeId(currentNode);
+    if (!completionNodeId) {
+      returnToSettlementSafely('missing hunt node id for completion', { resetHunt: true });
+      return;
+    }
+    setRunMap(map => completeMapNode(map, completionNodeId));
     setCurrentNode(null);
     setResourceReward(null);
     setCurrentEvent(null);
+    setRestResult(null);
     setScreen('map');
   };
 
@@ -1231,7 +1284,12 @@ export default function App() {
   };
 
   const finishBossVictory = (selectedResources, survivorAfterFight, huntResultId) => {
-    const completedMap = completeMapNode(runMap, currentNode.id);
+    const completionNodeId = getCompletionNodeId(currentNode);
+    if (!completionNodeId) {
+      returnToSettlementSafely('missing hunt node during boss victory', { resetHunt: true });
+      return;
+    }
+    const completedMap = completeMapNode(runMap, completionNodeId);
     const progress = getRunProgress(completedMap, currentNode);
     const monsterPartRewards = Array.isArray(selectedResources)
       ? selectedResources
@@ -1390,7 +1448,12 @@ export default function App() {
   };
 
   const finishPartyBossVictory = (selectedResources, survivingParty, huntResultId) => {
-    const completedMap = completeMapNode(runMap, currentNode.id);
+    const completionNodeId = getCompletionNodeId(currentNode);
+    if (!completionNodeId) {
+      returnToSettlementSafely('missing hunt node during boss victory', { resetHunt: true });
+      return;
+    }
+    const completedMap = completeMapNode(runMap, completionNodeId);
     const progress = getRunProgress(completedMap, currentNode);
     const monsterParts = Array.isArray(selectedResources)
       ? selectedResources
@@ -1751,6 +1814,7 @@ export default function App() {
   };
 
   const handleBuild = item => {
+    if (settlement.pendingNewborn) return;
     // Prevent direct building of deck-pool innovations unless they were drawn/chosen
     if (innovationCards[item.id] && !settlement.innovationDeckState.builtInnovationIds.includes(item.id)) {
       return;
@@ -1767,6 +1831,7 @@ export default function App() {
   };
 
   const handleCraft = recipe => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current => {
       if (!getGearUnlockState(recipe, current).unlocked || !canCraft(recipe, current.stash)) {
         return current;
@@ -1781,6 +1846,7 @@ export default function App() {
   };
 
   const handleAttemptInnovation = () => {
+    if (settlement.pendingNewborn) return;
     const drawable = getDrawableInnovationIdsForSettlement(settlement);
     if (
       !canSpendMemories(settlement, 1) ||
@@ -1838,6 +1904,7 @@ export default function App() {
   };
 
   const handleTimelineChoice = (choiceId, nominatedSurvivorIds = []) => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current =>
       resolveLanternTimelineChoice(current, choiceId, nominatedSurvivorIds)
     );
@@ -1856,6 +1923,7 @@ export default function App() {
   };
 
   const handleForgetCard = (survivorId, cardId) => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current => {
       const survivor = current.survivors.find(item => item.id === survivorId);
       if (!survivor || !cardId) return current;
@@ -1917,6 +1985,7 @@ export default function App() {
   };
 
   const handleMemoryCardRemoval = (actionId, survivorId, cardId) => {
+    if (settlement.pendingNewborn) return;
     const config = actionId === 'quietNight'
       ? { innovationId: 'quietNight', cost: 1, method: 'Quiet Night' }
       : { innovationId: 'taboo', cost: 2, method: 'Taboo' };
@@ -1958,6 +2027,7 @@ export default function App() {
   };
 
   const handleWeaponDrill = (survivorId, cardId) => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current => {
       if (!current.builtMemoryInnovations.includes('weaponDrills')) return current;
       if (current.memoryActionsUsedThisYear.weaponDrills === current.lanternYear) return current;
@@ -1992,10 +2062,12 @@ export default function App() {
   };
 
   const handleMemoryTraining = (survivorId, cardId) => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current => resolveMemoryTraining(current, survivorId, { cardId }));
   };
 
   const handlePainLesson = (survivorId, injuryId) => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current => {
       if (!current.builtMemoryInnovations.includes('painLessons')) return current;
       if (current.memoryActionsUsedThisYear.painLessons === current.lanternYear) return current;
@@ -2023,6 +2095,7 @@ export default function App() {
   };
 
   const handleShrineOfNames = survivorId => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current => {
       if (!current.builtMemoryInnovations.includes('shrineOfNames')) return current;
       if (current.memoryActionsUsedThisYear.shrineOfNames === current.lanternYear) return current;
@@ -2046,6 +2119,7 @@ export default function App() {
   };
 
   const handleRestSurvivor = survivorId => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current => {
       if (!canSpendMemories(current, 1)) return current;
       const survivor = current.survivors.find(item =>
@@ -2084,6 +2158,7 @@ export default function App() {
   };
 
   const handleTreatInjury = (survivorId, injuryId) => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current => {
       if (!current.builtInnovations.includes('firstAidTent')) return current;
       if (current.lastInjuryTreatmentLanternYear === current.lanternYear) return current;
@@ -2108,6 +2183,7 @@ export default function App() {
   };
 
   const handleConfirmLoadout = (selectedInstanceIds, activeProficiencyType) => {
+    if (settlement.pendingNewborn) return;
     const nemesisPreparation = settlement.pendingNemesisEncounter;
     const activeSurvivor = settlement.survivors.find(
       item => item.id === settlement.activeSurvivorId
@@ -2360,7 +2436,7 @@ export default function App() {
       setRestResult({
         ...result,
         choiceId,
-        onContinue: () => selectNode({ ...currentNode, type: 'fight' })
+        onContinue: () => startImmediateRestFight(currentNode)
       });
     } else {
       setRestResult({
@@ -3004,6 +3080,7 @@ export default function App() {
   };
 
   const handleCreateSurvivor = (name, gender, options) => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current => {
       const survivor = createSurvivor(name, gender, {
         ...options,
@@ -3190,6 +3267,7 @@ export default function App() {
   };
 
   const handleConfirmNewborn = details => {
+    let routeAfterNaming = null;
     updateSettlement(current => {
       const pending = current.pendingNewborn;
       if (!pending) return current;
@@ -3285,7 +3363,7 @@ export default function App() {
         });
       }
 
-      return {
+      const namedSettlement = {
         ...paidSettlement,
         survivors: [...current.survivors, newborn],
         activeSurvivorId: current.activeSurvivorId || newborn.id,
@@ -3300,10 +3378,23 @@ export default function App() {
             : entry
         )
       };
+      const shouldQueueNewLife =
+        !nextPending &&
+        !namedSettlement.principles?.newLife &&
+        namedSettlement.pendingPrincipleChoice?.group !== 'newLife';
+      const finalSettlement = shouldQueueNewLife && !namedSettlement.pendingPrincipleChoice
+        ? createPendingPrincipleChoice(namedSettlement, 'newLife', 'First newborn', [newborn.id])
+        : namedSettlement;
+      if (!nextPending && finalSettlement.pendingPrincipleChoice?.group === 'newLife') {
+        routeAfterNaming = 'principleChoice';
+      }
+      return finalSettlement;
     });
+    if (routeAfterNaming) setScreen(routeAfterNaming);
   };
 
   const handleResolveDeath = (resolutionId, choice, resourceId) => {
+    if (settlement.pendingNewborn) return;
     updateSettlement(current =>
       resolveDeathMemoryChoice(current, resolutionId, choice, resourceId)
     );
@@ -3351,7 +3442,9 @@ export default function App() {
             onMemoryTraining={handleMemoryTraining}
             onPainLesson={handlePainLesson}
             onShrineOfNames={handleShrineOfNames}
-            onOpenPrincipleChoice={() => setScreen('principleChoice')}
+            onOpenPrincipleChoice={() => {
+              if (!settlement.pendingNewborn) setScreen('principleChoice');
+            }}
             onReturnToTitle={showTitle}
           />
         ) : <TitleScreen slots={listSaveSlots()} onLoad={handleLoad} onNew={() => {}} onDelete={handleDelete} />;
@@ -3633,7 +3726,12 @@ export default function App() {
             settlement={settlement}
             selectedQuarry={selectedQuarry}
           />
-        ) : null;
+        ) : (
+          <InvalidPhaseScreen
+            reason="missing hunt event"
+            onRecover={() => returnToSettlementSafely('missing hunt event', { resetHunt: true })}
+          />
+        );
       case 'rest':
         return (
           <RestStopScreen
