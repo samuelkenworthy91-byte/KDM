@@ -282,3 +282,40 @@ button:disabled {
   padding-left: 1.2rem;
   color: #f1dca5;
 }
+
+.combat-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.85rem;
+  margin: 1.5rem 0;
+}
+
+.combat-panel,
+.hand-card,
+.result-banner {
+  border: 1px solid rgba(230, 198, 120, 0.22);
+  border-radius: 8px;
+  padding: 1rem;
+  background: rgba(5, 4, 8, 0.5);
+}
+
+.combat-section {
+  margin-top: 1.5rem;
+}
+
+.hand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+
+.hand-card p,
+.combat-panel p {
+  color: #d8ccb3;
+}
+
+.combat-log {
+  display: grid;
+  gap: 0.35rem;
+  color: #d8ccb3;
+}
