@@ -289,8 +289,22 @@ function chooseHuntEvent(level) {
     pool = events;
   }
 
-  // Simple shuffle/select
-  const selected = pool[Math.floor(Math.random() * pool.length)];
+  const rollPool = pool.filter(event =>
+    event?.eventType === 'huntRoll' ||
+    (Array.isArray(event?.resultBands) && event.resultBands.length > 0)
+  );
+
+  const sourcePool = rollPool.length ? rollPool : pool;
+  const selected = sourcePool[Math.floor(Math.random() * sourcePool.length)];
+  if (
+    selected?.eventType === 'huntRoll' ||
+    (Array.isArray(selected?.resultBands) && selected.resultBands.length > 0)
+  ) {
+    return {
+      ...selected,
+      choices: []
+    };
+  }
   return selected;
 }
 
@@ -3677,6 +3691,25 @@ export default function App() {
             />
           );
         }
+        const monsterId = quarries[selectedQuarry]?.monsterId;
+        const safePartyBonuses = buildSafePartyCombatBonuses({
+          runParty: livingRunParty,
+          existingBonuses: partyCombatBonuses,
+          settlement,
+          monsterId,
+          quarryId: selectedQuarry,
+          runModifiers,
+          runBonus,
+          getLoadoutBonus
+        });
+        if (!safePartyBonuses.length) {
+          return (
+            <InvalidPhaseScreen
+              reason="missing combat party bonuses"
+              onRecover={() => returnToSettlementSafely('missing combat party bonuses', { resetHunt: true })}
+            />
+          );
+        }
         return (
           <PartyCombatScreen
             key={currentNode?.id}
@@ -3686,7 +3719,7 @@ export default function App() {
               currentNode?.type,
               livingRunParty.length
             )}
-            partyBonuses={partyCombatBonuses}
+            partyBonuses={safePartyBonuses}
             pendingPartyEffects={pendingPartyEffects}
             hasMonsterBane={Boolean(
               livingRunParty.some(survivor =>

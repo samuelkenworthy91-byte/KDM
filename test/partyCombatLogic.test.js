@@ -185,6 +185,27 @@ test('combat creation repairs a dead active member and advances to a living surv
   assert.deepEqual(state.combatTurnOrder, ['Living', 'monster']);
 });
 
+test('combat creation ignores invalid party bonuses without throwing', () => {
+  const state = createPartyCombatState(monster('random'), [null, {}, { survivor: null }]);
+
+  assert.deepEqual(state.members, []);
+  assert.equal(state.activeCombatant, 'monster');
+  assert.equal(state.activePartyIndex, -1);
+  assert.equal(state.status, 'lost');
+});
+
+test('combat creation still creates members from valid bonuses', () => {
+  const state = createPartyCombatState(
+    monster('random'),
+    [null, ...party(['Mira', 'Holt'])]
+  );
+
+  assert.equal(state.members.length, 2);
+  assert.deepEqual(state.members.map(member => member.survivor.id), ['Mira', 'Holt']);
+  assert.equal(state.activeCombatant, 'Mira');
+  assert.equal(state.status, 'playing');
+});
+
 test('death prevention traits do not save a survivor at zero HP', () => {
   const state = createPartyCombatState(
     monster('front', [{ type: 'dealDamage', amount: 2 }]),

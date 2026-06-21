@@ -3,6 +3,13 @@ import { formatHistoryDetail, formatValueForDisplay } from '../utils/formatters.
 import { canUseEventChoice, getChoiceLockedText } from '../game/eventRequirementLogic.js';
 import { formatEventEffects } from '../game/eventLogic.js';
 
+const formatBandRange = band => {
+  if (band.min == null && band.max == null) return 'Any';
+  if (band.min == null) return `<= ${band.max}`;
+  if (band.max == null) return `${band.min}+`;
+  return `${band.min}-${band.max}`;
+};
+
 export default function EventScreen({
   event,
   hasParanoia,
@@ -16,8 +23,8 @@ export default function EventScreen({
   const context = { runParty, settlement, selectedQuarry: { id: selectedQuarry }, quarry: { id: selectedQuarry } };
   const choices = event.choices || [];
   const livingParty = (runParty || []).filter(survivor => survivor?.hp > 0 && survivor.alive !== false);
-  const isRollEvent = event.eventType === 'huntRoll' ||
-    (Array.isArray(event.resultBands) && event.resultBands.length > 0);
+  const resultBands = Array.isArray(event?.resultBands) ? event.resultBands : [];
+  const isRollEvent = event?.eventType === 'huntRoll' || resultBands.length > 0;
   const needsEventSurvivorChoice = isRollEvent && (event.allowsChoice || event.eventSurvivorRule === 'playerChoice');
   const isAutomatic = event.mode === 'automatic';
 
@@ -63,6 +70,25 @@ export default function EventScreen({
       
       {hasParanoia && !result && (
         <p className="missing">Paranoia warns that every choice may conceal a worse outcome.</p>
+      )}
+
+      {isRollEvent && (
+        <section className="event-roll-table" aria-label="Hunt event roll table">
+          <h3>Roll Table</h3>
+          <p>Event survivor: {event.eventSurvivorRule || 'partyLeader'}</p>
+          <p>Roll: d{event.roll?.die || 10}</p>
+          <div className="roll-band-list">
+            {resultBands.map(band => (
+              <div
+                key={band.id}
+                className={`roll-band ${result?.outcomeBand?.id === band.id ? 'selected' : ''}`}
+              >
+                <strong>{formatBandRange(band)} - {band.label}</strong>
+                <span>{band.resultText || band.outcomeText}</span>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {!result && needsEventSurvivorChoice ? (
@@ -134,6 +160,16 @@ export default function EventScreen({
           <p className="outcome-text">
             {formatValueForDisplay(result.outcomeText || 'The hunt event resolves.')}
           </p>
+          {result.roll && (
+            <section className="event-roll-graphic" aria-label="Roll result graphic">
+              <div className="roll-die">d{event.roll?.die || 10}</div>
+              <div>
+                <p>Base roll: {result.roll.baseRoll}</p>
+                <p>Final roll: {result.roll.finalRoll}</p>
+                {result.outcomeBand && <p>Outcome: {result.outcomeBand.label}</p>}
+              </div>
+            </section>
+          )}
           {result.roll && (
             <section className="event-roll-breakdown" aria-label="Hunt event roll breakdown">
               <h3>Roll Result</h3>

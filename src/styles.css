@@ -740,6 +740,47 @@ select {
   color: #e8bd69;
 }
 
+.event-roll-table,
+.event-roll-graphic {
+  margin: 1rem 0;
+  border: 1px solid #6f6046;
+  padding: 0.85rem;
+  background: #1f1b14;
+}
+
+.roll-band-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.roll-band {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid #3d382f;
+  padding: 0.65rem;
+  background: #11100e;
+}
+
+.roll-band.selected {
+  border-color: #e8bd69;
+  background: #2a2115;
+}
+
+.event-roll-graphic {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.roll-die {
+  border: 2px solid #e8bd69;
+  padding: 0.75rem;
+  min-width: 3rem;
+  text-align: center;
+  font-weight: 700;
+  color: #e8bd69;
+}
+
 .intent {
   border-left: 3px solid #b58a4a;
   padding: 0.65rem 0.8rem;

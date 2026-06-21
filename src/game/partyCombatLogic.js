@@ -32,9 +32,10 @@ function syncMonster(members, monster) {
   return members.map(member => ({ ...member, monster }));
 }
 
-function livingIndexes(members) {
+function livingIndexes(members = []) {
   return members
     .map((member, index) =>
+      member?.survivor?.id &&
       member.survivor.hp > 0 &&
       member.survivor.isAlive !== false &&
       member.survivor.alive !== false &&
@@ -208,7 +209,7 @@ function clearCombatTargetState(state) {
 
 function formatTargetingLog(monster, intent, selection, members) {
   const names = selection.targets.map(targetId =>
-    members.find(member => member.survivor.id === targetId)?.survivor.name
+    members.find(member => member?.survivor?.id === targetId)?.survivor.name
   ).filter(Boolean);
   if (selection.targetRule === 'all') {
     return `${monster.name} hits all living survivors.`;
@@ -236,7 +237,7 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
   }
   const validTargetIds = selection.targets.filter(targetId =>
     state.members.some(member =>
-      member.survivor.id === targetId && isLivingPartyMember(member)
+      member?.survivor?.id === targetId && isLivingPartyMember(member)
     )
   );
   if (validTargetIds.length !== selection.targets.length) {
@@ -253,7 +254,8 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
   if (import.meta.env?.DEV) {
     const livingIds = state.members
       .filter(isLivingPartyMember)
-      .map(member => member.survivor.id);
+      .map(member => member?.survivor?.id)
+      .filter(Boolean);
     console.debug(
       `Monster target roll: turn=${state.round + 1} ` +
       `living=[${livingIds.join(',')}] selected=[${selection.targets.join(',')}] ` +
@@ -281,7 +283,7 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
   let activeAuras = [...(state.activeAuras || [])];
   const resolutionLog = [];
   resolutionIds.forEach((targetId, resolutionIndex) => {
-    const targetIndex = members.findIndex(member => member.survivor.id === targetId);
+    const targetIndex = members.findIndex(member => member?.survivor?.id === targetId);
     if (targetIndex < 0) return;
     const targetResult = applyMonsterIntent(intentMonster, {
       ...members[targetIndex],
@@ -356,9 +358,11 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
 }
 
 export function createPartyCombatState(monster, partyBonuses, pendingPartyEffects = []) {
-  const members = partyBonuses.map(bonus => {
+  const validBonuses = (Array.isArray(partyBonuses) ? partyBonuses : [])
+    .filter(bonus => bonus?.survivor?.id);
+  const members = validBonuses.map(bonus => {
     const member = createCombatState(monster, bonus);
-    member.survivor.id = bonus.survivor.id;
+    member.survivor.id = bonus?.survivor?.id;
     if (
       member.survivor.hp <= 0 ||
       bonus.survivor.alive === false ||
