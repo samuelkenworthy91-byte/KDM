@@ -1,4 +1,4 @@
-export default function SettlementScreen({ settlement, onReset }) {
+export default function SettlementScreen({ settlement, onReset, onOpenGear }) {
   const survivors = settlement?.survivors || [];
   const living = survivors.filter(survivor => survivor.alive).length;
 
@@ -38,7 +38,7 @@ export default function SettlementScreen({ settlement, onReset }) {
           <button type="button" disabled>Start Hunt</button>
           <button type="button">Innovations</button>
           <button type="button">Principles</button>
-          <button type="button">Gear</button>
+          <button type="button" onClick={onOpenGear}>Gear</button>
         </section>
       </section>
     </main>
