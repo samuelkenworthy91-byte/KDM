@@ -244,7 +244,7 @@ test('Event Resolution Logic', async (t) => {
       outcomeText: 'Something happens.',
       effects: { mysteryEffect: 1 }
     }, state, context);
-    assert.deepEqual(result.appliedEffects, ['Unknown effect: mysteryEffect']);
+    assert.deepEqual(result.appliedEffects, ['Skipped unsafe effect: mysteryEffect']);
   });
 
   await t.test('events have readable long descriptions and bounded choice counts', () => {
@@ -441,7 +441,7 @@ test('Roll-driven hunt event engine', async (t) => {
     assert.match(result.outcomeText, /guarded/i);
     assert.ok(
       result.appliedEffects.some(effect =>
-        /Gain .* x1\./.test(effect) || /No resource was available/.test(effect)
+        /Gain .* x1\./.test(effect) || /No valid resource was available/.test(effect)
       )
     );
   });

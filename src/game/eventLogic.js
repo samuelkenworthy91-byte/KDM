@@ -15,7 +15,13 @@ const MONSTER_IDS = Object.values(resources).filter(item => item.type === 'monst
 const RARE_IDS = Object.values(resources).filter(item => ['rare', 'strange'].includes(item.type) && !item.creatureId).map(item => item.id);
 
 function pick(items) {
+  if (!Array.isArray(items) || !items.length) return null;
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function rollDie(sides = 10, random = Math.random) {
+  const die = Number(sides) || 10;
+  return Math.floor(random() * die) + 1;
 }
 
 function pickWithRandom(items, random = Math.random) {
@@ -215,7 +221,7 @@ export function formatEventEffects(effects = {}, context = {}) {
 function appendUnknownEffects(next, effects, handledKeys) {
   Object.keys(effects || {}).forEach(key => {
     if (!handledKeys.has(key)) {
-      next.appliedEffects.push(`Unknown effect: ${key}`);
+      next.appliedEffects.push(`Skipped unsafe effect: ${key}`);
       if (typeof console !== 'undefined') console.warn(`Unknown event effect: ${key}`);
     }
   });
@@ -270,7 +276,7 @@ function applyEffects(effects, state, context) {
         next.runResources.push(resourceId);
         next.appliedEffects.push(formatResourceGain(resourceId, 1));
       } else {
-        next.appliedEffects.push('No resource was available to gain.');
+        next.appliedEffects.push('No valid resource was available.');
       }
     }
   }
@@ -353,13 +359,13 @@ function applyEffects(effects, state, context) {
   if (effects.gainTrait) {
     handledKeys.add('gainTrait');
     const trait = effects.gainTrait.type === 'monsterBaneCurrent'
-      ? `monsterBane_${context.quarry.id}`
+      ? `monsterBane_${context.quarry?.id || 'unknown'}`
       : effects.gainTrait;
     if (effects.gainTrait.type === 'monsterBaneCurrent') {
       const existingBaneId = getSurvivorMonsterBaneId(next.runSurvivor);
       if (!existingBaneId) {
         next.runSurvivor.fightingArts.push(trait);
-        next.appliedEffects.push(`Monster Bane gained: ${context.quarry.name}`);
+        next.appliedEffects.push(`Monster Bane gained: ${context.quarry?.name || 'Unknown quarry'}`);
       } else {
         next.appliedEffects.push('Monster Bane reward replaced: this survivor already has permanent Monster Bane knowledge.');
         const replacement = generalFightingArts.find(art =>
@@ -478,7 +484,7 @@ function applyEffects(effects, state, context) {
       next.runResources.push(resourceId);
       next.appliedEffects.push(formatResourceGain(resourceId, 1));
     } else {
-      next.appliedEffects.push('No creature resource was available to gain.');
+      next.appliedEffects.push('No valid resource was available.');
     }
   }
   if (effects.addQuarryRumour) {
@@ -680,7 +686,19 @@ function resolveHuntRollEvent(event, choice, state, context = {}) {
       settlementMemoryDelta: state.settlementMemoryDelta || 0
     };
   }
-  const roll = getHuntEventRollBreakdown(event, eventSurvivor, state, context);
+  const forcedRoll = Number(choice?.rollOverride);
+  const contextRoll = Number(context.roll);
+  const baseRoll = Number.isFinite(forcedRoll) && forcedRoll > 0
+    ? forcedRoll
+    : Number.isFinite(contextRoll) && contextRoll > 0
+      ? contextRoll
+    : rollDie(event.roll?.die || 10, context.random);
+  const roll = getHuntEventRollBreakdown(
+    event,
+    eventSurvivor,
+    state,
+    { ...context, roll: baseRoll }
+  );
   const outcomeBand = getOutcomeBand(event, roll.finalRoll);
   const resolved = applyEffects(outcomeBand.effects || {}, {
     ...state,

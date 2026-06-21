@@ -781,6 +781,11 @@ select {
   color: #e8bd69;
 }
 
+.roll-die.rolling {
+  background: #3a2a16;
+  box-shadow: 0 0 0.75rem rgba(232, 189, 105, 0.35);
+}
+
 .intent {
   border-left: 3px solid #b58a4a;
   padding: 0.65rem 0.8rem;

@@ -23,7 +23,11 @@ export default function EventScreen({
   selectedQuarry
 }) {
   const [result, setResult] = useState(null);
-  const resolvedEventIdRef = useRef(null);
+  const [isRolling, setIsRolling] = useState(false);
+  const [displayRoll, setDisplayRoll] = useState(null);
+  const [lockedRoll, setLockedRoll] = useState(null);
+  const [chosenEventSurvivorId, setChosenEventSurvivorId] = useState(null);
+  const rollTimerRef = useRef(null);
   const displayEvent = normalizeHuntEventForRoll(event);
   const context = { runParty, settlement, selectedQuarry: { id: selectedQuarry }, quarry: { id: selectedQuarry } };
   const livingParty = (runParty || []).filter(survivor => survivor?.hp > 0 && survivor.alive !== false);
@@ -34,23 +38,74 @@ export default function EventScreen({
 
   useEffect(() => {
     setResult(null);
-    resolvedEventIdRef.current = null;
+    setIsRolling(false);
+    setDisplayRoll(null);
+    setLockedRoll(null);
+    setChosenEventSurvivorId(null);
+    if (rollTimerRef.current) {
+      clearInterval(rollTimerRef.current);
+      rollTimerRef.current = null;
+    }
   }, [displayEvent?.id]);
 
   useEffect(() => {
-    if (!isRollEvent || needsEventSurvivorChoice || result) return;
-    if (resolvedEventIdRef.current === displayEvent?.id) return;
-    resolvedEventIdRef.current = displayEvent?.id;
-    const next = onChoose(null);
-    setResult(next);
-  }, [displayEvent?.id, isRollEvent, needsEventSurvivorChoice, result]);
+    return () => {
+      if (rollTimerRef.current) {
+        clearInterval(rollTimerRef.current);
+      }
+    };
+  }, []);
 
   const autoPreview = resultBands[0]?.effects
     ? formatEventEffects(resultBands[0].effects, context)
     : [];
   const chooseEventSurvivor = survivorId => {
-    const next = onChoose({ eventSurvivorId: survivorId });
-    setResult(next);
+    setChosenEventSurvivorId(survivorId);
+  };
+  const getRollDie = () => Number(displayEvent?.roll?.die) || 10;
+  const generateRoll = () => {
+    const die = getRollDie();
+    return Math.floor(Math.random() * die) + 1;
+  };
+  const safelyChoose = choice => {
+    try {
+      const next = onChoose(choice);
+      setResult(next || {
+        outcomeText: 'The event resolved without a result.',
+        appliedEffects: ['No event result was returned.']
+      });
+    } catch (error) {
+      setResult({
+        outcomeText: 'The event hit a recovery path.',
+        appliedEffects: [`Event recovery: ${error?.message || 'unknown error'}`]
+      });
+    }
+  };
+  const handleRoll = () => {
+    if (isRolling || result) return;
+
+    const finalRoll = generateRoll();
+    setLockedRoll(finalRoll);
+    setIsRolling(true);
+
+    let ticks = 0;
+    const die = getRollDie();
+
+    rollTimerRef.current = setInterval(() => {
+      ticks += 1;
+      setDisplayRoll(Math.floor(Math.random() * die) + 1);
+
+      if (ticks >= 12) {
+        clearInterval(rollTimerRef.current);
+        rollTimerRef.current = null;
+        setDisplayRoll(finalRoll);
+        setIsRolling(false);
+        safelyChoose({
+          eventSurvivorId: chosenEventSurvivorId,
+          rollOverride: finalRoll
+        });
+      }
+    }, 80);
   };
 
   return (
@@ -60,10 +115,6 @@ export default function EventScreen({
       <p className="event-description">
         {formatValueForDisplay(displayEvent.longDescription || displayEvent.description)}
       </p>
-      {isRollEvent && !needsEventSurvivorChoice && !result && (
-        <p className="run-bonus-note">This event resolves immediately. The result will be shown before the hunt continues.</p>
-      )}
-      
       {hasParanoia && !result && (
         <p className="missing">Paranoia warns that every choice may conceal a worse outcome.</p>
       )}
@@ -94,15 +145,40 @@ export default function EventScreen({
             <button
               type="button"
               key={survivor.id}
+              className={chosenEventSurvivorId === survivor.id ? 'selected' : ''}
               onClick={() => chooseEventSurvivor(survivor.id)}
             >
               {survivor.name} - HP {survivor.hp}/{survivor.maxHp}, Survival {survivor.survival || 0}
             </button>
           ))}
         </div>
-      ) : !result && isRollEvent ? (
+      ) : null}
+
+      {!result && isRollEvent ? (
         <div className="event-outcome">
-          <p className="outcome-text">The event is resolving.</p>
+          <section className="event-roll-graphic" aria-label="Roll result graphic">
+            <div className={`roll-die ${isRolling ? 'rolling' : ''}`}>
+              {displayRoll || lockedRoll || '?'}
+            </div>
+            <div>
+              <p>Roll: d{getRollDie()}</p>
+              {chosenEventSurvivorId && (
+                <p>
+                  Event survivor selected: {
+                    livingParty.find(survivor => survivor.id === chosenEventSurvivorId)?.name ||
+                    chosenEventSurvivorId
+                  }
+                </p>
+              )}
+            </div>
+          </section>
+          <button
+            type="button"
+            onClick={handleRoll}
+            disabled={isRolling || (needsEventSurvivorChoice && !chosenEventSurvivorId)}
+          >
+            {isRolling ? 'Rolling...' : `Roll d${getRollDie()}`}
+          </button>
           {autoPreview.length > 0 && (
             <>
               <h3>Expected Effects</h3>
@@ -114,7 +190,7 @@ export default function EventScreen({
             </>
           )}
         </div>
-      ) : (
+      ) : result ? (
         <div className="event-outcome">
           <p className="outcome-text">
             {formatValueForDisplay(result.outcomeText || 'The hunt event resolves.')}
@@ -166,7 +242,7 @@ export default function EventScreen({
           )}
           <button type="button" onClick={onContinue}>Continue Hunt</button>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

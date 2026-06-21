@@ -96,7 +96,16 @@ export default function PartyCombatScreen({
   const currentIntent = combatMonster.intents?.[combat.intentIndex] || combatMonster.intents?.[0] || null;
   const combatOver = combat.status !== 'playing';
   const activeAuras = combat.activeAuras || [];
-  const fightingArtActions = active ? getActiveFightingArtActions(active) : [];
+  const safeActive = active ? {
+    ...active,
+    hand: Array.isArray(active.hand) ? active.hand : [],
+    runDeck: Array.isArray(active.runDeck) ? active.runDeck : [],
+    drawPile: Array.isArray(active.drawPile) ? active.drawPile : [],
+    discardPile: Array.isArray(active.discardPile) ? active.discardPile : [],
+    exhaustPile: Array.isArray(active.exhaustPile) ? active.exhaustPile : [],
+    survivalActionsUsed: Array.isArray(active.survivalActionsUsed) ? active.survivalActionsUsed : []
+  } : null;
+  const fightingArtActions = safeActive ? getActiveFightingArtActions(safeActive) : [];
   const livingPartyHasMonsterBane = validMembers.some(member =>
     member?.survivor?.hp > 0 &&
     member.fightingArts?.includes(`monsterBane_${combatMonster.quarryId}`)
@@ -114,8 +123,8 @@ export default function PartyCombatScreen({
     ? (combatMonster.weakPoints || []).find(point => point.id === selectedWeakPointId)
     : null;
   const previewAttack = selectedWeakPointId
-    ? active?.hand.find(card =>
-      card.type === 'attack' && !card.unplayable && getAdjustedCardCost(card, active) <= active?.survivor?.energy
+    ? safeActive?.hand.find(card =>
+      card.type === 'attack' && !card.unplayable && getAdjustedCardCost(card, safeActive) <= safeActive?.survivor?.energy
     )
     : null;
   const baneRevealsWeakPoints = livingPartyHasMonsterBane || (
@@ -124,9 +133,9 @@ export default function PartyCombatScreen({
   const selectedCardPreview = previewAttack && selectedWeakPoint
     ? getCardPreview({
         card: previewAttack,
-        survivor: active.survivor,
+        survivor: safeActive.survivor,
         combatState: {
-          ...active,
+          ...safeActive,
           monster: combatMonster,
           intentIndex: combat.intentIndex,
           selectedWeakPointId,
@@ -489,17 +498,17 @@ export default function PartyCombatScreen({
         </div>
       )}
 
-      {!combatOver && active && (
+      {!combatOver && safeActive && (
         <>
           <section className="survival-command-bar">
             <div>
-              <strong>{active.survivor.name} Survival Actions</strong>
-              <span>{active.survivor.survival} / {active.survivor.maxSurvival}</span>
+              <strong>{safeActive.survivor.name} Survival Actions</strong>
+              <span>{safeActive.survivor.survival} / {safeActive.survivor.maxSurvival}</span>
             </div>
             <div className="survival-action-buttons">
               {survivalActions.map(action => {
-                const used = active.survivalActionsUsed.includes(action.id);
-                const insufficient = active.survivor.survival < action.cost;
+                const used = safeActive.survivalActionsUsed.includes(action.id);
+                const insufficient = safeActive.survivor.survival < action.cost;
                 return (
                   <button
                     type="button"
@@ -513,7 +522,7 @@ export default function PartyCombatScreen({
                 );
               })}
             </div>
-            {!active.survivalActionsUsed.includes('counter') && selectedWeakPoint && (
+            {!safeActive.survivalActionsUsed.includes('counter') && selectedWeakPoint && (
               <small>
                 Counter preview: {
                   getPartyCounterPreview(combat, selectedWeakPoint.id)?.targetable
@@ -523,7 +532,7 @@ export default function PartyCombatScreen({
                 }.
               </small>
             )}
-            {active.survivalFeedback && <p role="status">{active.survivalFeedback}</p>}
+            {safeActive.survivalFeedback && <p role="status">{safeActive.survivalFeedback}</p>}
             {fightingArtActions.length > 0 && (
               <div className="survival-action-buttons" aria-label="Active fighting arts">
                 {fightingArtActions.map(action => (
@@ -542,30 +551,30 @@ export default function PartyCombatScreen({
           </section>
           <div className="combat-controls">
             <div>
-              Draw: {active.drawPile.length} | Discard: {active.discardPile.length} | Exhaust: {active.exhaustPile.length}
+              Draw: {safeActive.drawPile.length} | Discard: {safeActive.discardPile.length} | Exhaust: {safeActive.exhaustPile.length}
             </div>
             <button type="button" onClick={() => setCombat(endPartyTurn)}>End Turn</button>
           </div>
-          {getVisibleNamedMechanicCounters(active).length > 0 && (
+          {getVisibleNamedMechanicCounters(safeActive).length > 0 && (
             <section className="run-bonus-note" aria-label="Named mechanic counters">
               <strong>Named Mechanics:</strong>{' '}
-              {getVisibleNamedMechanicCounters(active).map(counter => (
+              {getVisibleNamedMechanicCounters(safeActive).map(counter => (
                 <span className="status-tag" key={counter.name}>{counter.name} {counter.amount}</span>
               ))}
             </section>
           )}
           <details className="combat-deck-list">
-            <summary>{active.survivor.name} Deck ({active.runDeck.length} cards)</summary>
+            <summary>{safeActive.survivor.name} Deck ({safeActive.runDeck.length} cards)</summary>
             <ul>
-              {active.runDeck.map((card, index) => (
+              {safeActive.runDeck.map((card, index) => (
                 <li key={`${card.id}-${index}`}>{card.name}{card.source ? ` - ${card.source}` : ''}</li>
               ))}
             </ul>
           </details>
-          <div className="hand" aria-label={`${active.survivor.name} card hand`}>
-            {active.hand.map((card, index) => {
+          <div className="hand" aria-label={`${safeActive.survivor.name} card hand`}>
+            {safeActive.hand.map((card, index) => {
               const previewState = {
-                ...active,
+                ...safeActive,
                 monster: combatMonster,
                 intentIndex: combat.intentIndex,
                 selectedWeakPointId,
@@ -584,7 +593,7 @@ export default function PartyCombatScreen({
                   card={card}
                   preview={getCardPreview({
                     card,
-                    survivor: active.survivor,
+                    survivor: safeActive.survivor,
                     combatState: previewState,
                     monster: combatMonster,
                     selectedTarget: combat.selectedCombatTarget,
@@ -593,7 +602,7 @@ export default function PartyCombatScreen({
                     playOptions
                   })}
                   monster={combatMonster}
-                  survivor={active.survivor}
+                  survivor={safeActive.survivor}
                   combatState={previewState}
                   party={validMembers}
                   adjustedCost={adjustedCost}
@@ -607,7 +616,7 @@ export default function PartyCombatScreen({
                       [mechanic]: amount
                     }
                   }))}
-                  disabled={card.unplayable || adjustedCost > active.survivor.energy}
+                  disabled={card.unplayable || adjustedCost > safeActive.survivor.energy}
                   onPlay={() => {
                     setCombat(current => playPartyCard(index, current, playOptions));
                     setNamedSpendSelections({});
