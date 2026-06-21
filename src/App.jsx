@@ -160,7 +160,6 @@ import { resolveHuntRetreat } from './game/retreatLogic.js';
 import { addPersonalCard, learnFightingArt } from './game/survivorProgression.js';
 import CombatScreen from './screens/CombatScreen.jsx';
 import PartyCombatScreen from './screens/PartyCombatScreen.jsx';
-import HuntClashScreen from './screens/HuntClashScreen.jsx';
 import CreateSettlementScreen from './screens/CreateSettlementScreen.jsx';
 import EventScreen from './screens/EventScreen.jsx';
 import LootRewardScreen from './screens/LootRewardScreen.jsx';
@@ -2373,82 +2372,91 @@ export default function App() {
         settlement
       });
     }
-    const resolvedSurvivor = result.runSurvivor?.id ? result.runSurvivor : null;
-    const eventConditionGains = { injuries: [], scars: [], disorders: [] };
-    if (resolvedSurvivor) {
-      ['injuries', 'scars', 'disorders'].forEach(type => {
-        (resolvedSurvivor[type] || []).forEach(conditionId => {
-          if (!(runSurvivor?.[type] || []).includes(conditionId)) {
-            eventConditionGains[type].push(conditionId);
-            recordConditionGain(type, conditionId);
-          }
-        });
-      });
-    }
-    if (resolvedSurvivor) {
-      const previousEventSurvivor = runParty.find(survivor => survivor.id === resolvedSurvivor.id) || runSurvivor;
-      const previousAdditions = previousEventSurvivor?.personalDeckAdditions || [];
-      const eventCardIds = (resolvedSurvivor.personalDeckAdditions || []).slice(previousAdditions.length);
-      if (eventCardIds.length) {
-        setRunDeck(current => [...current, ...getCardsFromIds(eventCardIds, 'Hunt event')]);
-      }
-    }
-    setRunResources(applied.runResources);
-    setRunSurvivor(applied.runSurvivor);
-    setRunParty(applied.runParty);
-    if (applied.runModifiers) {
-      setRunModifiers({
-        ...applied.runModifiers,
-        nextEventWarning: false
-      });
-    }
-    if (applied.settlement) {
-      updateSettlement(current => {
-        const appliedSurvivors = Array.isArray(applied.settlement.survivors)
-          ? applied.settlement.survivors
-          : current.survivors;
-        const next = {
-          ...current,
-          ...applied.settlement,
-          survivors: appliedSurvivors.map(survivor => survivor.id === resolvedSurvivor?.id
-            ? {
-              ...survivor,
-              survival: resolvedSurvivor.survival,
-              traits: resolvedSurvivor.traits,
-              fightingArts: resolvedSurvivor.fightingArts,
-              personalDeckAdditions: resolvedSurvivor.personalDeckAdditions,
-              deckAdditions: [],
-              injuries: resolvedSurvivor.injuries,
-              scars: resolvedSurvivor.scars,
-              disorders: resolvedSurvivor.disorders,
-              permanentModifiers: resolvedSurvivor.permanentModifiers
+    try {
+      const resolvedSurvivor = result.runSurvivor?.id ? result.runSurvivor : null;
+      const eventConditionGains = { injuries: [], scars: [], disorders: [] };
+      if (resolvedSurvivor) {
+        ['injuries', 'scars', 'disorders'].forEach(type => {
+          (resolvedSurvivor[type] || []).forEach(conditionId => {
+            if (!(runSurvivor?.[type] || []).includes(conditionId)) {
+              eventConditionGains[type].push(conditionId);
+              recordConditionGain(type, conditionId);
             }
-            : survivor),
-          conditionHistory: {
-            ...current.conditionHistory,
-            injuryGained: current.conditionHistory.injuryGained ||
-              Boolean(resolvedSurvivor?.injuries?.length),
-            disorderGained: current.conditionHistory.disorderGained ||
-              Boolean(resolvedSurvivor?.disorders?.length)
-          }
-        };
-        if (result.quarryRumour) {
-          const rumourQuarries = quarryList.filter(quarry =>
-            quarry.role === 'quarry' &&
-            !current.discoveredQuarries.includes(quarry.id)
-          ).slice(0, 1).map(quarry => quarry.id);
-          next.discoveredQuarries = [...new Set([...(current.discoveredQuarries || []), ...rumourQuarries])];
-          next.unlockedQuarries = [...new Set([...(current.unlockedQuarries || []), ...rumourQuarries])];
+          });
+        });
+      }
+      if (resolvedSurvivor) {
+        const previousEventSurvivor = runParty.find(survivor => survivor?.id === resolvedSurvivor.id) || runSurvivor;
+        const previousAdditions = previousEventSurvivor?.personalDeckAdditions || [];
+        const eventCardIds = (resolvedSurvivor.personalDeckAdditions || []).slice(previousAdditions.length);
+        if (eventCardIds.length) {
+          setRunDeck(current => [...current, ...getCardsFromIds(eventCardIds, 'Hunt event')]);
         }
-        return next;
+      }
+      setRunResources(applied.runResources);
+      setRunSurvivor(applied.runSurvivor);
+      setRunParty(applied.runParty);
+      if (applied.runModifiers) {
+        setRunModifiers({
+          ...applied.runModifiers,
+          nextEventWarning: false
+        });
+      }
+      if (applied.settlement) {
+        updateSettlement(current => {
+          const appliedSurvivors = Array.isArray(applied.settlement.survivors)
+            ? applied.settlement.survivors.filter(survivor => survivor?.id)
+            : (current.survivors || []).filter(survivor => survivor?.id);
+          const next = {
+            ...current,
+            ...applied.settlement,
+            survivors: appliedSurvivors.map(survivor => {
+              if (!survivor?.id || survivor.id !== resolvedSurvivor?.id) return survivor;
+              return {
+                ...survivor,
+                survival: resolvedSurvivor.survival,
+                traits: resolvedSurvivor.traits || [],
+                fightingArts: resolvedSurvivor.fightingArts || [],
+                personalDeckAdditions: resolvedSurvivor.personalDeckAdditions || [],
+                deckAdditions: [],
+                injuries: resolvedSurvivor.injuries || [],
+                scars: resolvedSurvivor.scars || [],
+                disorders: resolvedSurvivor.disorders || [],
+                permanentModifiers: resolvedSurvivor.permanentModifiers || {}
+              };
+            }),
+            conditionHistory: {
+              ...current.conditionHistory,
+              injuryGained: current.conditionHistory.injuryGained ||
+                Boolean(resolvedSurvivor?.injuries?.length),
+              disorderGained: current.conditionHistory.disorderGained ||
+                Boolean(resolvedSurvivor?.disorders?.length)
+            }
+          };
+          if (result.quarryRumour) {
+            const rumourQuarries = quarryList.filter(quarry =>
+              quarry.role === 'quarry' &&
+              !current.discoveredQuarries.includes(quarry.id)
+            ).slice(0, 1).map(quarry => quarry.id);
+            next.discoveredQuarries = [...new Set([...(current.discoveredQuarries || []), ...rumourQuarries])];
+            next.unlockedQuarries = [...new Set([...(current.unlockedQuarries || []), ...rumourQuarries])];
+          }
+          return next;
+        });
+      }
+      if (resolvedSurvivor?.id && resolvedSurvivor.hp <= 0) {
+        handleCombatDefeat({
+          survivorName: resolvedSurvivor.name || resolvedSurvivor.id,
+          killedBy: currentEvent?.name || 'Hunt event',
+          killedById: `event:${currentEvent?.id || 'unknownEvent'}`
+        }, result, eventConditionGains);
+      }
+    } catch (error) {
+      return createEventRecoveryResult({
+        event: currentEvent,
+        state: { runResources, runSurvivor, runParty, runModifiers, settlement },
+        error
       });
-    }
-    if (resolvedSurvivor?.hp <= 0) {
-      handleCombatDefeat({
-        survivorName: resolvedSurvivor.name,
-        killedBy: currentEvent.name,
-        killedById: `event:${currentEvent.id}`
-      }, result, eventConditionGains);
     }
     setRunEventWarningUsed(true);
     return result;
@@ -3706,7 +3714,9 @@ export default function App() {
           />
         );
       case 'combat': {
-        const livingRunParty = runParty.filter(survivor => survivor?.hp > 0 && survivor.alive !== false);
+        const livingRunParty = runParty.filter(
+          survivor => survivor?.id && survivor.hp > 0 && survivor.alive !== false
+        );
         if (!livingRunParty.length) {
           return (
             <InvalidPhaseScreen
@@ -3718,9 +3728,9 @@ export default function App() {
         const combatMonster = createScaledMonster(
           selectedQuarry,
           selectedLevel,
-          currentNode?.type,
-          livingRunParty.length
-        );
+            currentNode?.type,
+            livingRunParty.length
+          );
         if (!combatMonster) {
           return (
             <InvalidPhaseScreen
@@ -3729,17 +3739,43 @@ export default function App() {
             />
           );
         }
+        const monsterId = quarries[selectedQuarry]?.monsterId || selectedQuarry;
+        const safePartyBonuses = buildSafePartyCombatBonuses({
+          runParty: livingRunParty,
+          existingBonuses: partyCombatBonuses,
+          settlement,
+          monsterId,
+          quarryId: selectedQuarry,
+          runModifiers,
+          runBonus,
+          getLoadoutBonus
+        });
+        if (!combatMonster?.id || !Array.isArray(combatMonster.intents)) {
+          return (
+            <InvalidPhaseScreen
+              reason="missing combat monster"
+              onRecover={() => returnToSettlementSafely('missing combat monster', { resetHunt: true })}
+            />
+          );
+        }
+        if (!safePartyBonuses.length) {
+          return (
+            <InvalidPhaseScreen
+              reason="missing combat party bonuses"
+              onRecover={() => returnToSettlementSafely('missing combat party bonuses', { resetHunt: true })}
+            />
+          );
+        }
         return (
-          <HuntClashScreen
+          <PartyCombatScreen
             key={currentNode?.id}
             monster={combatMonster}
-            party={livingRunParty}
-            quarryId={selectedQuarry}
-            quarryLevel={selectedLevel}
-            runModifiers={runModifiers}
+            partyBonuses={safePartyBonuses}
+            pendingPartyEffects={pendingPartyEffects}
+            hasMonsterBane={safePartyBonuses.some(bonus => bonus?.hasMonsterBane)}
+            settlement={settlement}
             onVictory={handleCombatVictory}
             onDefeat={handleCombatDefeat}
-            onRecover={() => returnToSettlementSafely('hunt clash recovery', { resetHunt: true })}
           />
         );
       }

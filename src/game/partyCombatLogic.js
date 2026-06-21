@@ -54,9 +54,44 @@ function livingIndexes(members = []) {
 
 function buildTurnOrder(members) {
   return [
-    ...livingIndexes(members).map(index => members[index].survivor.id),
+    ...livingIndexes(members).map(index => members[index]?.survivor?.id).filter(Boolean),
     'monster'
   ];
+}
+
+function createSafeMonster(monster = {}) {
+  const safeIntents = Array.isArray(monster?.intents) ? monster.intents : [];
+  return {
+    ...(monster || {}),
+    id: monster?.id || monster?.baseId || monster?.quarryId || 'monster',
+    name: monster?.name || 'Unknown quarry',
+    intents: safeIntents.length
+      ? safeIntents
+      : [{
+        id: 'lash',
+        name: 'Lash Out',
+        damage: 1,
+        targetRule: 'randomLivingSurvivor',
+        effects: [{ type: 'dealDamage', amount: 1 }]
+      }],
+    weakPoints: Array.isArray(monster?.weakPoints) ? monster.weakPoints : []
+  };
+}
+
+function combatRecoveryState(state = {}, message = 'Combat recovery.') {
+  return {
+    ...state,
+    monster: createSafeMonster(state.monster),
+    members: Array.isArray(state.members) ? state.members : [],
+    status: 'lost',
+    activeCombatant: 'monster',
+    activePartyIndex: -1,
+    combatTurnOrder: buildTurnOrder(Array.isArray(state.members) ? state.members : []),
+    combatLog: [
+      ...(state.combatLog || []),
+      message
+    ]
+  };
 }
 
 function prepareTurn(member) {
@@ -228,6 +263,10 @@ function formatTargetingLog(monster, intent, selection, members) {
 }
 
 export function resolveMonsterTurn(state, { random = Math.random } = {}) {
+  if (!state || !Array.isArray(state.members)) {
+    return combatRecoveryState(state, 'Combat recovery: malformed monster turn state.');
+  }
+  state = { ...state, monster: createSafeMonster(state.monster) };
   const previousTargetIds = [
     ...(state.lastTargetIds || []),
     ...(state.monster?.currentIntent?.selectedTargetIds || [])
@@ -242,7 +281,15 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
     random
   });
   if (!livingIndexes(state.members).length) {
-    return { ...state, status: 'lost', activeCombatant: 'monster' };
+    return {
+      ...state,
+      status: 'lost',
+      activeCombatant: 'monster',
+      combatLog: [
+        ...(state.combatLog || []),
+        'Combat recovery: no living monster target.'
+      ]
+    };
   }
   const validTargetIds = selection.targets.filter(targetId =>
     state.members.some(member =>
@@ -283,9 +330,22 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
     currentIntent: selectedIntent
   };
   const targetIds = selection.targets;
+  const fallbackTargetId = state.members[livingIndexes(state.members)[0]]?.survivor?.id;
   const resolutionIds = targetIds.length
     ? targetIds
-    : [state.members[livingIndexes(state.members)[0]].survivor.id];
+    : [fallbackTargetId].filter(Boolean);
+
+  if (!resolutionIds.length) {
+    return {
+      ...state,
+      status: 'lost',
+      activeCombatant: 'monster',
+      combatLog: [
+        ...(state.combatLog || []),
+        'Combat recovery: no valid monster target.'
+      ]
+    };
+  }
   let members = [...state.members];
   const intentMonster = monster;
   let resolvedMonster = monster;
@@ -326,7 +386,7 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
       members,
       monster,
       combatTurnOrder: buildTurnOrder(members),
-      intentIndex: (state.intentIndex + 1) % monster.intents.length,
+      intentIndex: (state.intentIndex + 1) % Math.max(1, (monster.intents || []).length),
       activeCombatant: 'monster',
       status: 'lost',
       lastTargetId: null,
@@ -346,10 +406,10 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
     ...state,
     members,
     monster,
-    intentIndex: (state.intentIndex + 1) % monster.intents.length,
+    intentIndex: (state.intentIndex + 1) % Math.max(1, (monster.intents || []).length),
     combatTurnOrder: buildTurnOrder(members),
     activePartyIndex: firstIndex,
-    activeCombatant: members[firstIndex].survivor.id,
+    activeCombatant: members[firstIndex]?.survivor?.id || 'monster',
     status: monster.hp <= 0 ? 'won' : 'playing',
     lastTargetId: null,
     lastTargetIds: [],
@@ -367,10 +427,11 @@ export function resolveMonsterTurn(state, { random = Math.random } = {}) {
 }
 
 export function createPartyCombatState(monster, partyBonuses, pendingPartyEffects = []) {
+  const safeMonster = createSafeMonster(monster);
   const validBonuses = (Array.isArray(partyBonuses) ? partyBonuses : [])
     .filter(bonus => bonus?.survivor?.id);
   const members = validBonuses.map(bonus => {
-    const member = createCombatState(monster, bonus);
+    const member = createCombatState(safeMonster, bonus);
     member.survivor.id = bonus?.survivor?.id;
     if (
       member.survivor.hp <= 0 ||
@@ -384,13 +445,13 @@ export function createPartyCombatState(monster, partyBonuses, pendingPartyEffect
     }
     return member;
   });
-  const combatMonster = members[0]?.monster || monster;
+  const combatMonster = createSafeMonster(members[0]?.monster || safeMonster);
   const firstIndex = livingIndexes(members)[0] ?? -1;
   const state = {
     monster: combatMonster,
     members: syncMonster(members, combatMonster),
     combatTurnOrder: buildTurnOrder(members),
-    activeCombatant: firstIndex >= 0 ? members[firstIndex].survivor.id : 'monster',
+    activeCombatant: firstIndex >= 0 ? members[firstIndex]?.survivor?.id || 'monster' : 'monster',
     activePartyIndex: firstIndex,
     intentIndex: 0,
     round: 0,
@@ -398,18 +459,22 @@ export function createPartyCombatState(monster, partyBonuses, pendingPartyEffect
     activeAuras: [],
     status: firstIndex >= 0 ? 'playing' : 'lost',
     lastTargetId: null,
-    selectedCombatTarget: { type: 'monster', id: monster.id || 'monster' },
+    selectedCombatTarget: { type: 'monster', id: combatMonster.id || 'monster' },
     lastAttackerId: null,
     lastWeakPointBreakerId: null,
     lastSupportUserId: null,
     lastTargetIds: [],
     lastTargetRule: null,
-    combatLog: [`${monster.name} reveals a tell. The party acts first.`]
+    combatLog: [`${combatMonster.name} reveals a tell. The party acts first.`]
   };
   return state;
 }
 
 export function playPartyCard(cardIndex, state, options = {}) {
+  if (!state || !Array.isArray(state.members)) {
+    return combatRecoveryState(state, 'Combat recovery: malformed card play state.');
+  }
+  state = { ...state, monster: createSafeMonster(state.monster) };
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
   if (!livingIndexes(state.members).includes(state.activePartyIndex)) return endPartyTurn(state);
   const activeBefore = state.members[state.activePartyIndex];
@@ -436,19 +501,31 @@ export function playPartyCard(cardIndex, state, options = {}) {
     hasMonsterBane: partyHasMonsterBane,
     activeAuras: state.activeAuras || []
   }, options);
+  if (!active?.survivor?.id || !active?.monster) {
+    return {
+      ...state,
+      status: 'lost',
+      combatLog: [
+        ...(state.combatLog || []),
+        'Combat recovery: card play returned invalid combat state.'
+      ]
+    };
+  }
   const emitted = active.emittedPartyEffects || [];
+  const activeMonster = createSafeMonster(active.monster);
   const cleanedActive = {
     ...active,
+    monster: activeMonster,
     emittedPartyEffects: [],
     hasMonsterBane: state.members[state.activePartyIndex].hasMonsterBane,
     brokeWeakPointThisHunt: state.members[state.activePartyIndex].brokeWeakPointThisHunt ||
-      (active.monster.weakPoints || []).some(point => point.broken && !beforeWeakPoints.get(point.id)),
+      (activeMonster.weakPoints || []).some(point => point.broken && !beforeWeakPoints.get(point.id)),
     dealtFinalBlowThisHunt: state.members[state.activePartyIndex].dealtFinalBlowThisHunt ||
-      (monsterHpBefore > 0 && active.monster.hp <= 0),
+      (monsterHpBefore > 0 && activeMonster.hp <= 0),
     damageDealtThisCombat: (activeBefore.damageDealtThisCombat || 0) +
-      Math.max(0, monsterHpBefore - active.monster.hp),
+      Math.max(0, monsterHpBefore - (activeMonster.hp ?? 0)),
     weakPointsBrokenThisCombat: (activeBefore.weakPointsBrokenThisCombat || 0) +
-      (active.monster.weakPoints || []).filter(point =>
+      (activeMonster.weakPoints || []).filter(point =>
         point.broken && !beforeWeakPoints.get(point.id)
       ).length,
     usedSupportThisCombat: activeBefore.usedSupportThisCombat ||
@@ -460,13 +537,13 @@ export function playPartyCard(cardIndex, state, options = {}) {
   const usedSupport = cleanedActive.usedSupportThisCombat && !activeBefore.usedSupportThisCombat;
   let members = syncMonster(
     state.members.map((member, index) => index === state.activePartyIndex ? cleanedActive : member),
-    active.monster
+    activeMonster
   );
-  members = killZeroHpMembers(members, `${active.survivor.name}: self-inflicted damage`);
+  members = killZeroHpMembers(members, `${active.survivor?.name || active.survivor?.id || 'Survivor'}: self-inflicted damage`);
   const living = livingIndexes(members);
   const activeDied = members[state.activePartyIndex]?.status === 'dead';
   const deathLog = activeDied
-    ? [`${active.survivor.name} is killed by self-inflicted damage.`]
+    ? [`${active.survivor?.name || active.survivor?.id || 'Survivor'} is killed by self-inflicted damage.`]
     : [];
   const nextLivingIndex = activeDied
     ? living.find(index => index > state.activePartyIndex)
@@ -474,18 +551,18 @@ export function playPartyCard(cardIndex, state, options = {}) {
   const nextState = {
     ...state,
     members,
-    monster: active.monster,
+    monster: activeMonster,
     combatTurnOrder: buildTurnOrder(members),
     pendingPartyEffects: [...(state.pendingPartyEffects || []), ...emitted],
     activeAuras: active.activeAuras || state.activeAuras || [],
     lastAttackerId: playedCard?.type === 'attack'
-      ? active.survivor.id
+      ? active.survivor?.id
       : state.lastAttackerId,
     lastWeakPointBreakerId: brokeWeakPoint
-      ? active.survivor.id
+      ? active.survivor?.id
       : state.lastWeakPointBreakerId,
     lastSupportUserId: usedSupport
-      ? active.survivor.id
+      ? active.survivor?.id
       : state.lastSupportUserId,
     combatLog: [
       ...(state.combatLog || []),
@@ -494,21 +571,21 @@ export function playPartyCard(cardIndex, state, options = {}) {
     ],
     activePartyIndex: activeDied ? (nextLivingIndex ?? -1) : state.activePartyIndex,
     activeCombatant: activeDied
-      ? (nextLivingIndex !== undefined ? members[nextLivingIndex].survivor.id : 'monster')
+      ? (nextLivingIndex !== undefined ? members[nextLivingIndex]?.survivor?.id || 'monster' : 'monster')
       : state.activeCombatant,
     status: living.length
-      ? (active.monster.hp <= 0 ? 'won' : 'playing')
+      ? ((activeMonster.hp ?? 0) <= 0 ? 'won' : 'playing')
       : 'lost',
     selectedCombatTarget: selectedWeakPointId &&
-      active.monster.weakPoints?.some(point => point.id === selectedWeakPointId && !point.broken)
+      activeMonster.weakPoints?.some(point => point.id === selectedWeakPointId && !point.broken)
       ? state.selectedCombatTarget
-      : { type: 'monster', id: active.monster.id || 'monster' }
+      : { type: 'monster', id: activeMonster.id || 'monster' }
   };
   if (
     activeDied &&
     living.length &&
     nextLivingIndex === undefined &&
-    active.monster.hp > 0
+    (activeMonster.hp ?? 0) > 0
   ) {
     return resolveMonsterTurn({
       ...nextState,
@@ -520,6 +597,8 @@ export function playPartyCard(cardIndex, state, options = {}) {
 }
 
 export function selectPartyCombatTarget(target, state) {
+  if (!state) return combatRecoveryState(state, 'Combat recovery: missing target state.');
+  state = { ...state, monster: createSafeMonster(state.monster) };
   if (state.status !== 'playing') return state;
   if (!target || target.type === 'monster') {
     return {
@@ -538,13 +617,13 @@ export function selectPartyWeakPoint(weakPointId, state) {
   return selectPartyCombatTarget(
     weakPointId
       ? { type: 'weakPoint', id: weakPointId }
-      : { type: 'monster', id: state.monster.id || 'monster' },
+      : { type: 'monster', id: state?.monster?.id || 'monster' },
     state
   );
 }
 
 export function getPartyCounterPreview(state, weakPointId) {
-  const active = state.members[state.activePartyIndex];
+  const active = state?.members?.[state.activePartyIndex];
   if (!active) return null;
   return getCounterWeakPointPreview({
     ...active,
@@ -554,8 +633,8 @@ export function getPartyCounterPreview(state, weakPointId) {
 }
 
 export function getPartyWeakPointPreview(state, weakPointId) {
-  const member = state.members[state.activePartyIndex];
-  const weakPoint = state.monster.weakPoints?.find(point => point.id === weakPointId);
+  const member = state?.members?.[state.activePartyIndex];
+  const weakPoint = state?.monster?.weakPoints?.find(point => point.id === weakPointId);
   if (!hasValidCombatSurvivor(member) || !weakPoint) return null;
   const card = member.hand.find(item =>
     item.type === 'attack' && !item.unplayable && item.cost <= member.survivor.energy
@@ -618,6 +697,9 @@ export function getPartyWeakPointPreview(state, weakPointId) {
 }
 
 export function treatPartyWound(memberIndex, location, treatmentType, state) {
+  if (!state || !Array.isArray(state.members)) {
+    return combatRecoveryState(state, 'Combat recovery: malformed wound treatment state.');
+  }
   if (!['won', 'playing'].includes(state.status)) return state;
   const treatmentId = `${treatmentType}-${memberIndex}`;
   if (state.usedTreatments?.includes(treatmentId)) return state;
@@ -641,6 +723,10 @@ export function treatPartyWound(memberIndex, location, treatmentType, state) {
 }
 
 export function usePartySurvivalAction(actionId, state) {
+  if (!state || !Array.isArray(state.members)) {
+    return combatRecoveryState(state, 'Combat recovery: malformed survival action state.');
+  }
+  state = { ...state, monster: createSafeMonster(state.monster) };
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
   if (!livingIndexes(state.members).includes(state.activePartyIndex)) return endPartyTurn(state);
   if (!hasValidCombatSurvivor(state.members[state.activePartyIndex])) return endPartyTurn(state);
@@ -665,17 +751,22 @@ export function usePartySurvivalAction(actionId, state) {
     hasMonsterBane: partyHasMonsterBane,
     combatLogEntries: []
   });
+  if (!active?.survivor?.id || !active?.monster) {
+    return combatRecoveryState(state, 'Combat recovery: survival action returned invalid combat state.');
+  }
+  const activeMonster = createSafeMonster(active.monster);
   const trackedActive = {
     ...active,
+    monster: activeMonster,
     brokeWeakPointThisHunt: state.members[state.activePartyIndex].brokeWeakPointThisHunt ||
-      (active.monster.weakPoints || []).some(point => point.broken && !beforeWeakPoints.get(point.id)),
+      (activeMonster.weakPoints || []).some(point => point.broken && !beforeWeakPoints.get(point.id)),
     dealtFinalBlowThisHunt: state.members[state.activePartyIndex].dealtFinalBlowThisHunt ||
-      (monsterHpBefore > 0 && active.monster.hp <= 0),
+      (monsterHpBefore > 0 && activeMonster.hp <= 0),
     damageDealtThisCombat: (state.members[state.activePartyIndex].damageDealtThisCombat || 0) +
-      Math.max(0, monsterHpBefore - active.monster.hp),
+      Math.max(0, monsterHpBefore - (activeMonster.hp ?? 0)),
     weakPointsBrokenThisCombat:
       (state.members[state.activePartyIndex].weakPointsBrokenThisCombat || 0) +
-      (active.monster.weakPoints || []).filter(point =>
+      (activeMonster.weakPoints || []).filter(point =>
         point.broken && !beforeWeakPoints.get(point.id)
       ).length
   };
@@ -683,28 +774,32 @@ export function usePartySurvivalAction(actionId, state) {
     (state.members[state.activePartyIndex].weakPointsBrokenThisCombat || 0);
   const members = syncMonster(
     state.members.map((member, index) => index === state.activePartyIndex ? trackedActive : member),
-    active.monster
+    activeMonster
   );
   return {
     ...state,
     members,
-    monster: active.monster,
+    monster: activeMonster,
     lastAttackerId: actionId === 'counter'
-      ? active.survivor.id
+      ? active.survivor?.id
       : state.lastAttackerId,
     lastWeakPointBreakerId: brokeWeakPoint
-      ? active.survivor.id
+      ? active.survivor?.id
       : state.lastWeakPointBreakerId,
     combatLog: [...(state.combatLog || []), ...(active.combatLogEntries || [])],
-    status: active.monster.hp <= 0 ? 'won' : 'playing',
+    status: (activeMonster.hp ?? 0) <= 0 ? 'won' : 'playing',
     selectedCombatTarget: selectedWeakPointId &&
-      active.monster.weakPoints?.some(point => point.id === selectedWeakPointId && !point.broken)
+      activeMonster.weakPoints?.some(point => point.id === selectedWeakPointId && !point.broken)
       ? state.selectedCombatTarget
-      : { type: 'monster', id: active.monster.id || 'monster' }
+      : { type: 'monster', id: activeMonster.id || 'monster' }
   };
 }
 
 export function usePartyFightingArtAction(actionId, state) {
+  if (!state || !Array.isArray(state.members)) {
+    return combatRecoveryState(state, 'Combat recovery: malformed fighting art action state.');
+  }
+  state = { ...state, monster: createSafeMonster(state.monster) };
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
   if (!livingIndexes(state.members).includes(state.activePartyIndex)) return endPartyTurn(state);
   const active = useFightingArtAction(actionId, {
@@ -712,18 +807,26 @@ export function usePartyFightingArtAction(actionId, state) {
     monster: state.monster,
     intentIndex: state.intentIndex
   });
+  if (!active?.survivor?.id) {
+    return combatRecoveryState(state, 'Combat recovery: fighting art action returned invalid combat state.');
+  }
+  const activeMonster = createSafeMonster(active.monster || state.monster);
   const members = syncMonster(
     state.members.map((member, index) => index === state.activePartyIndex ? active : member),
-    active.monster || state.monster
+    activeMonster
   );
   return {
     ...state,
     members,
-    monster: active.monster || state.monster
+    monster: activeMonster
   };
 }
 
 export function endPartyTurn(state) {
+  if (!state || !Array.isArray(state.members)) {
+    return combatRecoveryState(state, 'Combat recovery: malformed end-turn state.');
+  }
+  state = { ...state, monster: createSafeMonster(state.monster) };
   if (state.status !== 'playing' || state.activePartyIndex < 0) return state;
   const activeMember = state.members[state.activePartyIndex];
   if (!hasValidCombatSurvivor(activeMember)) {
@@ -740,7 +843,7 @@ export function endPartyTurn(state) {
     return {
       ...state,
       activePartyIndex: nextIndex,
-      activeCombatant: state.members[nextIndex].survivor.id,
+      activeCombatant: state.members[nextIndex]?.survivor?.id || 'monster',
       combatTurnOrder: buildTurnOrder(state.members)
     };
   }
@@ -758,7 +861,7 @@ export function endPartyTurn(state) {
     return {
       ...state,
       activePartyIndex: nextIndex,
-      activeCombatant: state.members[nextIndex].survivor.id,
+      activeCombatant: state.members[nextIndex]?.survivor?.id || 'monster',
       combatTurnOrder: buildTurnOrder(state.members)
     };
   }
@@ -769,8 +872,8 @@ export function endPartyTurn(state) {
     state.members[state.activePartyIndex].attacksPlayedThisTurn >= 3 ? [cards.panic] : [];
   const turnLog = [];
   const tickedSurvivor = applyEndTurnStatuses(
-    state.members[state.activePartyIndex].survivor,
-    state.members[state.activePartyIndex].survivor.name,
+    state.members[state.activePartyIndex]?.survivor,
+    state.members[state.activePartyIndex]?.survivor?.name || state.members[state.activePartyIndex]?.survivor?.id || 'Survivor',
     turnLog,
     { dotDamageMultiplier: activeAuraAmount(state.activeAuras || [], 'dotDamageMultiplier') }
   );
@@ -804,7 +907,7 @@ export function endPartyTurn(state) {
       members,
       pendingPartyEffects: effectResult.pendingPartyEffects,
       activePartyIndex: nextIndex,
-      activeCombatant: members[nextIndex].survivor.id,
+      activeCombatant: members[nextIndex]?.survivor?.id || 'monster',
       combatTurnOrder: buildTurnOrder(members),
       combatLog: [...(state.combatLog || []), ...turnLog],
       selectedCombatTarget: state.selectedCombatTarget

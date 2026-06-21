@@ -13,6 +13,15 @@ const formatBandRange = band => {
   return `${band.min}-${band.max}`;
 };
 
+const safeText = (value, fallback = 'Unknown') =>
+  value == null || value === '' ? fallback : formatValueForDisplay(value);
+
+const safeBandLabel = band =>
+  safeText(band?.label || band?.id, 'Outcome');
+
+const safeBandText = band =>
+  safeText(band?.resultText || band?.outcomeText || band?.description, 'The event changes the hunt.');
+
 export default function EventScreen({
   event,
   hasParanoia,
@@ -66,7 +75,7 @@ export default function EventScreen({
     band?.effects
       ? formatEventEffects(band.effects, context).map(effect => `${band.label || band.id}: ${effect}`)
       : []
-  );
+  ).filter(effect => effect != null && effect !== '');
   const chooseEventSurvivor = survivorId => {
     setChosenEventSurvivorId(survivorId);
   };
@@ -154,8 +163,8 @@ export default function EventScreen({
                 key={band.id}
                 className={`roll-band ${result?.outcomeBand?.id === band.id ? 'selected' : ''}`}
               >
-                <strong>{formatBandRange(band)} - {band.label}</strong>
-                <span>{band.resultText || band.outcomeText}</span>
+                <strong>{formatBandRange(band)} - {safeBandLabel(band)}</strong>
+                <span>{safeBandText(band)}</span>
               </div>
             ))}
           </div>
@@ -219,7 +228,9 @@ export default function EventScreen({
           <h3>Event Recovery</h3>
           <p>Event: {result.eventId || displayEvent?.id || 'unknownEvent'}</p>
           <ul>
-            {(result.appliedEffects || ['Event recovery: unknown error']).map((effect, index) => (
+            {(result.appliedEffects || ['Event recovery: unknown error'])
+              .filter(effect => effect != null && effect !== '')
+              .map((effect, index) => (
               <li key={`event-recovery-${index}`}>{formatHistoryDetail(effect)}</li>
             ))}
           </ul>
@@ -269,7 +280,9 @@ export default function EventScreen({
             <>
               <h3>Applied Effects</h3>
               <ul>
-                {result.appliedEffects.map((effect, index) => (
+                {result.appliedEffects
+                  .filter(effect => effect != null && effect !== '')
+                  .map((effect, index) => (
                   <li key={`event-effect-${index}`}>{formatHistoryDetail(effect)}</li>
                 ))}
               </ul>

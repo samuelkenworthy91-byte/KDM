@@ -16,11 +16,11 @@ test('HuntClashScreen source exists and exposes safe fight controls', () => {
   assert.doesNotMatch(source, /monster\.id/);
 });
 
-test('App normal combat route uses HuntClashScreen instead of PartyCombatScreen', () => {
+test('App normal combat route does not use HuntClashScreen', () => {
   const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
   const combatCase = app.slice(app.indexOf("case 'combat':"), app.indexOf("case 'lootReward':"));
 
-  assert.match(app, /import HuntClashScreen from '\.\/screens\/HuntClashScreen\.jsx'/);
-  assert.match(combatCase, /<HuntClashScreen/);
-  assert.doesNotMatch(combatCase, /<PartyCombatScreen/);
+  assert.doesNotMatch(app, /import HuntClashScreen from '\.\/screens\/HuntClashScreen\.jsx'/);
+  assert.doesNotMatch(combatCase, /<HuntClashScreen/);
+  assert.match(combatCase, /<PartyCombatScreen/);
 });

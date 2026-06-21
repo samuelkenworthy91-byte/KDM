@@ -49,6 +49,23 @@ export default function PartyCombatScreen({
     createPartyCombatState(monster, partyBonuses, pendingPartyEffects)
   );
   const [namedSpendSelections, setNamedSpendSelections] = useState({});
+  const safeCombatUpdate = (label, updater) => {
+    setCombat(current => {
+      try {
+        const next = updater(current);
+        return next || current;
+      } catch (error) {
+        return {
+          ...current,
+          status: 'lost',
+          combatLog: [
+            ...(current?.combatLog || []),
+            `Combat recovery (${label}): ${error?.message || 'unknown error'}`
+          ]
+        };
+      }
+    });
+  };
   const combatMonster = combat?.monster || monster;
   const validMemberEntries = (combat.members || [])
     .map((member, index) => ({ member, index }))
@@ -345,7 +362,7 @@ export default function PartyCombatScreen({
           <button
             type="button"
             className={!selectedWeakPointId ? 'selected' : ''}
-            onClick={() => setCombat(current => selectPartyCombatTarget({
+            onClick={() => safeCombatUpdate('select target', current => selectPartyCombatTarget({
               type: 'monster',
               id: current.monster.id || 'monster'
             }, current))}
@@ -360,7 +377,7 @@ export default function PartyCombatScreen({
               disabled={weakPoint.broken}
               className={selectedWeakPointId === weakPoint.id ? 'selected' : ''}
               title={formatValueForDisplay(weakPoint.description)}
-              onClick={() => setCombat(current => selectPartyCombatTarget({
+              onClick={() => safeCombatUpdate('select weak point', current => selectPartyCombatTarget({
                 type: 'weakPoint',
                 id: weakPoint.id
               }, current))}
@@ -472,7 +489,7 @@ export default function PartyCombatScreen({
                   {!wound.severe && ['arms', 'body'].includes(location) && (
                     <button
                       type="button"
-                      onClick={() => setCombat(current =>
+                      onClick={() => safeCombatUpdate('treat wound', current =>
                         treatPartyWound(memberIndex, location, 'bandage', current)
                       )}
                     >
@@ -482,7 +499,7 @@ export default function PartyCombatScreen({
                   {!wound.severe && ['arms', 'legs'].includes(location) && (
                     <button
                       type="button"
-                      onClick={() => setCombat(current =>
+                      onClick={() => safeCombatUpdate('treat wound', current =>
                         treatPartyWound(memberIndex, location, 'splint', current)
                       )}
                     >
@@ -515,7 +532,7 @@ export default function PartyCombatScreen({
                     key={action.id}
                     disabled={used || insufficient}
                     title={`${formatValueForDisplay(action.name)}: ${formatHistoryDetail(action.effect)}`}
-                    onClick={() => setCombat(current => usePartySurvivalAction(action.id, current))}
+                    onClick={() => safeCombatUpdate('survival action', current => usePartySurvivalAction(action.id, current))}
                   >
                     {action.name} ({action.cost})
                   </button>
@@ -541,7 +558,7 @@ export default function PartyCombatScreen({
                     key={action.id}
                     disabled={action.disabled}
                     title={`${action.reason} Uses left: ${action.remainingUses}`}
-                    onClick={() => setCombat(current => usePartyFightingArtAction(action.id, current))}
+                    onClick={() => safeCombatUpdate('fighting art action', current => usePartyFightingArtAction(action.id, current))}
                   >
                     {action.name} ({action.remainingUses})
                   </button>
@@ -553,7 +570,7 @@ export default function PartyCombatScreen({
             <div>
               Draw: {safeActive.drawPile.length} | Discard: {safeActive.discardPile.length} | Exhaust: {safeActive.exhaustPile.length}
             </div>
-            <button type="button" onClick={() => setCombat(endPartyTurn)}>End Turn</button>
+            <button type="button" onClick={() => safeCombatUpdate('end turn', endPartyTurn)}>End Turn</button>
           </div>
           {getVisibleNamedMechanicCounters(safeActive).length > 0 && (
             <section className="run-bonus-note" aria-label="Named mechanic counters">
@@ -618,7 +635,7 @@ export default function PartyCombatScreen({
                   }))}
                   disabled={card.unplayable || adjustedCost > safeActive.survivor.energy}
                   onPlay={() => {
-                    setCombat(current => playPartyCard(index, current, playOptions));
+                    safeCombatUpdate('play card', current => playPartyCard(index, current, playOptions));
                     setNamedSpendSelections({});
                   }}
                 />

@@ -56,6 +56,7 @@ test('resolveEventTransaction never throws for every event at roll 1, 5, and 10'
         });
         assert.ok(result.eventId);
         assert.ok(Array.isArray(result.appliedEffects));
+        assert.doesNotMatch(result.appliedEffects.join('\n'), /Cannot read properties/);
       }, `${event.id} roll ${roll}`);
     }
   }
