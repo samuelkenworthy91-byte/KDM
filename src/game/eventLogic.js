@@ -136,23 +136,36 @@ function appendUnknownEffects(next, effects, handledKeys) {
 }
 
 function applyEffects(effects, state, context) {
+  const safeRunSurvivor = state.runSurvivor;
+  if (!safeRunSurvivor?.id) {
+    return {
+      runResources: [...(state.runResources || [])],
+      runSurvivor: safeRunSurvivor || null,
+      runModifiers: { ...(state.runModifiers || {}) },
+      settlementMemoryDelta: state.settlementMemoryDelta || 0,
+      appliedEffects: [
+        ...(state.appliedEffects || []),
+        'Event could not find a valid event survivor.'
+      ]
+    };
+  }
   const handledKeys = new Set();
   const next = {
-    runResources: [...state.runResources],
+    runResources: [...(state.runResources || [])],
     runSurvivor: {
-      ...state.runSurvivor,
-      traits: [...(state.runSurvivor.traits || [])],
-      fightingArts: [...(state.runSurvivor.fightingArts || [])],
-      personalDeckAdditions: [...(state.runSurvivor.personalDeckAdditions || [])],
-      injuries: [...(state.runSurvivor.injuries || [])],
-      scars: [...(state.runSurvivor.scars || [])],
-      disorders: [...(state.runSurvivor.disorders || [])],
-      permanentModifiers: { ...(state.runSurvivor.permanentModifiers || {}) },
-      temporaryPassives: [...(state.runSurvivor.temporaryPassives || [])]
+      ...safeRunSurvivor,
+      traits: [...(safeRunSurvivor.traits || [])],
+      fightingArts: [...(safeRunSurvivor.fightingArts || [])],
+      personalDeckAdditions: [...(safeRunSurvivor.personalDeckAdditions || [])],
+      injuries: [...(safeRunSurvivor.injuries || [])],
+      scars: [...(safeRunSurvivor.scars || [])],
+      disorders: [...(safeRunSurvivor.disorders || [])],
+      permanentModifiers: { ...(safeRunSurvivor.permanentModifiers || {}) },
+      temporaryPassives: [...(safeRunSurvivor.temporaryPassives || [])]
     },
-    runModifiers: { ...state.runModifiers },
+    runModifiers: { ...(state.runModifiers || {}) },
     settlementMemoryDelta: state.settlementMemoryDelta || 0,
-    appliedEffects: [...state.appliedEffects]
+    appliedEffects: [...(state.appliedEffects || [])]
   };
 
   if (effects.gainResource) {
@@ -558,6 +571,21 @@ function resolveHuntRollEvent(event, choice, state, context = {}) {
     };
   }
   const eventSurvivor = selection.survivor || state.runSurvivor;
+  if (!eventSurvivor?.id) {
+    return {
+      eventId: event.id,
+      choiceId: 'huntRoll',
+      eventSurvivor: null,
+      eventSurvivorRule: selection.rule,
+      eventSurvivorReason: 'No valid event survivor was available.',
+      outcomeText: 'The event passes without a valid survivor to resolve it.',
+      appliedEffects: ['No valid event survivor.'],
+      runResources: [...(state.runResources || [])],
+      runSurvivor: state.runSurvivor || null,
+      runModifiers: { ...(state.runModifiers || {}) },
+      settlementMemoryDelta: state.settlementMemoryDelta || 0
+    };
+  }
   const roll = getHuntEventRollBreakdown(event, eventSurvivor, state, context);
   const outcomeBand = getOutcomeBand(event, roll.finalRoll);
   const resolved = applyEffects(outcomeBand.effects || {}, {
@@ -586,7 +614,10 @@ function resolveHuntRollEvent(event, choice, state, context = {}) {
 export function resolveEvent(event, choice, state, context) {
   if (!event) return null;
 
-  if (event.eventType === 'huntRoll') {
+  if (
+    event.eventType === 'huntRoll' ||
+    (Array.isArray(event.resultBands) && event.resultBands.length > 0)
+  ) {
     return resolveHuntRollEvent(event, choice, state, context);
   }
   

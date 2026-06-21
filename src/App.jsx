@@ -3479,6 +3479,14 @@ export default function App() {
         );
       case 'loadout': {
         const survivor = settlement.survivors.find(item => item.id === settlement.activeSurvivorId);
+        if (!survivor) {
+          return (
+            <InvalidPhaseScreen
+              reason="missing loadout survivor"
+              onRecover={returnToSettlementSafely}
+            />
+          );
+        }
         const isNemesisLoadout = Boolean(settlement.pendingNemesisEncounter);
         return (
           <LoadoutScreen
@@ -3663,7 +3671,16 @@ export default function App() {
             onRecover={returnToSettlementSafely}
           />
         );
-      case 'combat':
+      case 'combat': {
+        const livingRunParty = runParty.filter(survivor => survivor?.hp > 0 && survivor.alive !== false);
+        if (!livingRunParty.length) {
+          return (
+            <InvalidPhaseScreen
+              reason="missing combat party"
+              onRecover={() => returnToSettlementSafely('missing combat party', { resetHunt: true })}
+            />
+          );
+        }
         return (
           <PartyCombatScreen
             key={currentNode?.id}
@@ -3671,13 +3688,13 @@ export default function App() {
               selectedQuarry,
               selectedLevel,
               currentNode?.type,
-              runParty.filter(survivor => survivor.hp > 0).length
+              livingRunParty.length
             )}
             partyBonuses={partyCombatBonuses}
             pendingPartyEffects={pendingPartyEffects}
             hasMonsterBane={Boolean(
-              runParty.some(survivor =>
-                survivor.hp > 0 && survivor.fightingArts?.includes(getMonsterBaneId(selectedQuarry))
+              livingRunParty.some(survivor =>
+                survivor.fightingArts?.includes(getMonsterBaneId(selectedQuarry))
               )
             )}
             settlement={settlement}
@@ -3685,6 +3702,7 @@ export default function App() {
             onDefeat={handleCombatDefeat}
           />
         );
+      }
       case 'lootReward':
         return (
           <LootRewardScreen

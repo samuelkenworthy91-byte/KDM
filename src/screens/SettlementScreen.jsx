@@ -2142,7 +2142,7 @@ export default function SettlementScreen({
           {settlement.pendingPrincipleChoice && (
             <article className="item-card">
               <p className="eyebrow">Decision Required</p>
-              <h4>{campaignPrincipleGroups[settlement.pendingPrincipleChoice.group]?.name || 'Campaign Principle'}</h4>
+              <h4>{campaignPrincipleGroups[settlement.pendingPrincipleChoice?.group]?.name || 'Campaign Principle'}</h4>
               <p>Trigger: {settlement.pendingPrincipleChoice.trigger}</p>
               <button type="button" onClick={onOpenPrincipleChoice}>
                 Choose Principle

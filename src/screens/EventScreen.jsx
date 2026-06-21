@@ -16,7 +16,8 @@ export default function EventScreen({
   const context = { runParty, settlement, selectedQuarry: { id: selectedQuarry }, quarry: { id: selectedQuarry } };
   const choices = event.choices || [];
   const livingParty = (runParty || []).filter(survivor => survivor?.hp > 0 && survivor.alive !== false);
-  const isRollEvent = event.eventType === 'huntRoll';
+  const isRollEvent = event.eventType === 'huntRoll' ||
+    (Array.isArray(event.resultBands) && event.resultBands.length > 0);
   const needsEventSurvivorChoice = isRollEvent && (event.allowsChoice || event.eventSurvivorRule === 'playerChoice');
   const isAutomatic = event.mode === 'automatic';
 

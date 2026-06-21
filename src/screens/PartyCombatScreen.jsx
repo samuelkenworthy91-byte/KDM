@@ -55,13 +55,13 @@ export default function PartyCombatScreen({
   const activeAuras = combat.activeAuras || [];
   const fightingArtActions = active ? getActiveFightingArtActions(active) : [];
   const livingPartyHasMonsterBane = combat.members.some(member =>
-    member.survivor.hp > 0 &&
+    member?.survivor?.hp > 0 &&
     member.fightingArts?.includes(`monsterBane_${combat.monster.quarryId}`)
   );
   const turnNames = combat.combatTurnOrder.map(combatantId =>
     combatantId === 'monster'
       ? 'Monster'
-      : combat.members.find(member => member.survivor.id === combatantId)?.survivor.name
+      : combat.members.find(member => member?.survivor?.id === combatantId)?.survivor.name
   ).filter(Boolean);
   const brokenWeakPoints = (combat.monster.weakPoints || []).filter(weakPoint => weakPoint.broken);
   const selectedWeakPointId = combat.selectedCombatTarget?.type === 'weakPoint'
@@ -176,30 +176,37 @@ export default function PartyCombatScreen({
     const healedMembers = combat.members.map(member =>
       resolveAfterCombatHealing(cleanupConsumedCards(member), combat.status === 'won' ? 'victory' : 'combat')
     );
-    const survivors = healedMembers.map(member => ({
-      ...partyBonuses.find(bonus => bonus.survivor.id === member.survivor.id)?.survivor,
-      hp: member.survivor.hp,
-      survival: member.survivor.survival,
-      hitLocations: member.survivor.hitLocations,
-      treatmentNotes: member.survivor.treatmentNotes,
-      injuries: member.injuries,
-      scars: member.scars,
-      disorders: member.disorders,
-      personalDeckAdditions: member.personalDeckAdditions,
-      woundHistory: member.woundHistory,
-      boundGear: member.status === 'dead'
-        ? member.destroyedBoundGear || []
-        : member.boundGear,
-      causeOfDeath: member.causeOfDeath || null,
-      alive: member.status !== 'dead',
-      isAlive: member.status !== 'dead',
-      combatStats: {
-        cardsPlayed: member.cardsPlayedThisTurn,
-        attacksPlayed: member.attacksPlayedThisTurn,
-        brokeWeakPoint: Boolean(member.brokeWeakPointThisHunt),
-        dealtFinalBlow: Boolean(member.dealtFinalBlowThisHunt)
-      }
-    }));
+    const survivors = healedMembers
+      .filter(member => member?.survivor?.id)
+      .map(member => {
+        const originalBonus = partyBonuses.find(
+          bonus => bonus?.survivor?.id === member.survivor.id
+        );
+        return {
+          ...(originalBonus?.survivor || member.survivor),
+          hp: member.survivor.hp,
+          survival: member.survivor.survival,
+          hitLocations: member.survivor.hitLocations,
+          treatmentNotes: member.survivor.treatmentNotes,
+          injuries: member.injuries,
+          scars: member.scars,
+          disorders: member.disorders,
+          personalDeckAdditions: member.personalDeckAdditions,
+          woundHistory: member.woundHistory,
+          boundGear: member.status === 'dead'
+            ? member.destroyedBoundGear || []
+            : member.boundGear,
+          causeOfDeath: member.causeOfDeath || null,
+          alive: member.status !== 'dead',
+          isAlive: member.status !== 'dead',
+          combatStats: {
+            cardsPlayed: member.cardsPlayedThisTurn,
+            attacksPlayed: member.attacksPlayedThisTurn,
+            brokeWeakPoint: Boolean(member.brokeWeakPointThisHunt),
+            dealtFinalBlow: Boolean(member.dealtFinalBlowThisHunt)
+          }
+        };
+      });
     const salvageRewards = healedMembers.map(getPostCombatSalvageRewards);
     if (combat.status === 'won') onVictory({
       survivors,

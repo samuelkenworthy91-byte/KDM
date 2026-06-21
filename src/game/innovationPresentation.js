@@ -97,17 +97,18 @@ export function getInnovationPlayerFields(innovation = {}, settlement = {}) {
 }
 
 export function getPrinciplePlayerFields(principle = {}, settlement = {}) {
-  const groupLabel = principle.group
-    ? `${principle.group === 'newLife' ? 'New Life' : principle.group[0].toUpperCase() + principle.group.slice(1)}`
+  const safePrinciple = principle || {};
+  const groupLabel = safePrinciple.group
+    ? `${safePrinciple.group === 'newLife' ? 'New Life' : safePrinciple.group[0].toUpperCase() + safePrinciple.group.slice(1)}`
     : 'Campaign';
   return {
     type: `Campaign Principle - ${groupLabel}`,
-    effect: text(principle.effectSummary || principle.mechanicalSummary || principle.playerSummary),
-    where: text(principle.whereToUse || principle.whereItMatters, 'Automatically when its trigger applies.'),
-    costLimit: principle.limit || 'Cost/limit: None.',
-    permanent: principle.permanent === false ? 'No' : 'Yes',
-    workTogetherEligible: principle.id === 'workTogether' ? 'Yes, for exact 1-Memory costs.' : 'No',
-    workTogether: principle.id === 'workTogether' ? getWorkTogetherDisplay(settlement, 1) : null,
-    flavor: text(principle.flavorText || principle.playerSummary, '')
+    effect: text(safePrinciple.effectSummary || safePrinciple.mechanicalSummary || safePrinciple.playerSummary),
+    where: text(safePrinciple.whereToUse || safePrinciple.whereItMatters, 'Automatically when its trigger applies.'),
+    costLimit: safePrinciple.limit || 'Cost/limit: None.',
+    permanent: safePrinciple.permanent === false ? 'No' : 'Yes',
+    workTogetherEligible: safePrinciple.id === 'workTogether' ? 'Yes, for exact 1-Memory costs.' : 'No',
+    workTogether: safePrinciple.id === 'workTogether' ? getWorkTogetherDisplay(settlement, 1) : null,
+    flavor: text(safePrinciple.flavorText || safePrinciple.playerSummary, '')
   };
 }

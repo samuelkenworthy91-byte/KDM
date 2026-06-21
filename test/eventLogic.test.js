@@ -357,6 +357,49 @@ test('Roll-driven hunt event engine', async (t) => {
     assert.deepEqual(result.appliedEffects, ['Gain Survival x1.']);
   });
 
+  await t.test('resultBands resolve through roll table even without huntRoll eventType', () => {
+    const result = resolveEvent({
+      id: 'bandedWithoutType',
+      eventSurvivorRule: 'partyLeader',
+      roll: { die: 10 },
+      resultBands: [
+        { id: 'low', max: 4, label: 'Low', resultText: 'Bad.', effects: { loseHp: 1 } },
+        { id: 'high', min: 5, label: 'High', resultText: 'Good.', effects: { gainSurvival: 1 } }
+      ],
+      choices: [{ id: 'legacy', text: 'Old route' }]
+    }, null, state, { ...context, roll: 6 });
+
+    assert.equal(result.choiceId, 'huntRoll');
+    assert.equal(result.roll.baseRoll, 6);
+    assert.equal(result.outcomeBand.label, 'High');
+    assert.deepEqual(result.appliedEffects, ['Gain Survival x1.']);
+  });
+
+  await t.test('huntRoll without a valid survivor returns a safe result', () => {
+    const result = resolveEvent({
+      id: 'noSurvivorRoll',
+      eventType: 'huntRoll',
+      eventSurvivorRule: 'partyLeader',
+      roll: { die: 10 },
+      resultBands: [{ id: 'any', min: 1, label: 'Any', resultText: 'Shown.', effects: { loseHp: 1 } }]
+    }, null, {
+      runResources: [],
+      runSurvivor: null,
+      runParty: [],
+      runModifiers: {},
+      appliedEffects: []
+    }, {
+      runParty: [],
+      quarry: { id: 'paleHuntLion' },
+      settlement: {}
+    });
+
+    assert.equal(result.choiceId, 'huntRoll');
+    assert.equal(result.eventSurvivor, null);
+    assert.equal(result.outcomeText, 'The event passes without a valid survivor to resolve it.');
+    assert.deepEqual(result.appliedEffects, ['No valid event survivor.']);
+  });
+
   await t.test('old event fallback still resolves safely', () => {
     const result = resolveEvent({
       id: 'legacyUnknown',

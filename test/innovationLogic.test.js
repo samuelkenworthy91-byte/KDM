@@ -131,6 +131,15 @@ test('campaign principles display as principles, not normal innovations', () => 
   assert.equal(graves.where, 'Automatically after survivor deaths.');
 });
 
+test('campaign principle presentation tolerates null principle values', () => {
+  const fields = getPrinciplePlayerFields(null, settlement());
+
+  assert.equal(fields.type, 'Campaign Principle - Campaign');
+  assert.equal(fields.effect, 'Not described.');
+  assert.equal(fields.where, 'Automatically when its trigger applies.');
+  assert.equal(fields.workTogetherEligible, 'No');
+});
+
 test('Work Together display is consistent for exact 1-Memory costs', () => {
   const current = {
     ...settlement({ lanternYear: 5 }),
