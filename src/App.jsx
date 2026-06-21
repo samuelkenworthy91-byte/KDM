@@ -1,5 +1,20 @@
-import ContentLibraryScreen from './ui/screens/ContentLibraryScreen.jsx';
+import { useState } from 'react';
+import { loadSettlement, resetSettlementSave, saveSettlement } from './domain/save/localSave.js';
+import CreateSettlementScreen from './ui/screens/CreateSettlementScreen.jsx';
+import SettlementScreen from './ui/screens/SettlementScreen.jsx';
 
 export default function App() {
-  return <ContentLibraryScreen />;
+  const [settlement, setSettlement] = useState(() => loadSettlement());
+
+  function handleCreate(nextSettlement) {
+    setSettlement(saveSettlement(nextSettlement));
+  }
+
+  function handleReset() {
+    resetSettlementSave();
+    setSettlement(null);
+  }
+
+  if (!settlement) return <CreateSettlementScreen onCreate={handleCreate} />;
+  return <SettlementScreen settlement={settlement} onReset={handleReset} />;
 }

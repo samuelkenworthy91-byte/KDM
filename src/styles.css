@@ -124,3 +124,85 @@ h1, h2, h3, p {
   margin: 0.35rem 0;
   color: #f1dca5;
 }
+
+.hero-panel {
+  max-width: 760px;
+}
+
+.settlement-form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 420px;
+  margin-top: 1.5rem;
+}
+
+label {
+  color: #d8ccb3;
+}
+
+input {
+  border: 1px solid rgba(230, 198, 120, 0.32);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  color: #f4ead2;
+  background: rgba(5, 4, 8, 0.68);
+  font: inherit;
+}
+
+button {
+  border: 1px solid rgba(230, 198, 120, 0.45);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  color: #100d14;
+  background: #d8b365;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button.secondary {
+  color: #f4ead2;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+button:disabled {
+  color: #9d8d6f;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: not-allowed;
+}
+
+.screen-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.survivor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.85rem;
+}
+
+.survivor-card {
+  border: 1px solid rgba(230, 198, 120, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  background: rgba(5, 4, 8, 0.45);
+}
+
+.survivor-card p {
+  margin-bottom: 0.35rem;
+  color: #d8ccb3;
+}
+
+.survivor-card strong {
+  color: #d8b365;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
