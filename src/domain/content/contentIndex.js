@@ -4,6 +4,7 @@ import * as eventData from '../../data/events.js';
 import * as gearCardData from '../../data/gear/gearCards.js';
 import * as quarryData from '../../data/quarries.js';
 import * as resourceData from '../../data/resources.js';
+import { normaliseContentItem, normaliseName } from '../schema/contentSchemas.js';
 
 const FALLBACK_IMAGE = '';
 
@@ -16,17 +17,11 @@ function valuesFrom(moduleNamespace, exportNames) {
   return Array.isArray(found) ? found : Object.values(found);
 }
 
-function safeString(value, fallback) {
-  if (value === null || value === undefined) return fallback;
-  const text = String(value).trim();
-  return text && text.toLowerCase() !== 'null' ? text : fallback;
-}
-
 function inferImage(item, type) {
   const explicit = item?.image || item?.imagePath || item?.portraitPath || item?.assetPath || item?.cardImage;
-  if (explicit) return safeString(explicit, FALLBACK_IMAGE);
+  if (explicit) return normaliseName(explicit, FALLBACK_IMAGE);
 
-  const id = safeString(item?.id, '');
+  const id = normaliseName(item?.id, '');
   if (!id) return FALLBACK_IMAGE;
   if (type === 'resource') return `assets/resources/${id}.png`;
   if (type === 'quarry') return `assets/quarries/portraits/${id}.png`;
@@ -37,18 +32,15 @@ function inferImage(item, type) {
 }
 
 function normaliseItem(item, fallbackType, index = 0, source = fallbackType) {
-  const raw = item && typeof item === 'object' ? item : {};
-  const type = safeString(raw.type || raw.eventType || raw.role || fallbackType, fallbackType);
-  const id = safeString(raw.id || raw.key, `${fallbackType}-${index + 1}`);
-  const name = safeString(raw.name || raw.displayName || raw.title, `Unnamed ${fallbackType} ${index + 1}`);
+  const raw = normaliseContentItem(item, fallbackType);
 
   return {
     ...raw,
-    id,
-    name,
-    type,
-    source: safeString(raw.source || raw.sourceType || raw.section || source, source),
-    image: inferImage({ ...raw, id }, fallbackType)
+    id: raw.id || `${fallbackType}-${index + 1}`,
+    name: raw.name || `Unnamed ${fallbackType} ${index + 1}`,
+    type: raw.type || fallbackType,
+    source: normaliseName(raw.source || raw.sourceType || raw.section || source, source),
+    image: inferImage(raw, fallbackType)
   };
 }
 
@@ -59,7 +51,7 @@ function normaliseList(items, type, source) {
 }
 
 function manifestPaths() {
-  return new Set((assetManifest?.assets || []).map(asset => safeString(asset.path, '')));
+  return new Set((assetManifest?.assets || []).map(asset => normaliseName(asset.path, '')));
 }
 
 export function getGearCards() {
@@ -132,7 +124,7 @@ export function getContentSummary() {
   const missingImageReferences = getMissingImageReferences();
   const publicAssetFolders = [...new Set(
     (assetManifest?.assets || [])
-      .map(asset => safeString(asset.path, ''))
+      .map(asset => normaliseName(asset.path, ''))
       .filter(Boolean)
       .map(path => path.split('/').slice(0, 2).join('/'))
   )];
