@@ -1,4 +1,4 @@
-export default function SettlementScreen({ settlement, onReset, onOpenGear, onOpenEvent, onOpenCombat }) {
+export default function SettlementScreen({ settlement, onReset, onOpenGear, onOpenEvent, onOpenCombat, onStartHunt }) {
   const survivors = settlement?.survivors || [];
   const living = survivors.filter(survivor => survivor.alive).length;
 
@@ -35,7 +35,7 @@ export default function SettlementScreen({ settlement, onReset, onOpenGear, onOp
         </section>
 
         <section className="action-row" aria-label="Future settlement systems">
-          <button type="button" disabled>Start Hunt</button>
+          <button type="button" onClick={onStartHunt}>Start Hunt</button>
           <button type="button" onClick={onOpenEvent}>Test Event</button>
           <button type="button" onClick={onOpenCombat}>Test Fight</button>
           <button type="button">Innovations</button>

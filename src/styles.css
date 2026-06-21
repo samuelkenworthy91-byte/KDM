@@ -319,3 +319,28 @@ button:disabled {
   gap: 0.35rem;
   color: #d8ccb3;
 }
+
+.hunt-path {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.hunt-node {
+  border: 1px solid rgba(230, 198, 120, 0.2);
+  border-radius: 8px;
+  padding: 0.85rem;
+  background: rgba(5, 4, 8, 0.45);
+}
+
+.hunt-node.active {
+  border-color: rgba(230, 198, 120, 0.7);
+  box-shadow: 0 0 22px rgba(216, 179, 101, 0.16);
+}
+
+.hunt-node span,
+.hunt-node small {
+  display: block;
+  color: #b8a989;
+}
