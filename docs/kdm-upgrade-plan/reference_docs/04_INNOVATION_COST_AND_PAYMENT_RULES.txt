@@ -1,0 +1,51 @@
+INNOVATION COST AND PAYMENT RULES
+
+Base rule:
+An innovation attempt costs:
+- 1 Memory
+- 1 Hide-eligible resource
+- 1 Organ-eligible resource
+- 1 Bone-eligible resource
+
+No hard cap:
+The player may innovate any number of times during settlement phase if they can keep paying the full cost.
+
+Why this matters:
+Memory alone is too soft as a cost. The body-material cost creates tension with crafting, treatment, intimacy support, gear-card training, and settlement actions.
+
+Payment UI:
+The innovation attempt should open a payment modal/screen before drawing innovation candidates.
+It should show three selectors:
+- Hide slot: all stash resources with materialTags including 'hide'
+- Organ slot: all stash resources with materialTags including 'organ'
+- Bone slot: all stash resources with materialTags including 'bone'
+
+It should also show:
+- Memory cost: 1
+- Current Memory balance
+- Current available choices per slot
+- Warning if selected resource is not a basic resource
+- Extra warning if selected resource is loveJuice because it has an intimacy protection use
+
+Selection rule:
+- One resource unit can fill only one slot.
+- If the same resource id has count 2+, it can be selected for multiple slots only if it has enough quantity and materialTags allow each selected slot.
+- Example: stomachStone has ['bone','organ']; with one stomachStone, it can fill Bone OR Organ, not both.
+
+Do not auto-pay:
+Remove old auto-selection that sorts basic resources and takes the first 3 resources.
+The player must confirm exact payment before draw.
+
+Innovation draw:
+After payment succeeds, draw innovation candidates as now.
+Candidate count can stay 3 unless later innovations modify it.
+The payment should be recorded in innovationHistory as selected slot mapping, e.g.
+paidResources: {
+  memory: 1,
+  hide: 'paleLionHide',
+  organ: 'sinew',
+  bone: 'riverTooth'
+}
+
+DelayedWork modifier:
+If the current repo has temporarySettlementModifiers.delayedWork increasing resource cost to 4, decide whether to delete or rework it. Under the new model, do not add a fourth generic resource silently. If kept, it should add a named extra slot such as extraAnyBodyMaterial or extraScrap, with UI selection.

@@ -1,0 +1,57 @@
+CODEX VERSION
+
+Use this prompt with Codex. Codex may patch multiple related files in this stage, but it must stay inside the current stage and avoid broad rewrites.
+
+Before editing, inspect the relevant current repo files and compare them with docs/kdm-upgrade-plan/reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+PROMPT 02 - RESOURCE TAGS AND SIX BASIC RESOURCE POOL
+
+You are patching repo samuelkenworthy91-byte/KDM.
+Work carefully. Prefer focused patches. Do not broad-rewrite unrelated systems.
+Read the uploaded TXT docs in docs/kdm-upgrade-plan/ before changing code, especially reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+
+Goal:
+Implement the new resource classification.
+
+Rules:
+There are exactly six basic resources: bone, hide, organ, sinew, scrap, loveJuice.
+Sinew is a basic resource and counts as Organ.
+Love Juice is a basic but slightly rarer resource, counts as Organ, and has a future intimacy protection use.
+Old generic claw/fur/horn/ichor/monsterTooth/strangeEye are no longer basic generic drops, but should remain safe for legacy saves if present.
+
+Implementation guidance:
+1. Update src/data/resources.js resource helper to accept options such as materialTags, basicResource, genericDropWeight, specialUse.
+2. Add loveJuice.
+3. Add materialTags to all current resources using reference_docs/03_RESOURCE_TAGS_AND_BASIC_POOL.txt.
+4. Replace genericResourceIds export with explicit ['bone','hide','organ','sinew','scrap','loveJuice'].
+5. Add helper exports if useful:
+   - BASIC_RESOURCE_IDS
+   - BODY_MATERIAL_TAGS = ['bone','hide','organ']
+   - getResourceMaterialTags(resourceId)
+   - resourceCanPayMaterial(resourceId, material)
+   - getGenericResourceDropWeight(resourceId)
+6. Update src/game/harvestRewardLogic.js so loveJuice drops at a lower weight and old generic resources do not appear as common generic harvest rewards.
+7. Add/update tests for resource classification.
+
+Do not change innovation payment UI yet except enough helpers for later prompts.
+
+
+
+Validation commands to run before committing:
+npm run build
+npm run test
+git status
+
+If validation passes, commit and push with:
+git add -A
+git commit -m "<clear short commit message>"
+git push origin main
+git rev-parse HEAD
+
+Extra Codex safety rules:
+- Do not combine this with later prompts.
+- Do not rewrite entire large files unless there is no safer targeted patch.
+- Preserve save compatibility and unknown legacy fallbacks.
+- If a file has old and new systems side by side, migrate safely before deleting.
+- Keep card/intention wording exactly aligned to the docs; do not invent new wording or balance changes.

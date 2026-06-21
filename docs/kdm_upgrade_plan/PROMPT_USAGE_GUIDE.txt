@@ -1,0 +1,25 @@
+PROMPT USAGE GUIDE
+
+Use Codex prompts first when you have Codex credits. Use fcc-claude-safe prompts only when you need the weaker model.
+
+For Codex:
+- Give one prompt at a time.
+- Let it inspect files.
+- Ask it to patch, build, test, and summarize changed files.
+
+For fcc-claude:
+- Give one prompt at a time.
+- Do not let it combine stages.
+- If it proposes broad rewrites, stop it.
+- If it changes card text or mechanical intent not listed in the prompt, revert that patch.
+- If it removes legacy save IDs, revert unless the prompt explicitly says migration is complete.
+
+After every prompt:
+npm run build
+npm run test
+git status
+
+git add -A
+git commit -m "Clear short commit message"
+git push origin main
+git rev-parse HEAD

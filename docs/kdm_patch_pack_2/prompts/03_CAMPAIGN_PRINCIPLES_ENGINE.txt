@@ -1,0 +1,117 @@
+Add the campaign principles engine.
+
+Goal:
+Create permanent campaign principle state and choice flow for Death, New Life, and Society principles.
+
+Important:
+Campaign principles are not normal innovations. They are permanent settlement-wide laws triggered by story moments.
+
+Principles:
+Death:
+- graves
+- cannibalism
+
+New Life:
+- protectTheYoung
+- survivalOfTheFittest
+
+Society:
+- workTogether
+- embraceTheDark
+
+Strict rules:
+- Do not implement all principle effects in this patch unless tiny and necessary.
+- Build the engine first.
+- Preserve save compatibility.
+- Remove/avoid duplicated normal innovation behaviour where it conflicts.
+- Do not broadly rewrite App.jsx.
+
+Required behaviour:
+
+1. Add data:
+src/data/campaignPrinciples.js
+
+Each principle option should include:
+- id
+- group: death | newLife | society
+- name
+- triggerLabel
+- playerSummary
+- mechanicalSummary
+- permanent: true
+- effect tags
+
+2. Add settlement state:
+settlement.principles = {
+  death: null,
+  newLife: null,
+  society: null
+}
+
+settlement.pendingPrincipleChoice = null or:
+{
+  group,
+  trigger,
+  affectedIds,
+  createdAtLanternYear
+}
+
+settlement.principleHistory = []
+
+settlement.principleUses = {}
+
+3. Add save migration in saveLogic/normalizeSettlement:
+- old saves get empty principles safely.
+- pendingPrincipleChoice defaults to null.
+- principleHistory defaults to [].
+- principleUses defaults to {}.
+
+4. Add helpers, e.g.:
+getMissingPrincipleChoices(settlement)
+createPendingPrincipleChoice(settlement, group, trigger, affectedIds)
+chooseCampaignPrinciple(settlement, group, optionId)
+hasCampaignPrinciple(settlement, group, optionId)
+
+5. Lock choices:
+- once settlement.principles[group] is set, it cannot be changed.
+- choosing a principle clears matching pending choice.
+- choice is recorded in principleHistory.
+
+6. UI:
+Add a basic PrincipleChoiceScreen or simple placeholder flow.
+It should show:
+- trigger
+- two choices
+- effect summaries
+- permanent warning
+- confirm button
+
+7. Settlement panel:
+Add a simple Principles panel somewhere in Settlement showing chosen principles and effects.
+Do not overdesign.
+
+8. Graves innovation conflict:
+Graves should no longer function as a normal innovation draw/build if that conflicts with the Death Principle.
+Move Graves wording/effect into campaignPrinciples data.
+If removing from the base innovation pool is too risky in this patch, mark it deprecated/hidden and add tests so it is not drawable as a normal innovation.
+
+Tests:
+- normalizeSettlement adds empty principles.
+- cannot choose invalid principle.
+- cannot change locked principle.
+- choosing principle records principleHistory.
+- pending principle choice clears after choose.
+- Graves is not drawable/buildable as a normal innovation if migrated out.
+- old saves with builtInnovations including graves do not crash and migrate sensibly.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Add campaign principles engine"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

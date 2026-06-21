@@ -1,0 +1,53 @@
+{
+  "name": "lantern-deckbuilder",
+  "version": "0.0.1",
+  "private": true,
+  "main": "electron/main.js",
+  "description": "A roguelite deckbuilder inspired by dark monster‑hunting games.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "test": "node --test",
+    "audit:equipment": "node scripts/auditEquipmentCards.mjs",
+    "build": "vite build",
+    "build:web": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "desktop": "vite build --mode electron && electron .",
+    "desktop:dev": "concurrently --kill-others-on-fail \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "dist:linux": "vite build --mode electron && electron-builder --linux AppImage",
+    "desktop:linux": "npm run dist:linux",
+    "package:steamos": "npm run desktop:linux"
+  },
+  "dependencies": {
+    "@google/gemini-cli": "^0.46.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.0.0",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.kdm.game",
+    "productName": "KDM",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/icons/kdm-icon.png",
+      "package.json"
+    ],
+    "linux": {
+      "target": "AppImage",
+      "category": "Game",
+      "icon": "public/icons/kdm-icon.png",
+      "artifactName": "KDM.AppImage"
+    }
+  }
+}

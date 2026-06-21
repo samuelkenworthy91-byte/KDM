@@ -1,0 +1,112 @@
+KDM UPGRADE PLAN - REPO AUDIT RESULTS
+
+Scope:
+- Docs pack copied to docs/kdm-upgrade-plan/.
+- Audit only. No mechanics implemented in this patch.
+
+Files to update in later prompts:
+
+1. src/data/resources.js
+- Extend resource data shape beyond id/name/type/description/creatureId.
+- Add materialTags, basicResource, genericDropWeight, and specialUse support.
+- Add loveJuice.
+- Make the new basic resource set explicit: bone, hide, organ, sinew, scrap, loveJuice.
+- Keep old save/resource IDs such as claw, fur, horn, ichor, monsterTooth, and strangeEye as legacy/non-basic resources where needed.
+- Replace broad genericResourceIds filtering with an explicit export.
+
+2. src/game/harvestRewardLogic.js
+- genericCommonPool currently consumes genericResourceIds and gives generic candidates uniform common handling.
+- Update to honor the explicit basic pool and weighted generic drops.
+- loveJuice should be available but rarer than bone/hide/organ/sinew/scrap.
+- Ensure old claw/fur/horn/etc. do not become generic common harvest drops.
+
+3. src/data/innovationCards.js
+- Current card factory defaults to buildCost { settlementMemory: 1, basicResources: 3 } and memoryCost 1.
+- Replace generic basicResources cost with structured innovationCost using exact Memory/Hide-slot/Organ-slot/Bone-slot payment.
+- Update card/payment text in later implementation prompts only.
+
+4. src/game/innovationLogic.js
+- Currently imports both innovationCards and memoryInnovations.
+- applyInnovationChoice still treats IDs found in memoryInnovations as builtMemoryInnovations.
+- Needs migration to a unified innovation source after replacement data exists.
+
+5. src/game/innovationModel.js
+- Normalizes both memoryCost and legacy costMemory.
+- Keep legacy fallback behavior, but later prompts should normalize the new structured innovationCost.
+
+6. src/game/memoryEconomy.js
+- BASIC_RESOURCE_IDS still includes claw.
+- awardHuntReturnMemories already matches the core living-return Memory rule.
+- resolveDeathMemoryChoice currently grants +1 Memory on burial by default.
+- Hunt-event Memory helpers still exist and should be gated/removed according to later prompts.
+
+7. src/screens/SettlementScreen.jsx
+- Imports innovationCards and memoryInnovations side by side.
+- Memory UI text still says Memory can come from successful intimacy, hunt events, and burial.
+- Displays memory innovation actions from the old memoryInnovationList.
+- Innovation cost display still says Memory plus shared draw resources.
+- Intimacy panel currently says successful intimacy grants 1 Memory.
+- Later prompts should update UI copy and source of truth after mechanics are migrated.
+
+8. src/App.jsx
+- handleAttemptInnovation still auto-selects payment resources.
+- It hard-codes basicIds as bone/hide/sinew/organ/scrap/claw and resourceAliases.
+- It spends 3 resources, or 4 with delayedWork, without player slot selection.
+- It imports genericResourceIds for random resource rewards.
+- It still awards Memory from hunt events and successful intimacy.
+- Later prompts should replace auto-payment with selector-driven payment and update Memory award sources safely.
+
+9. src/data/innovations.js
+- Still used as settlement structure/location-style innovation data.
+- Do not delete blindly; audit usages before renaming or splitting location data from the innovation deck.
+
+Files to deprecate later:
+
+- src/data/memoryInnovations.js
+  Older separate Memory-innovation catalogue. Deprecate only after its actions and save compatibility are represented in the unified innovation system.
+
+- src/game/memoryInnovationLogic.js
+  Older action logic paired with memoryInnovations. Deprecate only after SettlementScreen and saved builtMemoryInnovations have a migration path.
+
+- Old generic/basic resource interpretation in src/data/resources.js, src/game/memoryEconomy.js, src/game/harvestRewardLogic.js, and App.jsx.
+  Do not remove old resource IDs; remove only their old "basic/generic payment pool" behavior.
+
+Tests to add or update:
+
+- Resource tests:
+  explicit six basic resources;
+  loveJuice exists, is basic, is rarer in generic harvest weights;
+  claw/fur/horn/ichor/monsterTooth/strangeEye are not generic basics;
+  materialTags support Hide/Organ/Bone payment slots.
+
+- Harvest reward tests:
+  genericResourceIds or replacement pool only offers the six basics;
+  loveJuice can appear at lower weight;
+  old non-basic resources do not appear as common generic drops.
+
+- Innovation payment tests:
+  innovation attempt requires exactly 1 Memory plus one eligible Hide-slot, one Organ-slot, and one Bone-slot resource;
+  one multi-tag resource cannot fill multiple slots;
+  rare/named resources are never auto-spent;
+  delayedWork behavior is intentionally migrated or removed according to later docs.
+
+- Innovation model/UI tests:
+  innovationCards expose structured innovationCost;
+  InnovationDrawScreen and SettlementScreen display selected payment resources;
+  direct building of deck-pool innovations remains blocked unless drawn/chosen.
+
+- Memory economy tests:
+  hunt return grants Memory equal to living returning survivors;
+  retreat grants no Memory;
+  burial does not grant free Memory unless later gated by the correct innovation;
+  hunt-event and intimacy Memory awards match the later prompt rules.
+
+- Save compatibility tests:
+  old saves with builtMemoryInnovations, claw/fur/horn/ichor/monsterTooth/strangeEye, and older innovationDeckState load without crashing.
+
+Blockers found:
+
+- No blocking technical issue for the docs/audit patch.
+- The uploaded docs originally existed at docs/kdm_upgrade_plan/, not the requested docs/kdm-upgrade-plan/. This patch copies them to the requested path rather than deleting the existing underscore path.
+- The repo currently has old and new innovation systems side by side. Safe migration requires later prompt work before deleting memoryInnovations or memoryInnovationLogic.
+- npm/node commands emit an existing MODULE_TYPELESS_PACKAGE_JSON warning for ES module files because package.json has no "type": "module"; this is pre-existing and not changed here.

@@ -1,0 +1,42 @@
+Final validation for KDM Patch Pack 2.
+
+Only run this after all previous prompts have passed and been committed to:
+upgrade/patch-pack-2-principles-passives
+
+Commands:
+git status
+npm run build
+npm run test
+git log --oneline --max-count=12
+git diff --stat main..upgrade/patch-pack-2-principles-passives
+
+Manual playtest checklist:
+1. Start a hunt with normal gear.
+2. Check card text, previews, and actual effects match.
+3. Trigger or simulate first death.
+4. Choose Graves/Cannibalism.
+5. Confirm reward applies once.
+6. Trigger or simulate later death.
+7. Confirm locked principle auto-applies.
+8. Trigger or simulate first newborn.
+9. Choose New Life principle.
+10. Confirm newborn modifiers.
+11. Advance to Lantern Year 5.
+12. Choose Society principle.
+13. Test Work Together discount or Embrace the Dark rest odds.
+14. Check rest stop healing.
+15. Check hunter panel flip/back passives.
+16. Check event roll breakdown.
+17. Check nemesis champion duel reward.
+18. Check signature weapon progress visibility.
+
+If all good, merge to main:
+git checkout main
+git pull origin main
+git merge --ff-only upgrade/patch-pack-2-principles-passives
+git push origin main
+git status
+git rev-parse HEAD
+
+If --ff-only fails:
+Stop and paste the output.

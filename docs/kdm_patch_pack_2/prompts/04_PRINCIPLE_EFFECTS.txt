@@ -1,0 +1,99 @@
+Implement campaign principle effects.
+
+Goal:
+Wire real gameplay effects for Death, New Life, and Society principles.
+
+Dependencies:
+Run after 03_CAMPAIGN_PRINCIPLES_ENGINE.
+
+Principle effects:
+
+1. Death Principle
+Triggered after first survivor death if death principle not chosen.
+
+Graves:
+- Each survivor death gives +1 Memory.
+- Applies to the first death that triggered the choice.
+- Applies automatically to future deaths.
+- Reward must be logged in memoryHistory/settlementHistory.
+
+Cannibalism:
+- Each survivor death gives +1 random basic resource.
+- Applies to the first death that triggered the choice.
+- Applies automatically to future deaths.
+- Reward must be logged in settlementHistory.
+- Use only basic resources.
+
+2. New Life Principle
+Triggered after first newborn/first child if newLife principle not chosen.
+
+Protect the Young:
+- +10 percentage points intimacy success chance.
+- -10 percentage points intimacy tragedy chance.
+- All newborns gain +5 max HP.
+- Applies to the newborn that triggered the choice.
+
+Survival of the Fittest:
+- +20 percentage points intimacy tragedy chance.
+- All newborns gain a permanent personal +2 damage modifier/effect.
+- All newborns gain +1 max Survival.
+- Applies to the newborn that triggered the choice.
+- The +2 damage should affect that survivor's own attacks, not the whole party.
+
+3. Society Principle
+Triggered at Lantern Year 5 if society principle not chosen.
+
+Work Together:
+- Once per Lantern Year, any one thing that costs exactly 1 Memory costs 0 instead.
+- Applies to innovation attempts, Rite of Forgetting, Memory Training, Weapon Drills, Quiet Night, and future 1-Memory actions.
+- UI/preview must show original cost, Work Together discount, final cost, and whether it is already used this Lantern Year.
+- Store yearly use safely in settlement.principleUses.
+
+Embrace the Dark:
+- Affects rest stops only.
+- Negative rest outcomes -10 percentage points.
+- Neutral rest outcomes -10 percentage points.
+- Positive rest outcomes +20 percentage points.
+- Rest stop odds must still total 100%.
+- UI must show shifted odds or at least say Embrace the Dark modified this rest stop.
+
+Strict rules:
+- Do not allow principle rewards to be claimed twice.
+- Do not require repeated choices after the principle is locked.
+- Do not leave the old repeated grave legacy reward system active.
+- Do not break awardHuntReturnMemories for living survivors.
+- Do not create negative probabilities.
+
+Deletion/replacement required:
+- Replace old resolveDeathMemoryChoice bury/recover-resource behaviour.
+- Replace old GraveLegacyScreen repeated choice assumptions.
+- Rewrite memoryEconomy tests that say burial gives no memory.
+- Prevent duplicate graveHistory entries where possible.
+
+Tests:
+- First death creates pending Death Principle.
+- Choosing Graves grants +1 Memory for that death.
+- Later deaths auto-grant +1 Memory.
+- Choosing Cannibalism grants +1 basic resource for that death.
+- Later deaths auto-grant +1 basic resource.
+- Same death cannot grant reward twice.
+- First newborn creates pending New Life Principle.
+- Protect the Young modifies intimacy odds and newborn HP.
+- Survival of the Fittest modifies tragedy odds, newborn damage, and max Survival.
+- Society choice appears at Lantern Year 5.
+- Work Together discounts exactly one 1-Memory cost per year.
+- Work Together does not discount costs above 1 Memory.
+- Embrace the Dark modifies rest odds and keeps total at 100%.
+- Old saves with pendingDeathResolutions still migrate.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Implement campaign principle effects"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

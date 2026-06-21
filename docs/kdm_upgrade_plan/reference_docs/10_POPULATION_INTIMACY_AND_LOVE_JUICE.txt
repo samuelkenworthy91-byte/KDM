@@ -1,0 +1,45 @@
+POPULATION, INTIMACY AND LOVE JUICE
+
+Do this after resource tags and innovation model are done.
+
+Goals:
+- Make intimacy odds transparent.
+- Make innovations visibly modify odds and risks.
+- Add Love Juice as a resource and special intimacy protection tool.
+
+Love Juice:
+- Resource id: loveJuice.
+- It is one of the six basic resources.
+- It is slightly rarer in generic harvest rewards.
+- materialTags: ['organ'] so it can be spent as Organ for innovation if the player chooses, but UI should warn them.
+- Special intimacy use: spend 1 Love Juice before one intimacy attempt to negate any negative outcomes from that attempt.
+- It does not guarantee a baby.
+- It should prevent tragedy/negative injury/death/Panic/resource-loss type consequences caused by that intimacy attempt.
+- If the intimacy roll simply fails with no negative, Love Juice is still consumed if used.
+
+Intimacy UI must show:
+- base success chance
+- innovation modifiers
+- participant modifiers
+- resource modifiers
+- risk/tragedy chance
+- final chance
+- what Love Juice will prevent
+- whether Love Juice is available in stash
+
+Suggested formula:
+baseChance = 35
+positive modifiers:
+- Midwife Signs +10%
+- Shared Hearth +5%
+- Family Marks +5% if conditions met
+- optional Memory spend +5% per Memory if an innovation unlocks it
+negative modifiers:
+- severe untreated injury -10%
+- no population capacity -15%
+- settlement crisis modifier if implemented
+Clamp final success between 5% and 85% unless a special innovation changes caps.
+
+Do not make Love Juice a pure success booster. Its role is risk protection.
+
+Population tab should also show ways to improve odds, such as discovering specific innovations, treating injuries, spending Memory if unlocked, or using Love Juice for safety.

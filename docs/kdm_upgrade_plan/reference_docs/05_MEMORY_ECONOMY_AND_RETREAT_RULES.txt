@@ -1,0 +1,38 @@
+MEMORY ECONOMY AND RETREAT RULES
+
+Default Memory gain:
+After a successful hunt/showdown, gain Memory equal to returning living survivors.
+Examples:
+- 4 survivors return alive: +4 Memory
+- 3 survivors return alive: +3 Memory
+- 2 survivors return alive: +2 Memory
+- 1 survivor returns alive: +1 Memory
+- 0 survivors return alive: +0 Memory
+- retreat: +0 Memory
+
+Do not add Memory from:
+- retreat
+- failed hunt
+- intimacy by default
+- burial by default
+- generic hunt events by default
+
+Exception design:
+Later innovations may add exceptions. Examples:
+- Graves: when a survivor dies during a successful hunt, gain +1 Memory once.
+- Mourning Song: burial can produce Memory or convert a death into a lesson.
+- Storyteller Circle: successful hunts can offer training choices.
+But these are innovation-gated exceptions, not core rules.
+
+Retreat must be costly:
+Default retreat result should:
+- grant 0 Memory
+- not count as completedHunt/victory
+- not add quarry-specific innovation pool entries
+- not grant Monster Bane or victory survivor reward choices
+- lose unconfirmed resources if the current hunt map uses confirmation
+- apply retreat consequence and Panic/injury risk
+
+UI text updates:
+Remove wording saying Memory comes from intimacy, hunt events, and burial by default.
+Use: "Gain Memory when survivors return alive from a successful hunt. Retreat gives no Memory. Some innovations may unlock extra Memory sources."

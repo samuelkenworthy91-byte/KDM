@@ -1,0 +1,71 @@
+Replace choice-first hunt events with roll-driven hunt events.
+
+Goal:
+Make hunt events feel closer to KDM-style hunt events: event appears, a survivor is selected, a roll is made, modifiers apply, result band determines outcome.
+
+Do not copy KDM text. Keep all wording original for this game.
+
+Design:
+Most events automatically select the event survivor.
+Some events may let the player choose.
+
+Event flow:
+1. Event appears.
+2. Event survivor is determined:
+   - party leader
+   - random living survivor
+   - lowest HP
+   - highest/lowest survival
+   - scout
+   - player choice for special events
+3. Roll occurs.
+4. Modifiers from survivor/party/passives/gear/principles apply.
+5. Outcome band resolves.
+6. Result screen explains:
+   - base roll
+   - modifiers
+   - final roll
+   - outcome
+   - rewards/consequences
+
+Required data schema:
+Add or adapt event schema with:
+- id
+- name
+- eventType: huntRoll
+- eventSurvivorRule
+- allowsChoice boolean if needed
+- roll die
+- modifier rules
+- result bands
+- outcome effects
+- result text
+
+Required behaviour:
+- Existing choice events should be migrated gradually or wrapped safely.
+- Do not delete all old event content in one risky patch unless tests prove replacements.
+- Event choice UI should no longer be the default.
+- Roll result must be deterministic in tests with injected random/roll.
+- Survivors/party/passives can modify the result.
+- Outcome effects must use explicit resolvers, not text-only effects.
+
+Tests:
+- automatic event survivor selection works for random/lowest HP/party leader.
+- player-choice event allows choosing survivor.
+- modifiers apply from survivor stats/passives.
+- result band chosen from final roll.
+- reward/consequence applies.
+- old event fallback does not crash.
+- UI shows roll breakdown.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Add roll driven hunt events"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

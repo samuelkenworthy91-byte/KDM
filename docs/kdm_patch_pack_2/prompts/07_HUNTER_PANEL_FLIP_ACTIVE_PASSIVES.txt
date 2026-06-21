@@ -1,0 +1,65 @@
+Add flippable hunter panels showing active passives.
+
+Goal:
+Let the player see every passive currently affecting a hunter during hunt/showdown.
+
+Design:
+Each hunter panel should have a front and back, similar to the card preview flip.
+
+Front:
+- name
+- HP/max HP
+- Block
+- Survival/max Survival
+- statuses
+- current role/basic combat info
+
+Back:
+- Active Passives
+- grouped by source:
+  Fighting Arts
+  Active Fighting Art Buttons
+  Weapon Proficiency
+  Traits
+  Scars
+  Disorders
+  Campaign Principles
+  Gear Passives
+  Temporary Hunt/Combat Modifiers
+  Monster Bane
+
+Required behaviour:
+
+1. Use passive registry:
+Do not duplicate passive logic in UI.
+Use getActiveSurvivorPassives or equivalent.
+
+2. Flip behaviour:
+- Each hunter panel has a clear flip button.
+- Flip in place.
+- Back remains readable on phone.
+- Does not block hand/card UI.
+
+3. Active buttons:
+If fighting arts have active buttons, show them either:
+- on the action bar
+- or on the back with a clear "Use" button
+Do whichever is safest, but they must be discoverable.
+
+4. Tests:
+- passive list renders for survivor with passives.
+- unknown passive source does not crash UI.
+- flip state is per hunter, not global unless intentionally designed.
+- active button usage is visible if implemented.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Add hunter passive panel flip"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

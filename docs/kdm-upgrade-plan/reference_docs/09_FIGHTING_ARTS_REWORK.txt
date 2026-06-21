@@ -1,0 +1,50 @@
+FIGHTING ARTS REWORK
+
+Goal:
+Fighting arts should match the current gear-card combat system. Avoid flat '+1 Strength' style effects unless rare.
+
+Current combat systems to hook into:
+- card played
+- card type: attack, skill, support, reaction, counter
+- energy cost
+- damage
+- block
+- break damage
+- weak point opened/broken
+- harvest quality
+- statuses: bleed, burn, poison, doom, vulnerable, staggered, guarded, snared, shock, blind, prepared, marked, exposed
+- colour affinity on card/source gear
+- weaponStrategyId if available
+- gearInstanceId and card-copy practice progress
+- Panic gained/removed
+- survivor death
+- retreat
+- combat start/end
+
+Add hook engine before complex art data:
+Suggested hooks:
+- onCombatStart
+- onCardCost
+- onCardPlayed
+- onDamageCalculated
+- onBlockGained
+- onDamagePrevented
+- onStatusApplied
+- onWeakPointOpened
+- onWeakPointBroken
+- onHarvestRolled
+- onPanicGained
+- onPanicRemoved
+- onSurvivorDeath
+- onCombatEnd
+- onHuntReturn
+- onRetreat
+
+New fighting art batch should use current systems. Example style:
+- Blue Knuckle Doctrine: first time damage is fully prevented with Block/Guarded, counter damage equals Blue affinity count.
+- Second Knife Truth: if second attack comes from same gear instance, +1 break and +1 practice progress.
+- Harvest Without Mercy: on Precise/Harvest weak-point break, improve harvest quality by one step and gain Panic 1.
+- Purple Gut Instinct: once per hunt, convert a failed harvest/retreat/weak-point test by 2 or less into Messy success by spending 1 Survival.
+
+Do not implement all fighting arts as hard-coded if/else blocks in App.jsx.
+Use data-driven trigger/effect definitions as far as possible.

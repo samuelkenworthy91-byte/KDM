@@ -1,0 +1,55 @@
+CODEX VERSION
+
+Use this prompt with Codex. Codex may patch multiple related files in this stage, but it must stay inside the current stage and avoid broad rewrites.
+
+Before editing, inspect the relevant current repo files and compare them with docs/kdm-upgrade-plan/reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+PROMPT 11 - FINAL CLEANUP AND VALIDATION
+
+You are patching repo samuelkenworthy91-byte/KDM.
+Work carefully. Prefer focused patches. Do not broad-rewrite unrelated systems.
+Read the uploaded TXT docs in docs/kdm-upgrade-plan/ before changing code, especially reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt.
+
+
+Goal:
+Remove dead code and stale wording after all patches are in place.
+
+Tasks:
+1. Search for old concepts:
+   - basicResources: 3
+   - resourceAliases
+   - memoryInnovations separate UI
+   - settlementMemory wording where memories is preferred
+   - generic old resource pools including claw/fur/horn as basics
+   - burial/intimacy/hunt event default Memory wording
+2. Remove unused imports and unreachable UI.
+3. Update docs if any implementation choices changed.
+4. Confirm all screens still load:
+   - Title
+   - Settlement overview
+   - Innovations
+   - Actions
+   - Population
+   - Armoury/loadout
+   - Hunt/combat
+5. Run full validation.
+
+
+
+Validation commands to run before committing:
+npm run build
+npm run test
+git status
+
+If validation passes, commit and push with:
+git add -A
+git commit -m "<clear short commit message>"
+git push origin main
+git rev-parse HEAD
+
+Extra Codex safety rules:
+- Do not combine this with later prompts.
+- Do not rewrite entire large files unless there is no safer targeted patch.
+- Preserve save compatibility and unknown legacy fallbacks.
+- If a file has old and new systems side by side, migrate safely before deleting.
+- Keep card/intention wording exactly aligned to the docs; do not invent new wording or balance changes.

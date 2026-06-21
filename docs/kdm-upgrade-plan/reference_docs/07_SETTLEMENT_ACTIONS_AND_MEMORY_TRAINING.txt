@@ -1,0 +1,36 @@
+SETTLEMENT ACTIONS AND MEMORY TRAINING
+
+Goal:
+Innovations should unlock meaningful settlement actions. Actions should spend Memory/resources and create long-term survivor identity.
+
+Memory Training action:
+Unlocked by Night Drills or Memory Pit.
+Cost: 1 Memory.
+Target: one living survivor.
+Suggested default: once per survivor per settlement phase, or once per action tier if balance requires.
+
+Roll d20:
+1-2: Long-term injury. Gain no refund unless an innovation says otherwise.
+3-5: Gain a scar. If already scarred, clear Panic 1 if possible.
+6-10: Gain +1 weapon proficiency progress in active/equipped weapon type.
+11-14: Gain +1 gear-card practice progress on one selected equipped card.
+15-17: Draw 2 fighting arts, learn 1.
+18-19: Learn random fighting art and gain +1 gear-card practice progress.
+20: Learn random fighting art, gain +1 weapon proficiency progress, and add a rare personal lesson card if such cards exist.
+
+Training tiers:
+- Cautious Drill: lower risk, mostly proficiency/practice.
+- Black Lesson: higher fighting-art odds, injury risk.
+- Memory Pit: highest reward and highest danger.
+
+Action unlocks should come from unified innovations, not memoryInnovations.js.
+
+Existing actions to migrate:
+- Guided Reflection / Rite of Forgetting
+- Quiet Night
+- Taboo
+- Pain Lessons
+- Weapon Drills
+- Shrine of Names
+
+Make sure all actions state exact cost, requirement, and once-per-year/per-survivor limits in UI.

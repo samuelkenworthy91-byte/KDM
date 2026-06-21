@@ -1,0 +1,873 @@
+KDM / Lantern Deckbuilder
+GEAR OVERHAUL REPO MAP
+Recommended repo path: docs/KDM_GEAR_OVERHAUL_REPO_MAP.txt
+
+Purpose
+-------
+This is a planning and implementation map for replacing the old imported equipment/card catalogue with a smaller original quarry-location gear system.
+
+It is based on the current repo structure:
+- src/data/quarries.js controls quarry IDs, quarry tiers, design tags, loot/resource family, and building unlocks.
+- src/data/resources.js controls resource IDs and names.
+- src/data/equipment.js currently builds equipment from src/data/overhaul/gearRegistry.js.
+- src/data/overhaul/gearRegistry.js currently imports gear_master_overhaul.json and all_deck_cards.json.
+- src/data/cards.js currently merges overhaulCards from src/data/overhaul/cardRegistry.js, weapon mastery cards, starter cards, monster rewards, and fighting art cards.
+- src/data/weaponProficiency.js controls weapon type list, proficiency thresholds, proficiency passive text, and mastery card IDs.
+- src/data/gearMetadata.js currently has explicit old gear IDs and weapon type metadata.
+- src/data/events.js contains locked event choices based mainly on weaponType, gearTag, traits, innovations, and some generic resources.
+- src/game/eventRequirementLogic.js supports locked choice requirements including partyHasWeaponType, partyHasGearTag, partyHasGearId, traits, fighting arts, conditions, innovations, and monster bane knowledge.
+
+Important design rule
+---------------------
+Keep this original. Do not copy Kingdom Death names, prose, cards, or mechanics. The inspiration is only:
+- dark settlement survival;
+- monster/quarry-specific crafting;
+- hunt/showdown flow;
+- resources from defeated creatures;
+- scary readable equipment.
+
+Do not edit:
+- src/components/Card.jsx flip structure;
+- card flip CSS unless fixing a pure layout bug;
+- dist/;
+- node_modules/.
+
+The new card text must stay short and player-friendly.
+Front card text should look like:
+- "Deal 3 damage. Apply Poison 1."
+- "Gain 4 Block. Your next attack deals +2 damage."
+- "Aura — All Block cards give +1 more Block this fight."
+
+Dense mechanics should go in comments, Details/Advanced text, or card-back tactical preview, not the front text.
+
+
+A. CURRENT REPO FACTS THAT MATTER
+=================================
+
+A1. Crafting costs
+------------------
+Crafting cost is a plain object of resourceId to amount:
+
+Example:
+cost: {
+  bone: 1,
+  paleLionHide: 1
+}
+
+The existing crafting logic:
+- checks missing resources by resourceId;
+- formats cost names through src/data/resources.js;
+- deducts exact resource IDs from settlement stash.
+
+Therefore every new gear item needs:
+- id
+- name
+- buildingId / locationId / craftingLocationId
+- quarryId if quarry gear
+- itemType / loadoutCategory / slot / bodySlot where relevant
+- weaponType if it is a weapon
+- cost object with valid resource IDs
+- cardPackage array of valid card IDs
+- clear player-facing description/passiveText.
+
+A2. Quarry loot/resource rule
+-----------------------------
+The current quarries build loot by quarry:
+- Level 1 loot uses creature/common parts.
+- Level 2 loot uses common parts plus rare/strange parts.
+- Level 3 loot uses common + rare/strange + level3Rare parts.
+
+Use that logic for cost gating:
+- early/basic gear should use common creature parts and basic resources;
+- stronger gear should use rare/strange parts;
+- apex/signature gear should use level3Rare parts.
+
+A3. Current loadout direction
+-----------------------------
+Current loadout rules already support:
+- max 9 equipment per survivor;
+- max 2 weapon items;
+- duplicate weapon names allowed;
+- armour body slots;
+- jewellery slot;
+- tools/utilities within the 9 item cap.
+
+The gear overhaul should respect that rather than inventing a separate loadout model.
+
+
+B. RESOURCE FAMILIES AND COST PALETTES
+======================================
+
+General resource cost principles
+--------------------------------
+Small / fast weapons:
+- Dagger, Katar, Fist & Tooth
+- Cost 1 common creature hard part, or 1 generic Bone + 1 light quarry part.
+- Example pattern: { creatureToothOrClaw: 1 } or { bone: 1, quarryHideOrSinew: 1 }
+
+Medium weapons:
+- Sword, Spear, Bow, Whip, Axe, Shield
+- Cost 1-2 common creature parts plus 0-1 basic resource.
+- Example pattern: { quarryHardPart: 1, hide: 1 }
+
+Technical weapons:
+- Katana
+- Cost a clean precise part plus sinew/bone.
+- Example pattern: { quarryPrecisePart: 1, sinew: 1 }
+- Stronger katana versions may add one rare/strange part.
+
+Heavy weapons:
+- Grand weapons
+- Cost 2+ common parts and usually 1 rare/strange part.
+- Late/apex grand weapons may require a level3Rare part.
+- Example pattern: { quarryBoneOrHorn: 2, quarryRare: 1 }
+
+Armour:
+- Each armour set should use the defensive hide/scale/shell/chitin resource.
+- Individual pieces should be cheaper than weapons.
+- Complete set identity comes from passives/cards, not huge text.
+- Example light piece: { quarryHide: 1 }
+- Example chest/strong piece: { quarryHide: 2, hide: 1 }
+- Example late piece: { quarryPlate: 1, quarryRare: 1 }
+
+Instruments:
+- Use organs, horns, lungs, pipes, rhythm/vibration resources, or rare voice/light/memory resources.
+- Cost should be 1 thematic resource + 1 basic, or 1 rare for strong instruments.
+
+Tools:
+- Tools should be specific and cheap-to-medium.
+- Use odd parts: eye, gland, tongue, pipe, charm, sac, thread, ash, scrap, hide.
+- A powerful tool can use a rare/strange part.
+
+B1. Pale Hunt Lion / Lion Trophy Hall / Catarium
+------------------------------------------------
+Quarry ID: paleHuntLion
+Building IDs: lionTrophyHall, plus current Pale Hunt Lion unlocks boneSmith and skinnery.
+Full weapon suite should belong to lionTrophyHall/Catarium, not Bone Smith or Skinnery.
+
+Available thematic resources:
+- paleLionHide
+- paleLionClaw
+- paleLionSinew
+- paleLionMane (rare)
+- paleLionEye (rare)
+- elderPaleFang (level3Rare)
+- whiteHeart (level3Rare)
+- perfectMane (level3Rare)
+
+Locale mechanic:
+- Ambush: build a hidden damage bonus, then cash it in.
+- Pounce: become untargetable until the next quarry turn unless alone, then return with block/attack.
+- Predator pressure: rewards survivors who did not spend the whole turn blocking.
+
+Cost examples:
+- Knife/Dagger: { paleLionClaw: 1 }
+- Katar/Fist: { paleLionClaw: 1, paleLionSinew: 1 }
+- Sword/Spear/Whip: { paleLionClaw: 1, paleLionHide: 1 }
+- Katana: { elderPaleFang: 1, paleLionSinew: 1 } for late version, or { paleLionClaw: 1, paleLionSinew: 1 } for early.
+- Bow: { paleLionSinew: 1, paleLionMane: 1 }
+- Shield/Armour: { paleLionHide: 1-2 }
+- Grand: { elderPaleFang: 1, paleLionMane: 1, bone: 1 }
+- Instrument: { paleLionMane: 1, organ: 1 }
+- Tools: paleLionEye / paleLionSinew / paleLionMane / paleLionClaw.
+
+B2. Wailing Antelope / Stone Circle / Antelope Larder
+-----------------------------------------------------
+Quarry ID: wailingAntelope
+Building ID: antelopeLarder
+Organ Grinder is a support/tool location, not a full weapon suite.
+
+Available thematic resources:
+- wailingHorn
+- wailingOrgan
+- wailingHide
+- screamingSinew
+- stomachStone (rare)
+- endlessMarrow (level3Rare)
+
+Locale mechanic:
+- Hunger, trample, rhythm, movement, stamina.
+- Defensive gear should help recover, endure, or convert movement into block.
+- Weapons should feel like running, trampling, vibrating, or opening a path.
+
+Cost examples:
+- Dagger/Katar/Fist: { screamingSinew: 1 } or { wailingHorn: 1 }
+- Sword/Spear/Axe: { wailingHorn: 1, screamingSinew: 1 }
+- Whip/Bow: { screamingSinew: 1, wailingHide: 1 }
+- Katana: { stomachStone: 1, screamingSinew: 1 }
+- Grand: { wailingHorn: 2, endlessMarrow: 1 }
+- Shield/Armour: { wailingHide: 1-2 }
+- Instrument: { wailingHorn: 1, wailingOrgan: 1 }
+- Tools: wailingOrgan / stomachStone / screamingSinew / wailingHide.
+
+B3. Ash Phoenix / Phoenix Pyre
+------------------------------
+Quarry ID: ashPhoenix
+Building IDs: phoenixPyre. MonsterArchive may unlock from Ash Phoenix but should not automatically become a full gear suite unless it currently contains craftable equipment.
+
+Available thematic resources:
+- ashFeather
+- burntOrgan
+- phoenixAsh (rare)
+- timeBone (strange)
+- memoryGlass (strange)
+- unspentFeather (level3Rare)
+
+Locale mechanic:
+- Time, memory, discard, recursion, future damage, ash/burn.
+- Gear should play with draw/discard, delayed payoff, once-per-fight reset, or risk adding Panic.
+
+Cost examples:
+- Dagger/Fist: { ashFeather: 1 }
+- Sword/Spear: { timeBone: 1, ashFeather: 1 }
+- Whip/Bow: { ashFeather: 1, memoryGlass: 1 }
+- Katana: { timeBone: 1, phoenixAsh: 1 }
+- Axe: { timeBone: 1, burntOrgan: 1 }
+- Grand: { timeBone: 2, unspentFeather: 1 }
+- Shield/Armour: { ashFeather: 2 } or { phoenixAsh: 1, hide: 1 }
+- Instrument: { burntOrgan: 1, memoryGlass: 1 }
+- Tools: phoenixAsh / memoryGlass / timeBone / ashFeather.
+
+B4. Bloated Godling / Storm Shrine
+----------------------------------
+Quarry ID: bloatedGodling
+Building ID: stormShrine
+
+Available thematic resources:
+- thunderGland
+- bloatedHide
+- denseOrgan
+- stormBone (rare)
+- crackedMolar (rare)
+- livingThunderCore (level3Rare)
+
+Locale mechanic:
+- Charge, thunder, stored energy, swelling, reckless payoff.
+- Gear should store charge, punish repeated hits, add Enrage risk, or spike damage.
+
+Cost examples:
+- Dagger/Fist: { crackedMolar: 1 } or { thunderGland: 1 }
+- Sword/Spear/Axe: { stormBone: 1, thunderGland: 1 }
+- Whip/Bow: { thunderGland: 1, sinew: 1 }
+- Katana: { stormBone: 1, denseOrgan: 1 }
+- Grand: { stormBone: 2, livingThunderCore: 1 }
+- Shield/Armour: { bloatedHide: 1-2 }
+- Instrument: { thunderGland: 1, denseOrgan: 1 }
+- Tools: thunderGland / denseOrgan / stormBone / crackedMolar.
+
+B5. Crimson Crocodile / Red Tannery
+-----------------------------------
+Quarry ID: crimsonCrocodile
+Building ID: redTannery
+
+Available thematic resources:
+- crimsonScale
+- riverTooth
+- bloodMudOrgan
+- crocodileEye (rare)
+- redLeather (rare)
+- riverKingHeart (level3Rare)
+
+Locale mechanic:
+- Ambush, stillness, death-roll multi-hit, dragged-under control.
+- Weapons should reward waiting, attacking after block is removed, or exploiting Marked targets.
+- Armour should be red leather/scales, resisting multi-hit and converting being targeted into counter damage.
+
+Cost examples:
+- Dagger/Fist/Katar: { riverTooth: 1 }
+- Sword/Spear/Axe: { riverTooth: 1, crimsonScale: 1 }
+- Whip: { redLeather: 1, riverTooth: 1 }
+- Bow: { crocodileEye: 1, sinew: 1 }
+- Katana: { crocodileEye: 1, riverTooth: 1 }
+- Grand: { riverTooth: 2, riverKingHeart: 1 }
+- Shield/Armour: { crimsonScale: 1-2 } or { redLeather: 1, crimsonScale: 1 }
+- Instrument: { bloodMudOrgan: 1, crocodileEye: 1 }
+- Tools: crocodileEye / bloodMudOrgan / redLeather / crimsonScale.
+
+B6. Frogdog / Wet Yard / Gormery
+--------------------------------
+Quarry ID: frogdog
+Building ID: wetYard
+
+Available thematic resources:
+- frogdogTongue
+- rubberyHide
+- toxicGland (rare)
+- wetBone
+- bulgingEye (strange)
+- manyMouthGland (level3Rare)
+
+Locale mechanic:
+- Poison, tongue snare, wet leap, energy disruption.
+- Gear should apply Poison, reduce monster block through slime/acid, or interfere with target choice.
+- Tools can be strong here: antidote, slime snare, poison burst, bulging-eye scouting.
+
+Cost examples:
+- Dagger/Fist/Katar: { wetBone: 1 } or { toxicGland: 1 } for poison version.
+- Sword/Spear: { wetBone: 1, rubberyHide: 1 }
+- Whip: { frogdogTongue: 1 }
+- Bow: { frogdogTongue: 1, bulgingEye: 1 }
+- Katana: { wetBone: 1, toxicGland: 1 }
+- Axe: { wetBone: 1, toxicGland: 1 }
+- Grand: { wetBone: 2, manyMouthGland: 1 }
+- Shield/Armour: { rubberyHide: 1-2 }
+- Instrument: { manyMouthGland: 1 } or { toxicGland: 1, organ: 1 }
+- Tools: frogdogTongue / toxicGland / bulgingEye / rubberyHide.
+
+B7. Silk Matriarch / Silk Loom / Silk Mill
+------------------------------------------
+Quarry ID: silkMatriarch
+Building ID: silkLoom
+
+Available thematic resources:
+- silkGland
+- chitinThread
+- venomSac (rare)
+- webbedHide
+- broodCrown (level3Rare)
+- spiderEye (strange)
+
+Locale mechanic:
+- Snare, bind wounds, web control, venom.
+- Weapons should apply Snare or spend Snare for damage/control.
+- Armour should bind wounds, prevent Bleed, and soften damage.
+- Tools should heal, snare, or manipulate draw/intent.
+
+Cost examples:
+- Dagger/Katar/Fist: { chitinThread: 1 } or { venomSac: 1 }
+- Sword/Spear/Whip/Bow: { chitinThread: 1, silkGland: 1 }
+- Katana: { spiderEye: 1, chitinThread: 1 }
+- Axe: { chitinThread: 1, venomSac: 1 }
+- Grand: { chitinThread: 2, broodCrown: 1 }
+- Shield/Armour: { webbedHide: 1-2 } or { silkGland: 1, webbedHide: 1 }
+- Instrument: { silkGland: 1, spiderEye: 1 }
+- Tools: silkGland / chitinThread / venomSac / spiderEye.
+
+B8. Bloom Knight / Duelist Garden
+---------------------------------
+Quarry ID: bloomKnight
+Building ID: duelistGarden
+
+Available thematic resources:
+- bloomPetal
+- duelistThorn (rare)
+- polishedStem
+- floralSinew
+- knightSeed (strange)
+- perfectThornHeart (level3Rare)
+
+Locale mechanic:
+- Duel, riposte, perfect step, challenge, precision.
+- Weapons should reward exact timing, first attack, countering, and Marked/Vulnerable.
+- Armour should provide movement/duelist defensive utility, not raw tankiness.
+
+Cost examples:
+- Dagger/Katar/Fist: { bloomPetal: 1 }
+- Sword/Spear: { polishedStem: 1, floralSinew: 1 }
+- Whip/Bow: { floralSinew: 1, bloomPetal: 1 }
+- Katana: { duelistThorn: 1, floralSinew: 1 }
+- Axe: { polishedStem: 1, duelistThorn: 1 }
+- Grand: { polishedStem: 2, perfectThornHeart: 1 }
+- Shield/Armour: { bloomPetal: 1, floralSinew: 1 } or { knightSeed: 1 }
+- Instrument: { knightSeed: 1, floralSinew: 1 }
+- Tools: duelistThorn / knightSeed / bloomPetal / floralSinew.
+
+B9. Smog Singers / Smog Kiln
+----------------------------
+Quarry ID: smogSingers
+Building ID: smogKiln
+
+Available thematic resources:
+- smogPipe
+- sootLung
+- harmonyBone (rare)
+- tarFeather
+- chokingMask (strange)
+- finalChorusLung (level3Rare)
+
+Locale mechanic:
+- Sound, smoke, Panic, chorus, breathing, obscured targeting.
+- Weapons should apply Panic, reduce accuracy/targeting, and turn smoke into advantage.
+- Instruments should be excellent here because the locale is sound-based.
+- Armour should reduce Panic or turn Panic into block/survival.
+
+Cost examples:
+- Dagger/Fist/Katar: { tarFeather: 1 }
+- Sword/Spear/Axe: { harmonyBone: 1, sootLung: 1 }
+- Whip/Bow: { smogPipe: 1, tarFeather: 1 }
+- Katana: { harmonyBone: 1, chokingMask: 1 }
+- Grand: { harmonyBone: 2, finalChorusLung: 1 }
+- Shield/Armour: { chokingMask: 1 } or { sootLung: 1, hide: 1 }
+- Instrument: { smogPipe: 1, harmonyBone: 1 } or { finalChorusLung: 1 }
+- Tools: smogPipe / sootLung / chokingMask / tarFeather.
+
+B10. Chitin Crusader / Chitin Foundry
+-------------------------------------
+Quarry ID: chitinCrusader
+Building ID: chitinFoundry
+
+Available thematic resources:
+- chitinPlate
+- dungCore (strange)
+- beetleHorn
+- resinBlood (rare)
+- crusaderHeartplate (level3Rare)
+- jewelWing (strange)
+
+Locale mechanic:
+- Shell, armour, block, guard, charge, resin.
+- Gear should build block, shred block, harden resin, and punish attacks into guard.
+- Armour should have high passive block but may be slower/less flexible.
+
+Cost examples:
+- Dagger/Fist/Katar: { beetleHorn: 1 }
+- Sword/Spear/Axe: { beetleHorn: 1, chitinPlate: 1 }
+- Whip/Bow: { jewelWing: 1, sinew: 1 }
+- Katana: { beetleHorn: 1, resinBlood: 1 }
+- Grand: { beetleHorn: 2, crusaderHeartplate: 1 }
+- Shield/Armour: { chitinPlate: 1-2 } or { resinBlood: 1, chitinPlate: 1 }
+- Instrument: { dungCore: 1, beetleHorn: 1 }
+- Tools: resinBlood / dungCore / jewelWing / chitinPlate.
+
+B11. Drake Emperor / Crystal Forge / Dragon Armory
+--------------------------------------------------
+Quarry ID: drakeEmperor
+Building ID: crystalForge
+
+Available thematic resources:
+- drakeScale
+- crystalBone (rare)
+- fireGland
+- imperialHorn (rare)
+- emperorFlameMarrow (level3Rare)
+- moltenEye (strange)
+
+Locale mechanic:
+- Fire, crystal, command, imperial pressure, enrage.
+- Gear should Burn, add command auras, hit hard, and risk heat backlash.
+- Armour should be heatproof and command-focused.
+
+Cost examples:
+- Dagger/Fist/Katar: { crystalBone: 1 }
+- Sword/Spear/Axe: { crystalBone: 1, drakeScale: 1 }
+- Whip/Bow: { fireGland: 1, imperialHorn: 1 }
+- Katana: { crystalBone: 1, moltenEye: 1 }
+- Grand: { crystalBone: 2, emperorFlameMarrow: 1 }
+- Shield/Armour: { drakeScale: 1-2 }
+- Instrument: { imperialHorn: 1, fireGland: 1 }
+- Tools: fireGland / moltenEye / imperialHorn / drakeScale.
+
+B12. Sun Sovereign / Shell Sanctum / Sky Reef Sanctuary
+-------------------------------------------------------
+Quarry ID: sunSovereign
+Building ID: shellSanctum
+
+Available thematic resources:
+- sunShell
+- radiantEye (rare)
+- solarIchor (rare)
+- blindingScale
+- captiveNoon (level3Rare)
+- warmPearl (strange)
+
+Locale mechanic:
+- Radiance, blind, shell, heat mirage, avoidance.
+- Gear should create avoidance, target control, blinding bursts, and radiant block.
+- Armour should generate passive block/avoidance but may suffer from over-bright risk.
+
+Cost examples:
+- Dagger/Fist/Katar: { blindingScale: 1 }
+- Sword/Spear/Axe: { blindingScale: 1, sunShell: 1 }
+- Whip/Bow: { radiantEye: 1, sinew: 1 }
+- Katana: { radiantEye: 1, solarIchor: 1 }
+- Grand: { sunShell: 2, captiveNoon: 1 }
+- Shield/Armour: { sunShell: 1-2 }
+- Instrument: { warmPearl: 1, solarIchor: 1 }
+- Tools: radiantEye / solarIchor / warmPearl / blindingScale.
+
+B13. Pride King / Pride Hall
+----------------------------
+Quarry ID: prideKing
+Building ID: prideHall
+
+Available thematic resources:
+- prideMane
+- kingClaw (rare)
+- goldenFang (rare)
+- regalHide
+- judgmentEye (strange)
+- crownHeart (level3Rare)
+
+Locale mechanic:
+- Royal judgment, challenge, punishment, guard, dominance.
+- Gear should Mark, challenge, punish empty guard, and force dangerous-but-rewarding duels.
+- Armour should reduce targeting chaos but invite judgement.
+
+Cost examples:
+- Dagger/Fist/Katar: { kingClaw: 1 } or { goldenFang: 1 }
+- Sword/Spear/Axe: { goldenFang: 1, regalHide: 1 }
+- Whip/Bow: { prideMane: 1, judgmentEye: 1 }
+- Katana: { goldenFang: 1, judgmentEye: 1 }
+- Grand: { kingClaw: 1, crownHeart: 1, bone: 1 }
+- Shield/Armour: { regalHide: 1-2 } or { prideMane: 1, regalHide: 1 }
+- Instrument: { prideMane: 1, judgmentEye: 1 }
+- Tools: judgmentEye / prideMane / goldenFang / regalHide.
+
+
+C. SUPPORT / BASIC LOCATIONS
+============================
+
+C1. Bone Smith
+--------------
+Do NOT give Bone Smith a full quarry-style suite.
+Bone Smith should be basic weapons only.
+
+Suggested role:
+- starter/foundation weapon upgrades;
+- teaches weapon classes;
+- low cost;
+- few special rules;
+- uses generic bone/hide/sinew/scrap.
+
+Allowed:
+- basic sword
+- basic dagger
+- basic axe
+- basic spear
+- basic shield
+- basic bow
+- basic grand weapon
+- basic fist/tooth wraps
+- maybe basic katars/katana if needed for weapon class access
+
+Not allowed:
+- full armour set
+- full instrument line
+- quarry identity tools
+- late-game effects
+
+C2. Skinnery
+------------
+Do NOT give Skinnery a full quarry-style suite.
+Skinnery should be basic hide armour and survival gear only.
+
+Allowed:
+- basic armour pieces
+- hide wraps
+- survival cloak/boots/hood
+- simple passive block gear
+- basic tool like grease/salve if already needed
+
+Not allowed:
+- one of each weapon
+- full instrument line
+- quarry identity weapons
+
+C3. Organ Grinder
+-----------------
+Do NOT give Organ Grinder a full quarry-style suite.
+Organ Grinder should just be tools/support/instruments if desired.
+
+Allowed:
+- tools
+- organs/charm utility
+- healing/debuff/buff items
+- maybe one or two instruments
+
+Not allowed:
+- one of every weapon
+- armour set
+- full quarry identity suite
+
+C4. Lantern Hearth / Lantern Hoard
+----------------------------------
+Out of scope for the quarry-unlocked gear catalogue.
+Keep as settlement/support only unless there is a later separate Lantern gear pass.
+
+
+D. WEAPON PROFICIENCY REWORK
+============================
+
+Current weapon types in repo include:
+sword, axe, dagger, spear, bow, club, hammer, grandWeapon, katar, fistAndTooth, shield, whip, scythe, katana, strangeWeapon.
+
+For the new weapon plan, keep current valid type IDs for compatibility but update the passive rewards so they match the intended identity.
+
+Recommended proficiency passives
+--------------------------------
+
+sword:
+- Level 1: First Sword attack each turn deals +1 damage.
+- Level 2: After you play a Sword attack, your next Block card this turn gives +1 Block.
+- Mastery: Once per fight, after a Sword card wounds, draw 1 card.
+Identity: reliable, flexible, mid damage, mid cost.
+
+axe:
+- Level 1: Axe attacks deal double damage to monster Block.
+- Level 2: When an Axe removes all monster Block, your next attack deals +2 damage.
+- Mastery: First Axe attack each fight also applies Vulnerable 1.
+Identity: armour/block shredder, not simply generic high damage.
+
+dagger:
+- Level 1: First Dagger card each turn costs 0.
+- Level 2: Dagger attacks apply +1 extra Bleed/Poison/Burn if they already apply a DoT.
+- Mastery: After you play two Dagger cards in one turn, draw 1 card.
+Identity: fast cheap DoT stacking, low direct damage.
+
+spear:
+- Level 1: First Spear attack each turn also gives +1 Block.
+- Level 2: If you have Block, Spear attacks deal +1 damage.
+- Mastery: Once per fight, after a Spear attack, give another survivor 3 Block.
+Identity: reach simulated through damage plus small block.
+
+bow:
+- Level 1: First Bow attack each turn makes the quarry less likely to target this survivor.
+- Level 2: Bow attacks gain +2 on weak-point/harvest tests.
+- Mastery: Once per fight, after a Bow attack wounds, clarify the next quarry tell.
+Identity: lower damage, safer, precise weak-point control, little DoT.
+
+whip:
+- Level 1: Whip attacks that damage the quarry apply Snare 1.
+- Level 2: Whip cards make the quarry more likely to target this survivor until next quarry turn.
+- Mastery: Once per fight, when this survivor is targeted, gain 5 Block before damage.
+Identity: snare/control and drawing attention deliberately.
+
+grandWeapon:
+- Level 1: Grand Weapon attacks deal +2 damage.
+- Level 2: First Grand Weapon card each fight costs 1 less.
+- Mastery: Once per fight, after a Grand Weapon attack wounds, gain 4 Block.
+Identity: expensive huge damage, but helps offset openness slightly at mastery.
+
+katar:
+- Level 1: If two Katars are equipped, Katar attacks cost 1 less, minimum 0.
+- Level 2: After a Katar card damages the quarry, your next Katar card this turn deals +1 damage.
+- Mastery: Once per turn, after playing two Katar cards, draw 1 card.
+Identity: dual-wield speed; standard otherwise.
+
+fistAndTooth:
+- Level 1: First Fist & Tooth card each turn costs 0.
+- Level 2: Fist & Tooth Aura cards last 1 extra turn if they target only this survivor.
+- Mastery: Once per fight, when wounded, draw 1 and gain 3 Block.
+Identity: low cost, low damage, more aura/self-buff support.
+
+shield:
+- Level 1: First Shield card each turn gives +1 Block.
+- Level 2: When Block prevents damage, your next Shield attack deals +2 damage.
+- Mastery: Once per fight, deal damage equal to half your Block, up to 20.
+Identity: build block, then convert into counter damage.
+
+katana:
+- Level 1: The first Katana setup card each fight costs 0.
+- Level 2: Katana setup bonuses do not expire until your next Katana attack.
+- Mastery: Once per fight, double the stored bonus on your next Katana strike.
+Identity: patience, stored power, single big strike.
+
+strangeWeapon:
+- Keep but do not use as a normal weapon class unless events still require it.
+- Suggested: weird panic/memory gear only.
+- Level 1: First Strange card each fight may remove 1 Panic or draw 1.
+- Level 2: When you gain Panic from your own Strange card, gain 1 Survival.
+- Mastery: Once per fight, convert 1 Panic into +4 damage or +4 Block.
+Identity: dangerous occult utility.
+
+club / hammer / scythe:
+- Current repo supports these, but they are not in the current planned weapon class list.
+- Either keep them as legacy/rare/special weapons or map:
+  - club/hammer -> axe or grandWeapon style if deleting;
+  - scythe -> strangeWeapon or grandWeapon if deleting.
+- Do not leave active events requiring a deleted weapon type.
+
+
+E. EVENTS AND LOCKED CHOICE MAPPING
+===================================
+
+Current event requirement system supports:
+- partyHasWeaponType
+- partyHasGearTag
+- partyHasGearId
+- partyHasTrait
+- partyHasFightingArt
+- partyHasFightingArtTag
+- partyHasCondition
+- settlementHasInnovation
+- partyHasMonsterBaneForCurrentQuarry
+- any/all nested requirements
+
+Current events mostly use weaponType and gearTag. Do not hard-code old equipment IDs unless necessary.
+
+Known current event requirements to keep/update:
+- Chewing Earth: requires dagger.
+  Keep as dagger. The event is about a quick blade finding a seam.
+- Steam Pile: requires dagger.
+  Keep as dagger/tool alternative.
+- Many-Horned Grazer: requires dagger.
+  Keep as dagger.
+- The Bone Picker: requires whip.
+  Keep as whip because it snares movement.
+- Stranger at the Edge: requires whip.
+  Keep as whip.
+- No Same Stone Twice: requires whip.
+  Keep as whip.
+- Jaw Roots: has spear option text and grandWeapon locked option.
+  Update so spear option is also lockedUnless partyHasWeaponType spear, or rename it if it remains basic.
+  Keep grandWeapon locked option for splitting the hazard.
+- The Near Face: requires spear.
+  Keep as spear.
+- Charcoal Warnings: requires axe.
+  Keep as axe.
+- Weight of Hopelessness: requires axe.
+  Keep as axe.
+- Name in the Teeth: requires shield.
+  Keep as shield.
+- Sour Rain: currently requires strangeWeapon.
+  Replace with partyHasGearTag "tool" OR a specific new anti-acid tool tag such as "acidproof", "vessel", or "strange".
+- Clear Pool: currently requires gearTag trinket.
+  Replace "trinket" with "tool" or "charm" depending on new slot language. If jewellery/accessory remains, use tag "accessory" or "charm".
+
+Event migration rule:
+- Prefer weaponType requirements over gearId requirements.
+- If an event requires a specific old item, replace it with:
+  1. weaponType if it is a weapon solution;
+  2. gearTag "tool", "instrument", "charm", "fire", "snare", "poison", etc. if it is a category solution;
+  3. partyHasGearId only for a truly unique named story item.
+- Update lockedText to player-friendly text:
+  Bad: "Requires weaponType: dagger."
+  Good: "Requires a Dagger."
+  Good: "Requires a Tool with the Acidproof tag."
+  Good: "Requires an Instrument."
+
+
+F. NEW GEAR DATA STRUCTURE TARGET
+=================================
+
+Recommended item object shape:
+
+{
+  id: "lion_stalking_fang",
+  name: "Stalking Fang",
+  buildingId: "lionTrophyHall",
+  locationId: "lionTrophyHall",
+  craftingLocationId: "lionTrophyHall",
+  quarryId: "paleHuntLion",
+  itemType: "weapon",
+  loadoutCategory: "weapon",
+  slot: "weapon",
+  weaponType: "dagger",
+  hands: 1,
+  cost: { paleLionClaw: 1 },
+  cardPackage: [
+    "lion_stalking_fang_quick_cut",
+    "lion_stalking_fang_scent_of_blood",
+    "lion_stalking_fang_ambush_mark"
+  ],
+  passiveText: "Cheap Lion dagger. Builds Ambush and Bleed.",
+  keywords: ["Predator", "Ambush", "Bleed", "Quick"],
+  colorAffinity: "red",
+  implemented: true
+}
+
+Recommended card object shape:
+
+card(
+  "lion_stalking_fang_quick_cut",
+  "Quick Cut",
+  0,
+  "Deal 1 damage. Apply Bleed 1.",
+  [
+    { type: "damage", amount: 1 },
+    { type: "bleedMonster", amount: 1 }
+  ],
+  {
+    type: "attack",
+    tags: ["gear", "weapon", "dagger", "bleed", "ambush"],
+    sourceType: "equipment",
+    sourceGearId: "lion_stalking_fang",
+    weaponType: "dagger"
+  }
+)
+
+Text rules:
+- Use "quarry" in player text if that is the game’s visible term.
+- Keep front text short.
+- Avoid dense wording like "weak-point reward planning".
+- Use tags/effects for mechanics; do not overload description.
+
+
+G. OLD EQUIPMENT REMOVAL PLAN
+=============================
+
+Current old equipment pipeline:
+- src/data/overhaul/gearRegistry.js imports gear_master_overhaul.json and all_deck_cards.json.
+- src/data/overhaul/cardRegistry.js imports all_deck_cards.json.
+- src/data/equipment.js imports gearRegistry.
+- src/data/cards.js imports overhaulCards.
+
+Clean replacement options:
+
+Option 1: Replace overhaul registry output with curated new data.
+- Add src/data/gear/gearCatalog.js
+- Add src/data/gear/gearCards.js
+- Change src/data/equipment.js to use gearCatalog instead of gearRegistry.
+- Change src/data/cards.js to import gearCards instead of overhaulCards.
+- Keep old files in repo but no longer active.
+- Lowest risk for quick development.
+
+Option 2: Rewrite existing gearRegistry/cardRegistry.
+- Replace gear_master_overhaul.json and all_deck_cards.json.
+- Higher risk because existing assertions expect hundreds of rows.
+- Not recommended.
+
+Recommended:
+Use Option 1.
+Do not delete old JSON files in the first patch. Disconnect them from active imports and leave them as archived raw source until the new curated catalogue is stable.
+
+Files likely to edit:
+- src/data/equipment.js
+- src/data/cards.js
+- src/data/gearMetadata.js
+- src/data/weaponProficiency.js
+- src/data/events.js
+- possibly src/data/gear/gearCatalog.js NEW
+- possibly src/data/gear/gearCards.js NEW
+- tests for equipment/card package validity and weapon proficiency.
+
+Files not to edit:
+- src/components/Card.jsx
+- card flip CSS
+- src/main.jsx
+- Vite config
+- package.json unless adding no dependencies
+- dist
+- node_modules
+
+
+H. VALIDATION CHECKLIST
+=======================
+
+Build checks:
+npm run build
+npm run test
+git status
+
+Manual checks:
+1. Open Armoury / crafting.
+2. Confirm old imported KDM-like gear is gone from visible crafting.
+3. Confirm Bone Smith only has basic weapons.
+4. Confirm Skinnery only has basic armour/survival gear.
+5. Confirm Organ Grinder only has tools/support/instruments.
+6. Confirm quarry locations show their new themed equipment.
+7. Equip a weapon and confirm its three cards enter the deck.
+8. Equip an armour piece and confirm its passive/card appears correctly.
+9. Equip an instrument and confirm three cards enter the deck.
+10. Equip a tool and confirm two cards enter the deck.
+11. Use Preview/Back on gear cards and combat cards.
+12. Confirm card flip still flips in place.
+13. Trigger hunt events with locked weapon choices.
+14. Confirm locked text uses friendly wording.
+15. Confirm no event requires a deleted weapon type or old gear ID.
+
+Commit format:
+git add -A
+git commit -m "Replace old equipment with quarry gear catalogue"
+git push origin main
+git rev-parse HEAD

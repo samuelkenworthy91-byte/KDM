@@ -1,0 +1,56 @@
+Fix rest stop healing and add reliable odds display.
+
+Goal:
+Make rest stops trustworthy before/while Embrace the Dark modifies them.
+
+Current concern:
+Rest stop Forage/Scout previously had issues around showing result then Continue. User also wants to ensure healing on rest stops actually works.
+
+Required behaviour:
+
+1. Rest stop result flow:
+- Choosing a rest option shows a result panel.
+- Continue returns cleanly to the hunt map.
+- It should not skip or instantly close.
+
+2. Rest healing:
+- Any rest stop healing effect must actually apply to the correct survivor/party.
+- UI must show HP before and after.
+- Healing cannot exceed max HP.
+- Dead survivors cannot be healed by ordinary rest stops unless a card/effect explicitly says revive.
+
+3. Rest odds:
+- Define rest outcome categories: negative, neutral, positive.
+- Default probabilities should be explicit in one helper/table.
+- Embrace the Dark shifts:
+  negative -10 percentage points
+  neutral -10 percentage points
+  positive +20 percentage points
+- Clamp safely so no probability goes below 0.
+- Normalize to total 100%.
+
+4. UI:
+- Show base odds and modified odds if Embrace the Dark is active, or show a concise note:
+  Embrace the Dark: worse outcomes -10%, neutral outcomes -10%, positive outcomes +20%.
+
+5. Tests:
+- rest healing increases HP.
+- rest healing caps at max HP.
+- dead survivor not healed unless explicitly allowed.
+- result panel appears before Continue state.
+- Embrace the Dark changes rest odds only.
+- Embrace the Dark probabilities total 100%.
+- no negative probabilities.
+- continue returns to hunt/map state.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Fix rest stop healing and odds"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

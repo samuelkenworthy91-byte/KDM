@@ -1,0 +1,59 @@
+Strip back innovation text and make innovation mechanics player-friendly.
+
+Goal:
+Innovation cards/details should clearly tell the player what changed, where to use it, and what mechanic it affects.
+
+Current problem:
+Innovation text contains backend/system wording and sometimes buries practical instructions.
+
+Required presentation format:
+For each innovation/principle/action where possible, show:
+- Type: Passive / Settlement Action / Building Unlock / Deck Unlock / Campaign Principle
+- Effect: plain-English mechanical effect
+- Where to use it: tab/screen/action location
+- Cost/limit if applicable
+- Work Together eligible if it costs exactly 1 Memory
+- Permanent or yearly limit
+
+Examples:
+
+Weapon Drills:
+Type: Settlement Action
+Effect: Spend 1 Memory to train one survivor once per Lantern Year.
+Where to use: Settlement > Survivors > Training
+Work Together eligible: Yes
+
+Graves:
+Type: Campaign Principle - Death
+Effect: Each survivor death gives +1 Memory.
+Where it matters: Automatically after deaths.
+Permanent: Yes
+
+Requirements:
+1. Do not remove mechanical data.
+2. Separate flavour text from rules text.
+3. Do not leave text-only mechanics.
+4. Innovation draw screen should show the player summary, not dense backend notes.
+5. Details/advanced view can show deeper mechanics.
+6. Work Together discount display must be consistent everywhere costs appear.
+7. Campaign principles should not appear as normal innovations.
+
+Tests:
+- innovation display summary exists for each innovation.
+- Work Together eligible actions are flagged.
+- Graves/Cannibalism do not appear as ordinary innovation draws.
+- actionLocation/howToUse text exists for action innovations.
+- no innovation card crashes if optional text fields are missing.
+- UI/helper returns concise player-friendly summary.
+
+Validation:
+npm run build
+npm run test
+git status
+git diff --stat
+
+Commit:
+git add -A
+git commit -m "Clarify innovation text and effects"
+git push origin upgrade/patch-pack-2-principles-passives
+git rev-parse HEAD

@@ -1,0 +1,98 @@
+{
+  "version": "v8-duplicate-weapon-names-and-card-copy-training",
+  "maxEquipmentPerSurvivor": 9,
+  "weaponLimit": {
+    "maxWeaponItems": 2,
+    "maxDistinctWeaponNames": 2,
+    "duplicateNamesAllowed": true,
+    "sameNamePairsAllowed": true,
+    "countsLoadoutCategory": "weapon",
+    "ruleText": "A survivor may equip at most 2 weapon items. Those weapons may have the same name (for example, two Katars) or two different names. The number of distinct equipped weapon names can never exceed 2."
+  },
+  "armourSetBonusRule": {
+    "minorPiecesRequired": 2,
+    "majorPiecesRequired": 4,
+    "completePiecesRequired": "All listed pieces for that set",
+    "specialAbilityCard": "Injected into the survivor's deck only while the complete set remains equipped; removed immediately when the set is broken.",
+    "stacking": "A survivor may benefit from multiple sets only if equipment names/pieces satisfy each set and equipment slot rules allow it."
+  },
+  "universalTargetingRule": "No equipment card effect may require fighting its source monster/quarry. Source fields control unlock/crafting flavour only.",
+  "colorAffinityRule": {
+    "allowedAffinities": [
+      "blue",
+      "red",
+      "green",
+      "purple"
+    ],
+    "countSource": "equipped equipment with matching colorAffinity",
+    "thresholds": [
+      2,
+      4,
+      5
+    ],
+    "stacking": "Affinities stack independently from armour set bonuses. A single item may count for exactly one colour affinity and one armour set if eligible.",
+    "dynamicCards": "At 5 matching affinity pieces, add the matching affinity ability card to the survivor deck; remove it immediately when the count falls below 5."
+  },
+  "terminologyRule": {
+    "canonicalSource": "GitHub repo samuelkenworthy91-byte/KDM src/data/quarries.js, src/data/resources.js, src/data/equipment.js, src/data/innovationCards.js",
+    "ruleText": "Game-facing gear data must use repo quarry IDs, quarry display names, crafting building IDs/display names and resource IDs."
+  },
+  "armourBodySlotRule": {
+    "bodySlots": [
+      "head",
+      "chest",
+      "waist",
+      "arms",
+      "legs"
+    ],
+    "maxPerBodySlot": 1,
+    "countsLoadoutCategory": "armor",
+    "ruleText": "Armour pieces occupy exactly one body slot. A survivor can equip only one Head, Chest, Waist, Arms and Legs armour item."
+  },
+  "jewellerySlotRule": {
+    "slot": "jewelry",
+    "maxJewellery": 1,
+    "countsLoadoutCategory": "jewelry",
+    "ruleText": "Charms, circlets, rings, amulets, badges, earrings and similar items use the single Jewellery slot."
+  },
+  "utilitySlotRule": {
+    "slot": "utility",
+    "ruleText": "Utility gear fills remaining space after the 9-piece cap and named slot limits are checked."
+  },
+  "weaponStrategyRule": {
+    "ruleText": "Every weapon has a weaponStrategyId that describes its intended survivor deck plan and ramp/payoff pattern.",
+    "strategyProfileIds": [
+      "blockToDamage",
+      "panicRamp",
+      "bleedStatus",
+      "weakPointBreaker",
+      "comboTempo",
+      "heavyBreaker",
+      "rangedControl",
+      "resourceHarvest",
+      "partySupport",
+      "woundRisk"
+    ]
+  },
+  "uncappedScalingRule": {
+    "ruleText": "Damage/block/reward scaling effects should not include arbitrary 'to a max of' caps; difficult ramping is allowed to reach big numbers.",
+    "removedCapsInV7": 0
+  },
+  "cardCopyRule": {
+    "enabled": true,
+    "scope": "equipmentCard",
+    "baseCopiesFromOneItem": 1,
+    "maxCopiesFromOneItem": 3,
+    "maxExtraCopiesUnlockedFromOneItem": 2,
+    "trackingKey": "survivorId + gearInstanceId + cardId",
+    "ruleText": "Each equipped item instance contributes 1 copy of each of its cards by default. A survivor can train a specific card from that specific item instance to add extra copies, up to 3 total copies of that card from that one item.",
+    "duplicateItemRule": "Duplicate items are tracked separately by gearInstanceId. Two identical weapons can each train their own copies, but each item instance is still capped at 3 copies of a given card.",
+    "unequipRule": "Extra copies granted by an item are removed from the deck immediately when that item is unequipped, destroyed, or no longer valid.",
+    "progressionSuggestion": {
+      "copy2": "Unlock the second copy after 3 successful plays of that card while the item is equipped, then pay 1 matching resource or 1 generic resource.",
+      "copy3": "Unlock the third copy after 6 total successful plays of that card while the item is equipped, then pay 1 rare/matching quarry resource or 2 generic resources.",
+      "successfulPlayDefinition": "The card resolves at least one meaningful effect: damage, block, healing, draw/filtering, status application, survival gain, resource gain, or party support."
+    },
+    "implementationReminder": "Do not duplicate rows in the static card table for trained copies. Build the runtime deck by expanding cards according to each survivor's gearCardTraining state."
+  }
+}

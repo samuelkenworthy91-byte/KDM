@@ -1,0 +1,68 @@
+CURRENT REPO SCAN AND REQUIRED TWEAKS
+
+Scan target: samuelkenworthy91-byte/KDM default branch main.
+Scan date: 2026-06-19.
+
+Important current findings:
+
+1. Upgrade docs were not discoverable by repo search at docs/kdm-upgrade-plan yet.
+   Action: upload this pack to docs/kdm-upgrade-plan/ first, commit it, then run implementation prompts.
+
+2. src/data/resources.js still uses the old resource helper:
+   function resource(id, name, type, description, creatureId) { return { id, name, type, description, ...(creatureId ? { creatureId } : {}) }; }
+   It does not yet support materialTags, basicResource, genericDropWeight or specialUse.
+   Action: Resource prompt must patch this before innovation payment work.
+
+3. src/data/resources.js currently defines old generic/basic-like resources:
+   bone, hide, sinew, organ, claw, strangeEye, scrap, fur, horn, ichor, monsterTooth.
+   New intent: exactly six basic resources are bone, hide, organ, sinew, scrap, loveJuice.
+   - sinew is a basic resource but materialTags ['organ'].
+   - loveJuice is a new slightly rarer basic resource, materialTags ['organ'], special intimacy protection use.
+   - claw, fur, horn, ichor, monsterTooth, strangeEye are not generic basics anymore. Keep them only as legacy/non-basic resources with materialTags.
+
+4. genericResourceIds is currently generated using a broad filter:
+   Object.values(resources).filter(item => !item.creatureId && !['rare','strange','nemesis'].includes(item.type)).map(item => item.id)
+   This will accidentally include old non-creature resources such as claw/fur/horn depending on type.
+   Action: Replace with explicit export:
+   export const genericResourceIds = ['bone', 'hide', 'organ', 'sinew', 'scrap', 'loveJuice'];
+
+5. src/game/harvestRewardLogic.js imports genericResourceIds and builds common generic harvest candidates from it.
+   Action: update reward weighting so loveJuice appears but is rarer than the other common basics. Do not add old claw/fur/horn as generic common drops.
+
+6. src/game/eventLogic.js currently derives BASIC_IDS using item.type === 'basic'.
+   Action: after adding loveJuice and removing old generic basics, update event pools to use explicit BASIC_RESOURCE_IDS/genericResourceIds helpers, not raw type filtering.
+
+7. src/data/innovationCards.js still has old cost defaults:
+   costType: 'innovationAttempt', buildCost: { settlementMemory: 1, basicResources: 3 }, memoryCost: 1.
+   Action: remove/replace generic basicResources cost. New innovate cost is exactly:
+   - 1 Memory
+   - 1 Hide-slot payment
+   - 1 Organ-slot payment
+   - 1 Bone-slot payment
+   One multi-tag resource can fill only one selected slot.
+
+8. src/App.jsx current handleAttemptInnovation still auto-selects payment resources:
+   - basicIds = ['bone','hide','sinew','organ','scrap','claw']
+   - hard-coded resourceAliases
+   - resourceCost = 3 or 4
+   - sorts and slices payment automatically
+   Action: remove this old auto-pay method. Replace with selector-driven payment. Do not auto-spend rare/named resources.
+
+9. src/screens/InnovationDrawScreen.jsx still displays: "Paid: 1 Memory and 3 basic resources".
+   Action: update wording and display to show the exact chosen Hide/Organ/Bone resources.
+
+10. src/game/memoryEconomy.js already awards hunt-return memories based on returning living survivors. Keep that rule.
+    But it still has BASIC_RESOURCE_IDS including claw and burial gives +1 Memory.
+    Action: update BASIC_RESOURCE_IDS to six basics. Remove free burial Memory or gate it behind the correct later innovation, depending on the relevant prompt.
+
+11. src/data/memoryInnovations.js and src/game/memoryInnovationLogic.js still exist as old separate Memory-innovation systems.
+    Action: do not delete immediately in early prompts. Migrate/deprecate only when the unified innovation model prompt has replacement logic and tests.
+
+12. src/App.jsx already now blocks direct building of deck-pool innovations if they were not drawn/chosen. Keep this protection.
+
+General implementation safety:
+- Do not rewrite whole App.jsx or SettlementScreen.jsx.
+- Keep save migrations safe; old saves may contain claw, fur, horn, strangeEye, ichor and monsterTooth.
+- Do not wipe saves.
+- Do not remove legacy IDs until migration/tests prove the UI is safe.
+- Run npm run build, npm run test, git status after every prompt.

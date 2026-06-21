@@ -1,0 +1,23 @@
+FCC-CLAUDE MICRO PROMPT 05B - REPLACE OLD AUTO INNOVATION PAYMENT ONLY
+
+Patch src/App.jsx handleAttemptInnovation and the directly connected InnovationDrawScreen props only.
+Do not rewrite all App.jsx.
+
+Remove this old behavior:
+- basicIds = ['bone','hide','sinew','organ','scrap','claw']
+- resourceAliases hard-coded in handleAttemptInnovation
+- resourceCost = 3 or 4
+- sort resources and slice payment automatically
+
+New behavior:
+- handleAttemptInnovation must require a chosen payment object with hide, organ and bone selected.
+- It must validate selected payment with helpers.
+- It must deduct exactly those selected resources and 1 Memory.
+- It must not auto-spend named/rare resources.
+
+If the current UI does not yet pass selected payment, stop after wiring a placeholder state and report exactly what UI piece is still needed. Do not invent a broken flow.
+
+Validation:
+npm run build
+npm run test
+git status

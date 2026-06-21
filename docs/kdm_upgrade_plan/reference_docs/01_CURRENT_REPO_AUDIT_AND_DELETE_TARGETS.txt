@@ -1,0 +1,60 @@
+CURRENT REPO AUDIT AND DELETE / MIGRATION TARGETS
+
+Repo: samuelkenworthy91-byte/KDM
+
+Known current files and issues:
+
+1. src/data/resources.js
+- Current resource() helper only stores id, name, type, description, creatureId.
+- It has old generic resources that must no longer be treated as basic: claw, strangeEye, fur, horn, ichor, monsterTooth.
+- It currently exports genericResourceIds by filtering resources with no creatureId and excluding rare/strange/nemesis. This is too broad for the new six-basic-resource economy.
+- Add loveJuice.
+- Add materialTags to all resources.
+- Replace genericResourceIds with an explicit six-resource list: bone, hide, organ, sinew, scrap, loveJuice.
+- Add a weighted generic harvest pool so loveJuice is slightly rarer.
+
+2. src/game/harvestRewardLogic.js
+- genericCommonPool() currently uses genericResourceIds and treats all generic common resources similarly.
+- Update this to use resource drop weights or a specific generic harvest candidate list.
+- Ensure loveJuice can appear but at lower weight than bone/hide/organ/sinew/scrap.
+
+3. src/data/innovationCards.js
+- Current card factory has buildCost default { settlementMemory: 1, basicResources: 3 } and memoryCost 1.
+- Replace this with structured innovationCost: { memory: 1, materials: { hide: 1, organ: 1, bone: 1 } }.
+- Do not use 'basicResources: 3' anymore.
+- Update text from generic basic resources to explicit body-material slots.
+
+4. src/App.jsx
+- handleAttemptInnovation currently hard-codes basicIds and resourceAliases and auto-selects payment resources.
+- Remove this auto-payment logic.
+- Innovation must open a payment selector where the player chooses exactly which Hide-eligible, Organ-eligible, and Bone-eligible resources to consume.
+- Never auto-spend rare/quarry resources.
+
+5. src/data/memoryInnovations.js
+- This is an older separate Memory-innovation layer with different Memory costs.
+- Merge or deprecate it into the unified innovation system.
+- Do not leave two competing innovation systems visible in the UI.
+
+6. src/data/innovations.js
+- This is an older location/building innovation/crafting location file.
+- Do not delete blindly if crafting locations still use it.
+- Audit it and either keep it as building/location data or merge it into a clearer location data file.
+- It should not compete with the unified innovation deck.
+
+7. src/game/memoryEconomy.js
+- awardHuntReturnMemories already matches the core rule: Memory equals survivors who return alive.
+- Burial and hunt-event Memory awards may need removal or gating by later innovations.
+- Retreat must never grant Memory.
+
+8. src/screens/SettlementScreen.jsx
+- It imports both innovationCards and memoryInnovations.
+- It displays Memory gain text that mentions successful intimacy, hunt events, and burial.
+- Update to the new source of truth: successful hunt return only by default; later innovation-gated exceptions only if implemented.
+- Add Love Juice display and intimacy protection UI later.
+
+9. loadout docs
+- LOADOUT_AFFINITY_IMPLEMENTATION.md contradicts loadout_rules.json about duplicate weapon names.
+- loadout_rules.json v8 is the source of truth: same-name weapon pairs are allowed as long as weapon item count is max 2.
+
+Deletion/migration rule:
+Prefer deleting old duplicated systems only after their responsibilities are moved. Do not delete imports first and leave the UI broken.

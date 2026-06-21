@@ -1,0 +1,66 @@
+FCC-CLAUDE SAFE VERSION
+
+Use this prompt only with the weaker fcc-claude runner.
+
+You are patching repo samuelkenworthy91-byte/KDM.
+This is stage 10: 10 SAVE MIGRATION AND TESTS.
+
+ABSOLUTE RULES FOR THIS WEAKER MODEL:
+1. Do not combine stages.
+2. Do not rewrite entire App.jsx, SettlementScreen.jsx, combatLogic.js, resources.js, or innovationCards.js unless this exact prompt says to replace the full file. Prefer small targeted edits.
+3. Do not rename existing exports unless all imports are updated in the same patch.
+4. Do not delete memoryInnovations.js, memoryInnovationLogic.js, legacy resource IDs, old save fields, or old fighting art IDs until a prompt explicitly says migration/deprecation is safe.
+5. Do not invent card text, fighting art text, resource tags or rules. Use the exact wording and tables in docs/kdm-upgrade-plan/reference_docs/.
+6. Before changing code, open these docs:
+   - docs/kdm-upgrade-plan/reference_docs/00_CURRENT_REPO_SCAN_AND_TWEAKS.txt
+   - docs/kdm-upgrade-plan/reference_docs/02_MASTER_SYSTEM_RULES.txt
+   - any numbered reference doc named in this stage.
+7. Before changing code, inspect the target source file(s) and identify the smallest patch.
+8. After patching, run npm run build, npm run test, git status.
+
+
+
+Now follow the original stage prompt below, but obey the stricter rules above.
+
+--- ORIGINAL STAGE PROMPT START ---
+
+PROMPT 10 - SAVE MIGRATION AND TESTS
+
+You are patching repo samuelkenworthy91-byte/KDM.
+Work carefully. Prefer focused patches. Do not broad-rewrite unrelated systems.
+Read the uploaded TXT docs in docs/kdm-upgrade-plan/ before changing code.
+
+
+Goal:
+Make old saves safe after all system changes.
+
+Tasks:
+1. Update normalizeSettlement/save migration so missing loveJuice, materialTags, action state and innovation payment history do not crash.
+2. Migrate builtMemoryInnovations into innovationDeckState.builtInnovationIds where appropriate.
+3. Support old innovationHistory entries with paidResources arrays and new entries with slot mappings.
+4. Keep old resources in stash but stop treating old claw/fur/horn/ichor/monsterTooth/strangeEye as generic basic drops.
+5. Ensure old pending newborn/intimacy state loads.
+6. Add/expand tests listed in reference_docs/11_SAVE_MIGRATION_AND_TEST_REQUIREMENTS.txt.
+
+
+
+Validation commands to run before committing:
+npm run build
+npm run test
+git status
+
+If validation passes, commit and push with:
+git add -A
+git commit -m "<clear short commit message>"
+git push origin main
+git rev-parse HEAD
+
+--- ORIGINAL STAGE PROMPT END ---
+
+FINAL CHECKLIST BEFORE COMMIT:
+- Build passes.
+- Tests pass or existing failures are clearly reported.
+- No unrelated file rewrites.
+- No broad formatting-only churn.
+- No old save support removed.
+- No vague wording such as 'some resources' where exact Bone/Hide/Organ/Love Juice wording is required.
