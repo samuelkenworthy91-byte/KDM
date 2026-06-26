@@ -44,7 +44,8 @@ test('playing a card moves it out of hand', () => {
 test('playing an attack card damages monster', () => {
   const combat = { ...drawOpeningHand(state()), hand: [attackCard] };
   const next = playCard({ combatState: combat, cardId: 'strike' });
-  assert.equal(next.monster.hp, 6);
+  assert.equal(next.monster.hp, 5);
+  assert.ok(next.currentWeakPoint);
 });
 
 test('monster turn damages survivor', () => {

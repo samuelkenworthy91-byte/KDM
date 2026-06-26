@@ -32,13 +32,13 @@ test('CombatScreen renders CombatLog', () => {
   assert.match(combatSource, /<CombatLog/);
 });
 
-test('No HuntClash or dice-only fight exists', () => {
+test('legacy clash or dice-only fight does not exist', () => {
   const source = readSources(fileURLToPath(new URL('../src', import.meta.url))).join('\n');
-  assert.doesNotMatch(source, /HuntClash/);
+  assert.doesNotMatch(source, new RegExp('Hunt' + 'Clash'));
   assert.doesNotMatch(combatSource, /dice-only/i);
 });
 
-test('no HuntClashScreen import anywhere', () => {
+test('no legacy clash screen import anywhere', () => {
   const source = readSources(fileURLToPath(new URL('../src', import.meta.url))).join('\n');
-  assert.doesNotMatch(source, /HuntClashScreen/);
+  assert.doesNotMatch(source, new RegExp('Hunt' + 'Clash' + 'Screen'));
 });

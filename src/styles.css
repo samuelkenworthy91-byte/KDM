@@ -240,6 +240,68 @@ button:disabled {
   background: rgba(5, 4, 8, 0.45);
 }
 
+.flippable-card {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.card-inspect {
+  display: block;
+  width: 100%;
+  min-height: 210px;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+
+.card-inspect .catalog-card {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.gear-source-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.gear-source {
+  border: 1px solid rgba(230, 198, 120, 0.22);
+  border-radius: 8px;
+  padding: 1rem;
+  background: rgba(5, 4, 8, 0.45);
+}
+
+.gear-source p {
+  color: #d8ccb3;
+}
+
+.mini-card-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.mini-card-list span {
+  border: 1px solid rgba(230, 198, 120, 0.22);
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  color: #d8ccb3;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.82rem;
+}
+
+.warning-text {
+  color: #f1dca5;
+}
+
 .catalog-card img,
 .catalog-card .image-fallback {
   width: 92px;

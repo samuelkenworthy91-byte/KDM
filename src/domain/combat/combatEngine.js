@@ -1,6 +1,7 @@
 import { createSurvivor } from '../schema/survivorSchema.js';
-import { drawCards, shuffleCards } from './combatDeck.js';
+import { buildCombatDeckForSurvivor, drawCards, shuffleCards } from './combatDeck.js';
 import { chooseMonsterIntent, createMonster } from './monsterAI.js';
+import { createWeakPointDeck, drawWeakPoint, resolveWeakPointHit } from './weakPoints.js';
 
 function recoveryState(reason = 'Invalid combat input') {
   return {
@@ -14,6 +15,13 @@ function recoveryState(reason = 'Invalid combat input') {
     hand: [],
     discardPile: [],
     exhaustPile: [],
+    passiveCards: [],
+    passiveEffects: [],
+    gearCardGroups: [],
+    deckWarnings: [],
+    weakPointDeck: createWeakPointDeck(),
+    currentWeakPoint: null,
+    revealedWeakPoints: [],
     combatLog: [reason],
     pendingMonsterIntent: null
   };
@@ -36,14 +44,30 @@ function activeSurvivor(state) {
 }
 
 export function createCombatState(input = {}) {
-  const { monster, survivors, cards, random } = input && typeof input === 'object' ? input : {};
-  if (!monster || !Array.isArray(survivors) || !survivors.length || !Array.isArray(cards) || !cards.length) {
+  const {
+    monster,
+    survivors,
+    cards,
+    cardCatalog,
+    gearCatalog,
+    loadout,
+    random
+  } = input && typeof input === 'object' ? input : {};
+  if (!monster || !Array.isArray(survivors) || !survivors.length) {
     return recoveryState();
   }
   const safeSurvivors = survivors.filter(Boolean).map(createSurvivor);
   if (!safeSurvivors.length) return recoveryState();
   const safeMonster = createMonster(monster);
-  const drawPile = shuffleCards(cards.map(safeCard), random);
+  const builtDeck = Array.isArray(cards) && cards.length
+    ? { drawPile: shuffleCards(cards.map(safeCard), random), sourceGroups: [], passives: [], warnings: [] }
+    : buildCombatDeckForSurvivor({
+        survivor: safeSurvivors[0],
+        loadout,
+        cardCatalog,
+        gearCatalog,
+        random
+      });
 
   return {
     id: `combat-${Date.now()}`,
@@ -52,11 +76,18 @@ export function createCombatState(input = {}) {
     monster: safeMonster,
     survivors: safeSurvivors,
     activeSurvivorId: safeSurvivors[0].id,
-    drawPile,
+    drawPile: builtDeck.drawPile,
     hand: [],
     discardPile: [],
     exhaustPile: [],
-    combatLog: [`${safeMonster.name} emerges.`],
+    passiveCards: builtDeck.passives || [],
+    passiveEffects: (builtDeck.passives || []).flatMap(card => card.effects || card.passiveEffect || []),
+    gearCardGroups: builtDeck.sourceGroups || [],
+    deckWarnings: builtDeck.warnings || [],
+    weakPointDeck: createWeakPointDeck(safeMonster),
+    currentWeakPoint: null,
+    revealedWeakPoints: [],
+    combatLog: [`${safeMonster.name} emerges.`, ...(builtDeck.warnings || [])],
     pendingMonsterIntent: chooseMonsterIntent(safeMonster, random)
   };
 }
@@ -83,6 +114,31 @@ function applyCardEffect(state, effect) {
   return next;
 }
 
+function applyAttackEffectWithWeakPoint(state, card, effect) {
+  const hits = effect.hits || 1;
+  const baseDamage = (effect.amount || 0) * hits;
+  const revealedState = drawWeakPoint(state);
+  const resolved = resolveWeakPointHit({
+    combatState: revealedState,
+    card,
+    weakPoint: revealedState.currentWeakPoint,
+    damage: baseDamage
+  });
+  const next = {
+    ...resolved.combatState,
+    monster: {
+      ...resolved.combatState.monster,
+      hp: Math.max(0, resolved.combatState.monster.hp - resolved.damage)
+    },
+    combatLog: [
+      ...resolved.combatState.combatLog,
+      ...resolved.log,
+      `${card.name} deals ${resolved.damage} damage from ${card.sourceGearName || card.sourceGearId || 'unknown gear'}.`
+    ]
+  };
+  return next;
+}
+
 export function playCard({ combatState, cardId } = {}) {
   if (!combatState || combatState.status === 'recovery') return recoveryState();
   const card = combatState.hand.find(item => item.id === cardId);
@@ -93,10 +149,14 @@ export function playCard({ combatState, cardId } = {}) {
     hand: combatState.hand.filter(item => item.id !== cardId),
     discardPile: card.exhaust ? combatState.discardPile : [...combatState.discardPile, card],
     exhaustPile: card.exhaust ? [...combatState.exhaustPile, card] : combatState.exhaustPile,
-    combatLog: [...combatState.combatLog, `${card.name} played.`]
+    combatLog: [...combatState.combatLog, `${card.name} played${card.sourceGearName ? ` from ${card.sourceGearName}` : ''}.`]
   };
   card.effects.forEach(effect => {
-    next = applyCardEffect(next, effect);
+    if (effect.type === 'damage' || effect.type === 'multiHitDamage') {
+      next = applyAttackEffectWithWeakPoint(next, card, effect);
+    } else {
+      next = applyCardEffect(next, effect);
+    }
   });
   return checkCombatEnd(next);
 }

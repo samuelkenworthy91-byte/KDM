@@ -1,12 +1,14 @@
-import { getCardCatalog } from '../../domain/cards/cardCatalog.js';
+import { getGearCardGroups } from '../../domain/gear/gearCardGrouping.js';
 import { getGearCatalog } from '../../domain/gear/gearCatalog.js';
 import { getResourceCatalog } from '../../domain/resources/resourceCatalog.js';
-import CardPreview from '../components/CardPreview.jsx';
+import FlippableCard from '../components/FlippableCard.jsx';
 
 export default function GearCatalogScreen({ onBack }) {
   const resources = getResourceCatalog();
   const gear = getGearCatalog();
-  const cards = getCardCatalog();
+  const groups = getGearCardGroups();
+  const cardCount = groups.reduce((total, group) =>
+    total + group.activeCards.length + group.passiveCards.length + group.unlinkedCards.length, 0);
 
   return (
     <main className="app-shell">
@@ -22,7 +24,7 @@ export default function GearCatalogScreen({ onBack }) {
         <div className="stats-grid">
           <div className="stat"><span>Resources</span><strong>{resources.length}</strong></div>
           <div className="stat"><span>Gear</span><strong>{gear.length}</strong></div>
-          <div className="stat"><span>Cards</span><strong>{cards.length}</strong></div>
+          <div className="stat"><span>Cards</span><strong>{cardCount}</strong></div>
         </div>
 
         <section className="audit-section">
@@ -36,8 +38,18 @@ export default function GearCatalogScreen({ onBack }) {
 
         <section className="audit-section">
           <h2>Gear / Equipment / Cards</h2>
-          <div className="catalog-grid">
-            {cards.slice(0, 36).map(card => <CardPreview key={card.id} card={card} />)}
+          <div className="gear-source-list">
+            {groups.slice(0, 36).map(group => (
+              <article className="gear-source" key={group.gearId}>
+                <h3>{group.gearName}</h3>
+                <p>{group.gearType} / {group.slot}</p>
+                <div className="catalog-grid">
+                  {[...group.activeCards, ...group.passiveCards, ...group.unlinkedCards].map(card => (
+                    <FlippableCard key={card.id} card={card} />
+                  ))}
+                </div>
+              </article>
+            ))}
           </div>
         </section>
       </section>

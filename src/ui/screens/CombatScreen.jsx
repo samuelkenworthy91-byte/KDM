@@ -6,24 +6,16 @@ import {
   playCard,
   resolveMonsterTurn
 } from '../../domain/combat/combatEngine.js';
-import { getCardCatalog } from '../../domain/cards/cardCatalog.js';
 import CardHand from '../components/CardHand.jsx';
 import CombatLog from '../components/CombatLog.jsx';
+import FlippableCard from '../components/FlippableCard.jsx';
 import MonsterPanel from '../components/MonsterPanel.jsx';
 import SurvivorCombatPanel from '../components/SurvivorCombatPanel.jsx';
-
-function makeCards() {
-  const cards = getCardCatalog().filter(card => card.effects?.length).slice(0, 12);
-  return cards.length ? cards : [
-    { id: 'fallback-strike', name: 'Fallback Strike', type: 'attack', effects: [{ type: 'damage', amount: 3 }] }
-  ];
-}
 
 export default function CombatScreen({ monster, survivor, onReturn }) {
   const [combatState, setCombatState] = useState(() => drawOpeningHand(createCombatState({
     monster,
     survivors: [survivor],
-    cards: makeCards(),
     random: () => 0
   })));
   const activeSurvivor = combatState.survivors.find(item => item.id === combatState.activeSurvivorId) || combatState.survivors[0];
@@ -48,8 +40,8 @@ export default function CombatScreen({ monster, survivor, onReturn }) {
         </div>
 
         <div className="combat-layout">
-          <MonsterPanel monster={combatState.monster} intent={combatState.pendingMonsterIntent} />
-          <SurvivorCombatPanel survivor={activeSurvivor} />
+          <MonsterPanel monster={combatState.monster} intent={combatState.pendingMonsterIntent} weakPoint={combatState.currentWeakPoint} />
+          <SurvivorCombatPanel survivor={activeSurvivor} passives={combatState.passiveCards} />
         </div>
 
         <div className="stats-grid">
@@ -66,6 +58,31 @@ export default function CombatScreen({ monster, survivor, onReturn }) {
           </section>
         ) : (
           <>
+            <section className="combat-section">
+              <h2>Deck Sources</h2>
+              <div className="gear-source-list">
+                {(combatState.gearCardGroups || []).map(group => (
+                  <article className="gear-source" key={group.gearId}>
+                    <h3>{group.gearName || 'Unknown Gear'}</h3>
+                    <p>{group.gearType || 'gear'} / {group.slot || 'slot'}</p>
+                    <div className="mini-card-list">
+                      {[...(group.activeCards || []), ...(group.passiveCards || []), ...(group.unlinkedCards || [])].map(card => (
+                        <span key={card.id}>{card.name || 'Unnamed Card'}</span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className="combat-section">
+              <h2>Passives</h2>
+              <div className="hand-grid">
+                {(combatState.passiveCards || []).map(card => <FlippableCard key={card.id} card={card} />)}
+              </div>
+              {(combatState.deckWarnings || []).map(warning => <p className="warning-text" key={warning}>{warning}</p>)}
+            </section>
+
             <CardHand hand={combatState.hand} onPlayCard={handlePlayCard} />
             <button type="button" onClick={handleEndTurn}>End Turn</button>
           </>
